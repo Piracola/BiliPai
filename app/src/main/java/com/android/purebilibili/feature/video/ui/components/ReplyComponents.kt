@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.appendInlineContent
 //  Cupertino Icons - iOS SF Symbols 风格图标
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
-import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.filled.MoreVert
@@ -39,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.ImageLoader
 import coil.imageLoader
 //  已改用 MaterialTheme.colorScheme.primary
 import com.android.purebilibili.core.store.SettingsManager
@@ -111,13 +109,15 @@ internal data class ReplyItemLayoutPolicy(
 ) {
     val dividerStartPaddingDp: Int
         get() = horizontalPaddingDp + avatarSizeDp + avatarContentSpacingDp
+    val contentSpacingDp: Int
+        get() = avatarSizeDp + avatarContentSpacingDp
 }
 
 internal fun resolveReplyItemLayoutPolicy(): ReplyItemLayoutPolicy {
     return ReplyItemLayoutPolicy(
         horizontalPaddingDp = 12,
-        avatarSizeDp = 38,
-        avatarContentSpacingDp = 9,
+        avatarSizeDp = 36,
+        avatarContentSpacingDp = 8,
         actionButtonSizeDp = 40,
         decorationWidthReserveDp = 78,
         decorationImageWidthDp = 64,
@@ -131,6 +131,13 @@ internal fun resolveReplyItemHeaderEndPaddingDp(
     policy: ReplyItemLayoutPolicy = resolveReplyItemLayoutPolicy()
 ): Int {
     return policy.actionButtonSizeDp + if (hasPiliPlusDecoration) policy.decorationWidthReserveDp else 0
+}
+
+internal fun resolveReplyItemContentStartPaddingDp(
+    containerWidth: Dp,
+    policy: ReplyItemLayoutPolicy = resolveReplyItemLayoutPolicy()
+): Int {
+    return if (containerWidth >= 280.dp) policy.contentSpacingDp else policy.horizontalPaddingDp
 }
 
 internal fun resolveReplyItemTextColumnWidthDp(
@@ -1064,7 +1071,7 @@ fun ReplyItemView(
         }
     )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(appearance.panelColor)
@@ -1076,45 +1083,45 @@ fun ReplyItemView(
                 }
             )
     ) {
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    top = 12.dp,
-                    bottom = 12.dp,
+                    top = 10.dp,
+                    bottom = 10.dp,
                     start = layoutPolicy.horizontalPaddingDp.dp,
                     end = layoutPolicy.horizontalPaddingDp.dp
                 )
         ) {
-            // Avatar
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(FormatUtils.fixImageUrl(item.member.avatar))
-                    .crossfade(!lightweightMode)
-                    .build(),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(layoutPolicy.avatarSizeDp.dp)
-                    .clip(CircleShape)
-                    .background(appearance.placeholderColor)
-                    .clickable { onAvatarClick(item.member.mid) }
-            )
-            
-            Spacer(modifier = Modifier.width(layoutPolicy.avatarContentSpacingDp.dp))
+            val headerEndPadding = resolveReplyItemHeaderEndPaddingDp(
+                hasPiliPlusDecoration = piliPlusDecoration != null,
+                policy = layoutPolicy
+            ).dp
+            val startPadding = resolveReplyItemContentStartPaddingDp(
+                containerWidth = maxWidth,
+                policy = layoutPolicy
+            ).dp
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                val headerEndPadding = resolveReplyItemHeaderEndPaddingDp(
-                    hasPiliPlusDecoration = piliPlusDecoration != null,
-                    policy = layoutPolicy
-                ).dp
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // User Info Header
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // User Info Header
+                Row() {
+                    // Avatar
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(FormatUtils.fixImageUrl(item.member.avatar))
+                            .crossfade(!lightweightMode)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(layoutPolicy.avatarSizeDp.dp)
+                            .clip(CircleShape)
+                            .background(appearance.placeholderColor)
+                            .clickable { onAvatarClick(item.member.mid) }
+                    )
+
+                    Spacer(modifier = Modifier.width(layoutPolicy.avatarContentSpacingDp.dp))
+
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(end = headerEndPadding)
@@ -1159,19 +1166,24 @@ fun ReplyItemView(
                                 NameplateTag(imageUrl = nameplateImage)
                             }
                         }
+
+                        Text(
+                            text = metadataText,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            color = appearance.secondaryTextColor
+                        )
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                    Text(
-                        text = metadataText,
-                        fontSize = 12.sp,
-                        color = appearance.secondaryTextColor
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Content
+                // Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = startPadding)
+                ) {
                     ReplyMessageText(
                         text = item.content.message,
                         fontSize = 15.sp,
@@ -1203,8 +1215,6 @@ fun ReplyItemView(
                             }
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Footer Actions
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1263,7 +1273,7 @@ fun ReplyItemView(
 
                 // Sub-comments (Threaded view)
                 if (showSubPreview && (!item.replies.isNullOrEmpty() || item.rcount > 0)) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1365,12 +1375,11 @@ fun ReplyItemView(
                                     .padding(vertical = 4.dp)
                             )
                         }
-                        
+
                         if (threadReplyCount > 0) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(min = 32.dp)
                                     .testTag("$COMMENT_VIEW_ALL_REPLIES_TAG_PREFIX${item.rpid}")
                                     .clickable { onSubClick(item) },
                                 contentAlignment = Alignment.CenterStart
@@ -1379,42 +1388,41 @@ fun ReplyItemView(
                                     text = subReplySummaryLabel,
                                     fontSize = 13.sp,
                                     color = appearance.accentColor,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(vertical = 6.dp)
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
                     }
                     }
                 }
-
-                if (piliPlusDecoration != null) {
-                    FanGroupDecorationBadge(
-                        visual = piliPlusDecoration,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(
-                                top = 2.dp,
-                                end = layoutPolicy.actionButtonSizeDp.dp
-                            )
-                    )
-                }
-
-                IconButton(
-                    onClick = { showActionSheet = true },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(layoutPolicy.actionButtonSizeDp.dp)
-                        .testTag("$COMMENT_ACTION_BUTTON_TAG_PREFIX${item.rpid}")
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "评论操作",
-                        tint = appearance.actionTint,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
             }
+        }
+
+        if (piliPlusDecoration != null) {
+            FanGroupDecorationBadge(
+                visual = piliPlusDecoration,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(
+                        top = 2.dp,
+                        end = layoutPolicy.actionButtonSizeDp.dp
+                    )
+            )
+        }
+
+        IconButton(
+            onClick = { showActionSheet = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(layoutPolicy.actionButtonSizeDp.dp)
+                .testTag("$COMMENT_ACTION_BUTTON_TAG_PREFIX${item.rpid}")
+        ) {
+            Icon(
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = "评论操作",
+                tint = appearance.actionTint,
+                modifier = Modifier.size(18.dp)
+            )
         }
         
         HorizontalDivider(

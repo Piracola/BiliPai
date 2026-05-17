@@ -155,7 +155,7 @@ fun RelatedVideoItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp) // Spacing between items
+            .padding(horizontal = 8.dp) // Spacing between items
     ) {
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -170,7 +170,7 @@ fun RelatedVideoItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp) // Internal padding
+                .padding(5.dp) // Internal padding
         ) {
             // 🔗 [共享元素] 为封面添加共享元素标记
             val coverModifier = if (coverSharedEnabled) {
@@ -230,7 +230,7 @@ fun RelatedVideoItem(
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Video info
             Column(
@@ -415,7 +415,8 @@ private fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }

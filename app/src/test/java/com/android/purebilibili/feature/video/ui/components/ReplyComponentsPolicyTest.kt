@@ -1,6 +1,7 @@
 package com.android.purebilibili.feature.video.ui.components
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.android.purebilibili.data.model.response.ReplyMember
 import com.android.purebilibili.data.model.response.ReplyCardLabel
 import com.android.purebilibili.data.model.response.ReplyContent
@@ -581,13 +582,13 @@ class ReplyComponentsPolicyTest {
         val policy = resolveReplyItemLayoutPolicy()
 
         assertEquals(12, policy.horizontalPaddingDp)
-        assertEquals(38, policy.avatarSizeDp)
-        assertEquals(9, policy.avatarContentSpacingDp)
+        assertEquals(36, policy.avatarSizeDp)
+        assertEquals(8, policy.avatarContentSpacingDp)
         assertEquals(40, policy.actionButtonSizeDp)
         assertEquals(78, policy.decorationWidthReserveDp)
-        assertEquals(59, policy.dividerStartPaddingDp)
+        assertEquals(56, policy.dividerStartPaddingDp)
         assertEquals(
-            289,
+            292,
             resolveReplyItemTextColumnWidthDp(containerWidthDp = 360, policy = policy)
         )
         assertEquals(
@@ -597,6 +598,14 @@ class ReplyComponentsPolicyTest {
         assertEquals(
             118,
             resolveReplyItemHeaderEndPaddingDp(hasPiliPlusDecoration = true, policy = policy)
+        )
+        assertEquals(
+            12,
+            resolveReplyItemContentStartPaddingDp(containerWidth = 279.dp, policy = policy)
+        )
+        assertEquals(
+            44,
+            resolveReplyItemContentStartPaddingDp(containerWidth = 280.dp, policy = policy)
         )
     }
 
