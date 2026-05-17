@@ -15,4 +15,14 @@ class MessageLinkNavigationPolicyTest {
         val videoAction = assertIs<MessageLinkNavigationAction.Video>(action)
         assertEquals("av115391124741470", videoAction.videoId)
     }
+
+    @Test
+    fun resolveMessageLinkNavigationAction_routesLikelyDynamicCommentFallbackToDynamic() {
+        val action = resolveMessageLinkNavigationAction(
+            "bilibili://comment/detail/1/1199344045210468386/265141324256"
+        )
+
+        val dynamicAction = assertIs<MessageLinkNavigationAction.DynamicComment>(action)
+        assertEquals("1199344045210468386", dynamicAction.dynamicId)
+    }
 }

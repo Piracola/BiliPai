@@ -77,6 +77,16 @@ class BilibiliNavigationTargetParserTest {
     }
 
     @Test
+    fun parse_videoDeepLinkWithLikelyDynamicId_resolvesDynamicTarget() {
+        val target = BilibiliNavigationTargetParser.parse(
+            "bilibili://video/1199344045210468386"
+        )
+
+        assertIs<BilibiliNavigationTarget.Dynamic>(target)
+        assertEquals("1199344045210468386", target.dynamicId)
+    }
+
+    @Test
     fun parse_searchDeepLink_resolvesSearchTarget() {
         val target = BilibiliNavigationTargetParser.parse(
             "bilibili://search?keyword=%E9%BB%91%E7%A5%9E%E8%AF%9D"
