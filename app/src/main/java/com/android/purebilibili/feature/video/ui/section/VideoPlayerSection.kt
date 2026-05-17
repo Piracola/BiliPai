@@ -33,6 +33,7 @@ import com.android.purebilibili.feature.video.ui.gesture.resolveLockedTwoFingerS
 import com.android.purebilibili.feature.video.ui.gesture.resolveTwoFingerGesturePlaybackSpeed
 import com.android.purebilibili.feature.video.ui.gesture.resolveTwoFingerSpeedGestureMode
 import com.android.purebilibili.feature.video.playback.policy.resolveDisplayedQualityId
+import com.android.purebilibili.core.ui.motion.AppMotionEasing
 import com.android.purebilibili.data.model.response.ViewPoint
 import com.android.purebilibili.feature.video.progress.PbpProgressData
 import com.android.purebilibili.feature.video.progress.buildPbpRidgeSamples
@@ -64,6 +65,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.infiniteRepeatable
@@ -189,17 +191,24 @@ private fun GesturePercentDigit(
             alphaAnim.snapTo(1f)
             return@LaunchedEffect
         }
-        blurAnim.snapTo(6f)
-        alphaAnim.snapTo(0.55f)
+        blurAnim.snapTo(motionSpec.digitInitialBlurRadiusDp)
+        alphaAnim.snapTo(motionSpec.digitInitialAlpha)
         launch {
             blurAnim.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(durationMillis = motionSpec.digitBlurResetDurationMillis)
+                animationSpec = tween(
+                    durationMillis = motionSpec.digitBlurResetDurationMillis,
+                    delayMillis = motionSpec.digitBlurHoldDurationMillis,
+                    easing = AppMotionEasing.EmphasizedEnter
+                )
             )
         }
         alphaAnim.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = motionSpec.digitAlphaResetDurationMillis)
+            animationSpec = tween(
+                durationMillis = motionSpec.digitAlphaResetDurationMillis,
+                easing = AppMotionEasing.EmphasizedEnter
+            )
         )
     }
 
@@ -221,14 +230,30 @@ private fun GesturePercentDigit(
                 }
             }
             (slideInVertically(
-                animationSpec = tween(motionSpec.digitEnterFadeDurationMillis),
+                animationSpec = spring(
+                    dampingRatio = motionSpec.digitSlideSpringDampingRatio,
+                    stiffness = motionSpec.digitSlideSpringStiffness
+                ),
                 initialOffsetY = enterOffset
-            ) + fadeIn(animationSpec = tween(motionSpec.digitEnterFadeDurationMillis)))
+            ) + fadeIn(
+                animationSpec = tween(
+                    durationMillis = motionSpec.digitEnterFadeDurationMillis,
+                    easing = AppMotionEasing.EmphasizedEnter
+                )
+            ))
                 .togetherWith(
                     slideOutVertically(
-                        animationSpec = tween(motionSpec.digitExitFadeDurationMillis),
+                        animationSpec = spring(
+                            dampingRatio = motionSpec.digitSlideSpringDampingRatio,
+                            stiffness = motionSpec.digitSlideSpringStiffness
+                        ),
                         targetOffsetY = exitOffset
-                    ) + fadeOut(animationSpec = tween(motionSpec.digitExitFadeDurationMillis))
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = motionSpec.digitExitFadeDurationMillis,
+                            easing = AppMotionEasing.EmphasizedExit
+                        )
+                    )
                 )
         },
         label = "gesture-percent-digit"

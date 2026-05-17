@@ -4,6 +4,7 @@ import android.view.SurfaceView
 import android.view.TextureView
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.android.purebilibili.feature.video.ui.components.GesturePercentMotionDefaults
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
@@ -488,11 +489,16 @@ internal data class GestureLevelOverlayVisualPolicy(
 )
 
 internal data class VideoGestureMotionSpec(
+    val digitInitialBlurRadiusDp: Float,
+    val digitInitialAlpha: Float,
+    val digitBlurHoldDurationMillis: Int,
     val digitBlurResetDurationMillis: Int,
     val digitAlphaResetDurationMillis: Int,
     val digitEnterFadeDurationMillis: Int,
     val digitExitFadeDurationMillis: Int,
     val digitScaleDurationMillis: Int,
+    val digitSlideSpringDampingRatio: Float,
+    val digitSlideSpringStiffness: Float,
     val levelOverlayEnterFadeDurationMillis: Int,
     val levelOverlayEnterTransformDurationMillis: Int,
     val levelOverlayExitDurationMillis: Int,
@@ -512,11 +518,16 @@ internal data class VideoGestureMotionSpec(
 
 internal fun resolveVideoGestureMotionSpec(): VideoGestureMotionSpec {
     return VideoGestureMotionSpec(
-        digitBlurResetDurationMillis = 220,
-        digitAlphaResetDurationMillis = 180,
-        digitEnterFadeDurationMillis = 180,
-        digitExitFadeDurationMillis = 140,
+        digitInitialBlurRadiusDp = GesturePercentMotionDefaults.InitialBlurRadiusDp,
+        digitInitialAlpha = GesturePercentMotionDefaults.InitialAlpha,
+        digitBlurHoldDurationMillis = GesturePercentMotionDefaults.BlurHoldDurationMillis,
+        digitBlurResetDurationMillis = GesturePercentMotionDefaults.BlurResetDurationMillis,
+        digitAlphaResetDurationMillis = GesturePercentMotionDefaults.AlphaResetDurationMillis,
+        digitEnterFadeDurationMillis = GesturePercentMotionDefaults.EnterFadeDurationMillis,
+        digitExitFadeDurationMillis = GesturePercentMotionDefaults.ExitFadeDurationMillis,
         digitScaleDurationMillis = 0,
+        digitSlideSpringDampingRatio = GesturePercentMotionDefaults.SlideSpringDampingRatio,
+        digitSlideSpringStiffness = GesturePercentMotionDefaults.SlideSpringStiffness,
         levelOverlayEnterFadeDurationMillis = 160,
         levelOverlayEnterTransformDurationMillis = 220,
         levelOverlayExitDurationMillis = 200,
