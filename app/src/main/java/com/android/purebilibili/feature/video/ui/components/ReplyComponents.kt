@@ -1212,7 +1212,12 @@ fun ReplyItemView(
                         onTopicClick = { topic -> onUrlClick?.invoke(resolveReplyTopicNavigationUrl(topic)) },
                         onVoteClick = { voteId -> onUrlClick?.invoke("bilibili://vote?id=$voteId") },
                         noteCvidStr = item.noteCvidStr,
-                        prefix = contentPrefix
+                        prefix = contentPrefix,
+                        onPlainTextClick = if (openThreadFromRootClick) {
+                            { onSubClick(item) }
+                        } else {
+                            null
+                        }
                     )
 
                     // Images
@@ -1375,7 +1380,8 @@ fun ReplyItemView(
                                     onTopicClick = { topic -> onUrlClick?.invoke(resolveReplyTopicNavigationUrl(topic)) },
                                     onVoteClick = { voteId -> onUrlClick?.invoke("bilibili://vote?id=$voteId") },
                                     noteCvidStr = subReply.noteCvidStr,
-                                    prefix = prefix
+                                    prefix = prefix,
+                                    onPlainTextClick = { onSubClick(item) }
                                 )
                             }
                         }
@@ -1468,7 +1474,8 @@ internal fun ReplyMessageText(
     onTopicClick: ((String) -> Unit)? = null,
     onVoteClick: ((Long) -> Unit)? = null,
     noteCvidStr: String = "",
-    prefix: AnnotatedString? = null
+    prefix: AnnotatedString? = null,
+    onPlainTextClick: (() -> Unit)? = null
 ) {
     val videoReference = remember(text) { resolveReplyVideoReference(text) }
     var resolvedTitle by remember(videoReference?.bvid) {
@@ -1515,7 +1522,8 @@ internal fun ReplyMessageText(
             onTopicClick = onTopicClick,
             onVoteClick = onVoteClick,
             noteCvidStr = noteCvidStr,
-            prefix = prefix
+            prefix = prefix,
+            onPlainTextClick = onPlainTextClick
         )
     }
 }
@@ -1623,7 +1631,8 @@ fun RichCommentText(
     onTopicClick: ((String) -> Unit)? = null,
     onVoteClick: ((Long) -> Unit)? = null,
     noteCvidStr: String = "",
-    prefix: AnnotatedString? = null
+    prefix: AnnotatedString? = null,
+    onPlainTextClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val timestampColor = MaterialTheme.colorScheme.primary
@@ -1720,10 +1729,11 @@ fun RichCommentText(
             onUserClick != null ||
             onTopicClick != null ||
             onVoteClick != null
-    val selectionEnabled = remember(renderableEmoteKeys, hasInteractiveAnnotations) {
+    val hasTapHandler = hasInteractiveAnnotations || onPlainTextClick != null
+    val selectionEnabled = remember(renderableEmoteKeys, hasTapHandler) {
         shouldEnableRichCommentSelection(
             hasRenderableEmotes = renderableEmoteKeys.isNotEmpty(),
-            hasInteractiveAnnotations = hasInteractiveAnnotations
+            hasInteractiveAnnotations = hasTapHandler
         )
     }
     val copyText = remember(text) { text.trim() }
@@ -1733,7 +1743,7 @@ fun RichCommentText(
         //  使用 Text + pointerInput 实现带表情的可点击文本
         var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
         val textModifier = when {
-            hasInteractiveAnnotations -> Modifier.pointerInput(annotatedString, text) {
+            hasTapHandler -> Modifier.pointerInput(annotatedString, text, onPlainTextClick) {
                 detectTapGestures(
                     onLongPress = {
                         if (copyText.isNotEmpty()) {
@@ -1787,11 +1797,13 @@ fun RichCommentText(
                                 start = searchStart,
                                 end = searchEnd
                             )
-                                .firstOrNull()?.let { annotation ->
-                                    val secondsValue = annotation.item.toLongOrNull() ?: 0L
-                                    onTimestampClick?.invoke(secondsValue * 1000)
-                                }
+                            .firstOrNull()?.let { annotation ->
+                                val secondsValue = annotation.item.toLongOrNull() ?: 0L
+                                onTimestampClick?.invoke(secondsValue * 1000)
+                                return@detectTapGestures
+                            }
                         }
+                        onPlainTextClick?.invoke()
                     }
                 )
             }

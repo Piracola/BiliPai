@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -170,6 +171,60 @@ class SubReplyDetailUiRegressionTest {
         composeTestRule
             .onRoot()
             .performClick()
+
+        composeTestRule.runOnIdle {
+            assertEquals(100L, openedReplyId)
+        }
+    }
+
+    @Test
+    fun clickingRootCommentTextWithSubReplies_opensRootReplyDetail() {
+        var openedReplyId: Long? = null
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                ReplyItemView(
+                    item = buildReplyWithPreview(),
+                    emoteMap = emptyMap(),
+                    onClick = {},
+                    onSubClick = { openedReplyId = it.rpid },
+                    onAvatarClick = {}
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText("root")
+            .performTouchInput {
+                click(center)
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(100L, openedReplyId)
+        }
+    }
+
+    @Test
+    fun clickingSubReplyPreviewText_opensRootReplyDetail() {
+        var openedReplyId: Long? = null
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                ReplyItemView(
+                    item = buildReplyWithPreview(),
+                    emoteMap = emptyMap(),
+                    onClick = {},
+                    onSubClick = { openedReplyId = it.rpid },
+                    onAvatarClick = {}
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText("PreviewReply: preview child reply")
+            .performTouchInput {
+                click(center)
+            }
 
         composeTestRule.runOnIdle {
             assertEquals(100L, openedReplyId)

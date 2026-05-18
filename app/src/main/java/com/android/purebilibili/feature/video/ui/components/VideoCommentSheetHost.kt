@@ -446,13 +446,21 @@ fun VideoCommentSheetHost(
                                 closesThreadDetail -> -1
                                 else -> 0
                             }
-                            val enter = fadeIn(animationSpec = tween(180)) +
-                                slideInHorizontally(animationSpec = tween(220)) { width ->
-                                    if (direction >= 0) width / 5 else -width / 5
+                            val enter = fadeIn(animationSpec = tween(220)) +
+                                slideInHorizontally(animationSpec = tween(260)) { width ->
+                                    when {
+                                        direction > 0 -> width / 2
+                                        direction < 0 -> -width / 2
+                                        else -> 0
+                                    }
                                 }
-                            val exit = fadeOut(animationSpec = tween(160)) +
-                                slideOutHorizontally(animationSpec = tween(200)) { width ->
-                                    if (direction >= 0) -width / 6 else width / 6
+                            val exit = fadeOut(animationSpec = tween(200)) +
+                                slideOutHorizontally(animationSpec = tween(240)) { width ->
+                                    when {
+                                        direction > 0 -> -width / 3
+                                        direction < 0 -> width / 3
+                                        else -> 0
+                                    }
                                 }
                             enter togetherWith exit using SizeTransform(clip = false)
                         },
