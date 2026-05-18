@@ -2,14 +2,19 @@ package com.android.purebilibili.feature.video.ui.components
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -427,61 +432,88 @@ fun VideoCommentSheetHost(
                         ),
                     color = appearance.panelColor
                 ) {
-                    when (hostContent) {
-                        VideoCommentSheetHostContent.MAIN_LIST -> {
-                            VideoCommentMainList(
-                                viewModel = commentViewModel,
-                                showIdentityDecorations = commentMemberDecorationsEnabled,
-                                onRootCommentClick = onRootCommentClick,
-                                onReplyClick = onReplyClick,
-                                onUserClick = onUserClick,
-                                onCommentUrlClick = openCommentUrl,
-                                onTimestampClick = onTimestampClick,
-                                maxTimestampMs = maxTimestampMs,
-                                onImagePreview = previewCallback
-                            )
-                        }
-
-                        VideoCommentSheetHostContent.THREAD_DETAIL -> {
-                            val rootReply = subReplyState.rootReply
-                            if (rootReply != null) {
-                                SubReplyDetailContent(
-                                    rootReply = rootReply,
-                                    subReplies = subReplyState.items,
-                                    remoteReplyCount = subReplyState.totalCount,
-                                    isLoading = subReplyState.isLoading,
-                                    isEnd = subReplyState.isEnd,
-                                    emoteMap = emoteMap,
-                                    onLoadMore = { commentViewModel.loadMoreSubReplies() },
-                                    onDismiss = { commentViewModel.closeSubReply() },
-                                    applyStatusBarPadding = applyThreadStatusBarPadding,
-                                    onRootCommentClick = onRootCommentClick,
-                                    onTimestampClick = onTimestampClick,
-                                    upMid = subReplyState.upMid,
-                                    showUpFlag = commentState.showUpFlag,
+                    AnimatedContent(
+                        targetState = hostContent,
+                        transitionSpec = {
+                            val opensThreadDetail =
+                                initialState == VideoCommentSheetHostContent.MAIN_LIST &&
+                                    targetState == VideoCommentSheetHostContent.THREAD_DETAIL
+                            val closesThreadDetail =
+                                initialState == VideoCommentSheetHostContent.THREAD_DETAIL &&
+                                    targetState == VideoCommentSheetHostContent.MAIN_LIST
+                            val direction = when {
+                                opensThreadDetail -> 1
+                                closesThreadDetail -> -1
+                                else -> 0
+                            }
+                            val enter = fadeIn(animationSpec = tween(180)) +
+                                slideInHorizontally(animationSpec = tween(220)) { width ->
+                                    if (direction >= 0) width / 5 else -width / 5
+                                }
+                            val exit = fadeOut(animationSpec = tween(160)) +
+                                slideOutHorizontally(animationSpec = tween(200)) { width ->
+                                    if (direction >= 0) -width / 6 else width / 6
+                                }
+                            enter togetherWith exit using SizeTransform(clip = false)
+                        },
+                        label = "video_comment_host_content"
+                    ) { targetContent ->
+                        when (targetContent) {
+                            VideoCommentSheetHostContent.MAIN_LIST -> {
+                                VideoCommentMainList(
+                                    viewModel = commentViewModel,
                                     showIdentityDecorations = commentMemberDecorationsEnabled,
-                                    onImagePreview = previewCallback,
+                                    onRootCommentClick = onRootCommentClick,
                                     onReplyClick = onReplyClick,
-                                    onConversationClick = commentViewModel::openSubReplyConversation,
-                                    onConversationBack = commentViewModel::closeSubReplyConversation,
-                                    isConversationMode = subReplyState.conversationAnchor != null,
-                                    dissolvingIds = subReplyState.dissolvingIds,
-                                    currentMid = commentState.currentMid,
-                                    onDissolveStart = { rpid -> commentViewModel.startSubDissolve(rpid) },
-                                    onDeleteComment = { rpid -> commentViewModel.deleteSubComment(rpid) },
-                                    onCommentLike = commentViewModel::likeComment,
-                                    onReportComment = commentViewModel::reportComment,
-                                    likedComments = commentState.likedComments,
-                                    onUrlClick = openCommentUrl,
-                                    onAvatarClick = { mid ->
-                                        mid.toLongOrNull()?.let(onUserClick)
-                                    },
-                                    maxTimestampMs = maxTimestampMs
+                                    onUserClick = onUserClick,
+                                    onCommentUrlClick = openCommentUrl,
+                                    onTimestampClick = onTimestampClick,
+                                    maxTimestampMs = maxTimestampMs,
+                                    onImagePreview = previewCallback
                                 )
                             }
-                        }
 
-                        VideoCommentSheetHostContent.HIDDEN -> Unit
+                            VideoCommentSheetHostContent.THREAD_DETAIL -> {
+                                val rootReply = subReplyState.rootReply
+                                if (rootReply != null) {
+                                    SubReplyDetailContent(
+                                        rootReply = rootReply,
+                                        subReplies = subReplyState.items,
+                                        remoteReplyCount = subReplyState.totalCount,
+                                        isLoading = subReplyState.isLoading,
+                                        isEnd = subReplyState.isEnd,
+                                        emoteMap = emoteMap,
+                                        onLoadMore = { commentViewModel.loadMoreSubReplies() },
+                                        onDismiss = { commentViewModel.closeSubReply() },
+                                        applyStatusBarPadding = applyThreadStatusBarPadding,
+                                        onRootCommentClick = onRootCommentClick,
+                                        onTimestampClick = onTimestampClick,
+                                        upMid = subReplyState.upMid,
+                                        showUpFlag = commentState.showUpFlag,
+                                        showIdentityDecorations = commentMemberDecorationsEnabled,
+                                        onImagePreview = previewCallback,
+                                        onReplyClick = onReplyClick,
+                                        onConversationClick = commentViewModel::openSubReplyConversation,
+                                        onConversationBack = commentViewModel::closeSubReplyConversation,
+                                        isConversationMode = subReplyState.conversationAnchor != null,
+                                        dissolvingIds = subReplyState.dissolvingIds,
+                                        currentMid = commentState.currentMid,
+                                        onDissolveStart = { rpid -> commentViewModel.startSubDissolve(rpid) },
+                                        onDeleteComment = { rpid -> commentViewModel.deleteSubComment(rpid) },
+                                        onCommentLike = commentViewModel::likeComment,
+                                        onReportComment = commentViewModel::reportComment,
+                                        likedComments = commentState.likedComments,
+                                        onUrlClick = openCommentUrl,
+                                        onAvatarClick = { mid ->
+                                            mid.toLongOrNull()?.let(onUserClick)
+                                        },
+                                        maxTimestampMs = maxTimestampMs
+                                    )
+                                }
+                            }
+
+                            VideoCommentSheetHostContent.HIDDEN -> Unit
+                        }
                     }
                 }
             }

@@ -1,6 +1,8 @@
 package com.android.purebilibili.feature.video.ui.components
 
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -302,6 +304,10 @@ internal fun resolveReplyThreadCount(item: ReplyItem): Int {
         item.rcount,
         item.replies.orEmpty().size
     ).coerceAtLeast(0)
+}
+
+internal fun shouldOpenReplyThreadFromRootClick(item: ReplyItem): Boolean {
+    return resolveReplyThreadCount(item) > 0
 }
 
 internal fun resolveSubReplyPreviewSummaryLabel(
@@ -992,6 +998,9 @@ fun ReplyItemView(
             hasUpReply = hasUpSubReply
         )
     }
+    val openThreadFromRootClick = remember(item.count, item.rcount, item.replies) {
+        shouldOpenReplyThreadFromRootClick(item)
+    }
     val copyToClipboard = rememberClipboardCopyHandler()
     var showActionSheet by remember(item.rpid) { mutableStateOf(false) }
     var showFreeCopyDialog by remember(item.rpid) { mutableStateOf(false) }
@@ -1076,7 +1085,13 @@ fun ReplyItemView(
             .fillMaxWidth()
             .background(appearance.panelColor)
             .combinedClickable(
-                onClick = onClick,
+                onClick = {
+                    if (openThreadFromRootClick) {
+                        onSubClick(item)
+                    } else {
+                        onClick()
+                    }
+                },
                 onLongClick = {
                     onLongClick?.invoke()
                     showActionSheet = true
@@ -1277,6 +1292,7 @@ fun ReplyItemView(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .animateContentSize(animationSpec = tween(durationMillis = 180))
                             .clip(RoundedCornerShape(6.dp))
                             .background(appearance.composerHintBackgroundColor)
                             .padding(horizontal = 8.dp, vertical = 6.dp),

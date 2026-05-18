@@ -260,6 +260,31 @@ class ReplyComponentsPolicyTest {
     }
 
     @Test
+    fun `root click opens thread only when reply has nested replies`() {
+        assertTrue(
+            shouldOpenReplyThreadFromRootClick(
+                ReplyItem(
+                    rcount = 1,
+                    content = ReplyContent(message = "has remote thread")
+                )
+            )
+        )
+        assertTrue(
+            shouldOpenReplyThreadFromRootClick(
+                ReplyItem(
+                    replies = listOf(ReplyItem(rpid = 11L)),
+                    content = ReplyContent(message = "has preview thread")
+                )
+            )
+        )
+        assertFalse(
+            shouldOpenReplyThreadFromRootClick(
+                ReplyItem(content = ReplyContent(message = "plain comment"))
+            )
+        )
+    }
+
+    @Test
     fun `buildReplyCommentShareText includes author message and comment url`() {
         val text = buildReplyCommentShareText(
             ReplyItem(
