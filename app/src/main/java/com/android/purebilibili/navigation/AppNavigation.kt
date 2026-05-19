@@ -1318,6 +1318,7 @@ fun AppNavigation(
                                 onBack = { navigateToBottomPagerItem(BottomNavItem.HOME) },
                                 globalHazeState = mainHazeState,
                                 scrollToTopChannel = historyScrollChannel,
+                                onUpClick = { mid -> navController.navigate(ScreenRoutes.Space.createRoute(mid)) },
                                 onVideoClick = { lookupKey, cid, cover ->
                                     val historyItem = historyViewModel.getHistoryItem(lookupKey)
                                     val resolvedCid = resolveHistoryPlaybackCid(
@@ -1964,6 +1965,7 @@ fun AppNavigation(
                     onBack = { navController.popBackStack() },
                     globalHazeState = mainHazeState, // [新增] 传入全局 HazeState
                     scrollToTopChannel = historyScrollChannel,
+                    onUpClick = { mid -> navController.navigate(ScreenRoutes.Space.createRoute(mid)) },
                     onVideoClick = { lookupKey, cid, cover ->
                         // [修复] 根据历史记录类型导航到不同页面
                         val historyItem = historyViewModel.getHistoryItem(lookupKey)

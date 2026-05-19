@@ -97,7 +97,6 @@ import com.android.purebilibili.core.util.LocalWindowSizeClass
 import com.android.purebilibili.core.util.rememberAdaptiveGridColumns
 import com.android.purebilibili.core.util.rememberResponsiveSpacing
 import com.android.purebilibili.core.util.rememberResponsiveValue
-import com.android.purebilibili.core.util.PinyinUtils
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.data.model.response.HistoryBusiness
 import com.android.purebilibili.data.model.response.HistoryItem
@@ -161,6 +160,7 @@ fun CommonListScreen(
     viewModel: BaseListViewModel,
     onBack: () -> Unit,
     onVideoClick: (String, Long, String) -> Unit,
+    onUpClick: ((Long) -> Unit)? = null,
     onCollectionClick: ((Long, Long, String, String) -> Unit)? = null,
     onFavoriteFolderClick: ((Long, Long, String, String) -> Unit)? = null,
     onPlayAllAudioClick: ((String, Long) -> Unit)? = null,
@@ -213,6 +213,10 @@ fun CommonListScreen(
     val isHistoryPaused by historyViewModel?.isHistoryPausedState?.collectAsState(context = kotlin.coroutines.EmptyCoroutineContext)
         ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val isHistoryManagementBusy by historyViewModel?.isHistoryManagementBusyState?.collectAsState(context = kotlin.coroutines.EmptyCoroutineContext)
+        ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val historyHasMore by historyViewModel?.hasMoreState?.collectAsState(context = kotlin.coroutines.EmptyCoroutineContext)
+        ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val historyIsLoadingMore by historyViewModel?.isLoadingMoreState?.collectAsState(context = kotlin.coroutines.EmptyCoroutineContext)
         ?: androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var isHistoryBatchMode by rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     var selectedHistoryKeys by rememberSaveable { androidx.compose.runtime.mutableStateOf(setOf<String>()) }
@@ -733,6 +737,12 @@ fun CommonListScreen(
                         onUnfavorite = if (favoriteViewModel != null) {
                             { favoriteViewModel.removeVideo(it) }
                         } else null,
+                        onUpClick = if (historyViewModel != null && !isHistoryBatchMode) {
+                            onUpClick
+                        } else null,
+                        searchPaginationFallbackEnabled = historyViewModel != null,
+                        hasMoreSearchResults = historyHasMore,
+                        isLoadingMoreSearchResults = historyIsLoadingMore,
                         historyDeleteSession = historyDeleteSession,
                         historyBatchMode = historyViewModel != null && isHistoryBatchMode,
                         historySelectedKeys = selectedHistoryKeys,
@@ -1251,6 +1261,10 @@ private fun CommonListContent(
     onHistoryLongDelete: ((String) -> Unit)? = null,
     onHistoryDissolveComplete: ((String) -> Unit)? = null,
     onHistoryToggleSelect: ((String) -> Unit)? = null,
+    onUpClick: ((Long) -> Unit)? = null,
+    searchPaginationFallbackEnabled: Boolean = false,
+    hasMoreSearchResults: Boolean = false,
+    isLoadingMoreSearchResults: Boolean = false,
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState? = null
 ) {
     val resolvedGridState = gridState ?: rememberLazyGridState()
@@ -1282,12 +1296,26 @@ private fun CommonListContent(
         }
     } else {
         val filteredItems = androidx.compose.runtime.remember(items, searchQuery) {
-            if (searchQuery.isBlank()) items
-            else {
-                items.filter {
-                    PinyinUtils.matches(it.title, searchQuery) ||
-                    PinyinUtils.matches(it.owner.name, searchQuery)
-                }
+            filterCommonListVideosByQuery(items, searchQuery)
+        }
+        LaunchedEffect(
+            searchPaginationFallbackEnabled,
+            searchQuery,
+            items.size,
+            filteredItems.size,
+            hasMoreSearchResults,
+            isLoadingMoreSearchResults
+        ) {
+            if (
+                searchPaginationFallbackEnabled &&
+                shouldLoadMoreCommonListSearchResults(
+                    searchQuery = searchQuery,
+                    filteredItemCount = filteredItems.size,
+                    hasMore = hasMoreSearchResults,
+                    isLoadingMore = isLoadingMoreSearchResults
+                )
+            ) {
+                onLoadMore()
             }
         }
 
@@ -1413,6 +1441,7 @@ private fun CommonListContent(
                                         }
                                     },
                                     onUnfavorite = if (onUnfavorite != null) { { onUnfavorite(video) } } else null,
+                                    onUpClick = onUpClick,
                                     onLongClick = if (!historyBatchMode && supportsHistoryDissolve) {
                                         { onHistoryLongDelete?.invoke(historyKey) }
                                     } else null

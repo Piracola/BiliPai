@@ -187,6 +187,7 @@ fun ElegantVideoCard(
     onUnfavorite: (() -> Unit)? = null,  //  [新增] 取消收藏回调
     dismissMenuText: String = "\uD83D\uDEAB 不感兴趣", //  [新增] 自定义长按菜单删除文案
     onLongClick: ((VideoItem) -> Unit)? = null, // [Feature] Long Press Preview
+    onUpClick: ((Long) -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClick: (String, Long) -> Unit
 ) {
@@ -949,7 +950,11 @@ fun ElegantVideoCard(
         ) {
             //  [HIG] UP主名称 - 13sp footnote 标准
             //  共享元素过渡 - UP主名称
+            val upClickMid = video.owner.mid.takeIf { it > 0L && onUpClick != null }
             var upNameModifier = Modifier.weight(1f, fill = false)
+            if (upClickMid != null) {
+                upNameModifier = upNameModifier.clickable { onUpClick?.invoke(upClickMid) }
+            }
             
             if (metadataSharedEnabled) {
                 with(requireNotNull(sharedTransitionScope)) {
