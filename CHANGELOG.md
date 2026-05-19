@@ -1,5 +1,27 @@
 # Changelog
 
+## v8.3.5 (2026-05-20)
+
+### 版本信息
+- 版本号从 `8.3.4` 升级到 `8.3.5`，`versionCode` 升级到 `199`。
+- 本次为“空间动态长图文、动态评论数量与评论区选择、空间页稳定性、历史与搜索补全”的维护更新，汇总 8.3.4 到 8.3.5 的全部改动。
+
+### 更新内容
+- **空间动态长图文**：修复 TDS 音频体验等 UP 空间里长图文只显示图片、不显示正文和评论数量的问题；空间动态 article 会把标题与摘要合成到动态正文槽位，保留封面、跳转、转发、评论和点赞计数。
+- **长图文全文跳转与图片加载**：`/opus/` 长图文链接现在直接进入动态详情全文，不再误走旧专栏兜底；兼容 `opus.pics.url` 图片字段，修复空间长图文图片只显示灰色占位的问题。
+- **动态评论数量与评论区选择**：评论按钮在手机窄槽位也保留非 0 数量；打开评论时会按列表页评论数选择最接近的评论区候选，减少动态图文在 `type=17` 与旧评论区之间选错导致数量不一致的问题。
+- **空间页稳定性**：修复空间页 LazyGrid 共享过渡崩溃、合集外层内容为空，以及充电视频/充电动态提示展示，减少空间页进入、滚动和卡片展示异常。
+- **历史与搜索补全**：修复观看历史里的 UP 跳转，搜索列表补充分页加载策略，减少搜索结果只显示首屏或历史入口无法正确进入 UP 空间的问题。
+- **版本与文档同步**：版本号升级到 `8.3.5` / `versionCode 199`，README、README_EN 和更新日志同步到 8.3.5。
+- **回归覆盖**：新增或更新空间动态模型解析、动态接口契约、空间动态加载/导航、动态评论候选选择、动态操作按钮、空间页合集/充电提示、观看历史 UP 跳转和搜索补页等测试。
+
+### 验证
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.data.model.response.SpaceModelsParsingTest' --tests 'com.android.purebilibili.feature.space.SpaceDynamicLoadPolicyTest' --tests 'com.android.purebilibili.core.network.DynamicApiContractTest'`
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.feature.dynamic.DynamicCommentLoadPolicyTest' --tests 'com.android.purebilibili.feature.dynamic.DynamicInteractionPolicyTest' --tests 'com.android.purebilibili.feature.space.SpaceDynamicLoadPolicyTest'`
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.feature.dynamic.DynamicLayoutPolicyTest' --tests 'com.android.purebilibili.feature.space.SpaceDynamicLoadPolicyTest' --tests 'com.android.purebilibili.data.model.response.SpaceModelsParsingTest'`
+- `./gradlew :app:compileDebugKotlin`
+- `git diff --check`
+
 ## v8.3.4 (2026-05-19)
 
 ### 版本信息

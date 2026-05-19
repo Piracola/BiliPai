@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-05-19 · Synced to v8.3.4 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-05-20 · Synced to v8.3.5 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-8.3.4-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-8.3.5-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -432,15 +432,14 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v8.3.4 · 2026-05-19)
+### Latest (v8.3.5 · 2026-05-20)
 
-- Removed nested-reply blur, fixed nested-reply pagination and motion crashes, added a pull-down close handle, and improved nested-reply scrolling, text expansion, and drag-to-dismiss behavior.
-- Reworked portrait comment/player coordination and fixed alignment when portrait comments transition into landscape playback.
-- Fixed Space long-article rendering and tightened Space dynamic models, article block parsing, navigation, and loading policies.
-- Fixed first-use portrait danmaku settings, double-tap seek hint timing, auto rotation sensitivity, and portrait/landscape video positioning.
-- Fixed audio backup-source selection by matching backup URLs to the currently selected audio track, reducing silent playback that only recovers after toggling Auto / 192K.
-- Maintained AGP, Kotlin, Compose BOM, Lifecycle, Activity Compose, Window, and Compose Animation with a smoothness-first, low-risk dependency policy.
-- Bumped the app to `8.3.4` with `versionCode` `198`.
+- Fixed Space dynamic long-article cards so text, comment counts, cover images, and `/opus/` full-detail navigation work for TDS-style posts.
+- Kept non-zero comment counts visible on compact mobile action buttons, and selected the comment target that best matches the feed-side count.
+- Fixed Space LazyGrid shared-transition crashes, empty outer collection content, and charge-video / charge-dynamic badges.
+- Fixed UP navigation from watch history and added paginated search-result loading.
+- Added or updated regression coverage for Space dynamic parsing, dynamic API contracts, comment-target selection, action buttons, Space screens, and search pagination.
+- Bumped the app to `8.3.5` with `versionCode` `199`.
 
 ---
 
