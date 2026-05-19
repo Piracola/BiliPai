@@ -138,4 +138,70 @@ class VideoCommentSheetHostPolicyTest {
             )
         )
     }
+
+    @Test
+    fun `sheet vertical drag follows finger down and back up while offset is positive`() {
+        assertTrue(
+            shouldHandleVideoCommentSheetVerticalDrag(
+                dragAmountPx = 36f,
+                currentOffsetPx = 0f
+            )
+        )
+        assertEquals(
+            36f,
+            resolveVideoCommentSheetDragTargetOffset(
+                currentOffsetPx = 0f,
+                dragAmountPx = 36f
+            )
+        )
+
+        assertTrue(
+            shouldHandleVideoCommentSheetVerticalDrag(
+                dragAmountPx = -14f,
+                currentOffsetPx = 36f
+            )
+        )
+        assertEquals(
+            22f,
+            resolveVideoCommentSheetDragTargetOffset(
+                currentOffsetPx = 36f,
+                dragAmountPx = -14f
+            )
+        )
+        assertEquals(
+            0f,
+            resolveVideoCommentSheetDragTargetOffset(
+                currentOffsetPx = 8f,
+                dragAmountPx = -16f
+            )
+        )
+    }
+
+    @Test
+    fun `sheet vertical drag ignores upward drag before the sheet has been pulled`() {
+        assertFalse(
+            shouldHandleVideoCommentSheetVerticalDrag(
+                dragAmountPx = -12f,
+                currentOffsetPx = 0f
+            )
+        )
+    }
+
+    @Test
+    fun `sheet drag start keeps the currently rendered offset to support interruption`() {
+        assertEquals(
+            40f,
+            resolveVideoCommentSheetDragStartOffset(
+                renderedOffsetPx = 40f,
+                targetOffsetPx = 0f
+            )
+        )
+        assertEquals(
+            56f,
+            resolveVideoCommentSheetDragStartOffset(
+                renderedOffsetPx = 40f,
+                targetOffsetPx = 56f
+            )
+        )
+    }
 }

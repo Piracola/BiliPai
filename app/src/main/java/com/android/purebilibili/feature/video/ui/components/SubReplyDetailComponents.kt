@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -57,11 +56,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +74,6 @@ import com.android.purebilibili.data.model.response.ReplyItem
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextContent
 import com.android.purebilibili.core.ui.animation.MaybeDissolvableVideoCard
 import com.android.purebilibili.core.ui.common.rememberClipboardCopyHandler
-import com.android.purebilibili.core.ui.rememberAppChevronDownIcon
 import com.android.purebilibili.core.ui.rememberAppLikeFilledIcon
 import com.android.purebilibili.core.ui.rememberAppLikeIcon
 import com.android.purebilibili.feature.video.viewmodel.CommentUiState
@@ -91,7 +87,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 const val SUB_REPLY_DETAIL_HEADER_TAG = "subreply_detail_header"
-const val SUB_REPLY_DETAIL_DISMISS_HANDLE_TAG = "subreply_detail_dismiss_handle"
 const val SUB_REPLY_DETAIL_CLOSE_TAG = "subreply_detail_close"
 const val SUB_REPLY_DETAIL_ROOT_TAG = "subreply_detail_root"
 const val SUB_REPLY_DETAIL_LIST_TAG = "subreply_detail_reply_list"
@@ -101,7 +96,6 @@ const val SUB_REPLY_DETAIL_CONVERSATION_TAG_PREFIX = "subreply_detail_conversati
 const val SUB_REPLY_DETAIL_IMAGE_TAG_PREFIX = "subreply_detail_image_"
 
 private val SUB_REPLY_DIRECTED_MESSAGE_PATTERN = Regex("""^\s*回复\s*@.+?[：:]""")
-private const val SUB_REPLY_DETAIL_DISMISS_DRAG_THRESHOLD_DP = 72
 
 internal data class SubReplyDetailLayoutPolicy(
     val listBottomPaddingDp: Int,
@@ -165,13 +159,6 @@ internal fun resolveSubReplyDetailRevealSpec(
         initialBlurRadiusDp = 0f,
         initialOffsetDp = 14
     )
-}
-
-internal fun shouldDismissSubReplyByVerticalDrag(
-    dragDistancePx: Float,
-    thresholdPx: Float
-): Boolean {
-    return dragDistancePx >= thresholdPx.coerceAtLeast(0f)
 }
 
 internal fun resolveSubReplyDetailSectionTitle(replyCount: Int): String {
@@ -470,11 +457,6 @@ internal fun SubReplyDetailContent(
                     )
                 }
             }
-            SubReplyDismissDragHandle(
-                appearance = appearance,
-                onDismiss = onDismiss,
-                modifier = Modifier.align(Alignment.Center)
-            )
         }
         HorizontalDivider(thickness = 0.5.dp, color = appearance.dividerColor)
 
@@ -1009,76 +991,6 @@ private fun SubReplyDetailItem(
                 color = appearance.dividerColor
             )
         }
-    }
-}
-
-@Composable
-private fun SubReplyDismissDragHandle(
-    appearance: SubReplyDetailAppearance,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val chevronDownIcon = rememberAppChevronDownIcon()
-    val density = LocalDensity.current
-    val thresholdPx = remember(density) {
-        with(density) { SUB_REPLY_DETAIL_DISMISS_DRAG_THRESHOLD_DP.dp.toPx() }
-    }
-    var dragDistancePx by remember { mutableStateOf(0f) }
-    val visualOffsetPx = dragDistancePx
-        .coerceIn(0f, thresholdPx)
-        .times(0.45f)
-
-    Column(
-        modifier = modifier
-            .width(72.dp)
-            .height(48.dp)
-            .graphicsLayer {
-                translationY = visualOffsetPx
-            }
-            .clip(RoundedCornerShape(24.dp))
-            .background(appearance.secondaryTextColor.copy(alpha = 0.08f))
-            .clickable(onClick = onDismiss)
-            .pointerInput(thresholdPx, onDismiss) {
-                detectVerticalDragGestures(
-                    onDragStart = {
-                        dragDistancePx = 0f
-                    },
-                    onVerticalDrag = { change, dragAmount ->
-                        dragDistancePx = (dragDistancePx + dragAmount).coerceAtLeast(0f)
-                        change.consume()
-                    },
-                    onDragCancel = {
-                        dragDistancePx = 0f
-                    },
-                    onDragEnd = {
-                        val shouldDismiss = shouldDismissSubReplyByVerticalDrag(
-                            dragDistancePx = dragDistancePx,
-                            thresholdPx = thresholdPx
-                        )
-                        dragDistancePx = 0f
-                        if (shouldDismiss) {
-                            onDismiss()
-                        }
-                    }
-                )
-            }
-            .testTag(SUB_REPLY_DETAIL_DISMISS_HANDLE_TAG),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .width(26.dp)
-                .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(appearance.secondaryTextColor.copy(alpha = 0.55f))
-        )
-        Icon(
-            imageVector = chevronDownIcon,
-            contentDescription = "下拉关闭楼中楼",
-            tint = appearance.secondaryTextColor,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 

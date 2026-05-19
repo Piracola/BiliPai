@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -86,6 +87,7 @@ import com.android.purebilibili.feature.video.ui.pager.shouldOpenPortraitComment
 import com.android.purebilibili.feature.video.viewmodel.CommentSortMode
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 private const val MAIN_COMMENT_SHEET_HEIGHT_FRACTION = 0.60f
@@ -153,6 +155,27 @@ internal fun shouldDismissVideoCommentSheetHostOnBackdropTap(
     return mainSheetVisible
 }
 
+internal fun shouldHandleVideoCommentSheetVerticalDrag(
+    dragAmountPx: Float,
+    currentOffsetPx: Float
+): Boolean {
+    return dragAmountPx > 0f || currentOffsetPx > 0f
+}
+
+internal fun resolveVideoCommentSheetDragTargetOffset(
+    currentOffsetPx: Float,
+    dragAmountPx: Float
+): Float {
+    return (currentOffsetPx + dragAmountPx).coerceAtLeast(0f)
+}
+
+internal fun resolveVideoCommentSheetDragStartOffset(
+    renderedOffsetPx: Float,
+    targetOffsetPx: Float
+): Float {
+    return max(renderedOffsetPx, targetOffsetPx).coerceAtLeast(0f)
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun VideoCommentSheetHost(
@@ -218,24 +241,25 @@ fun VideoCommentSheetHost(
     val uiPreset = LocalUiPreset.current
     val motionSpec = remember(uiPreset) { resolveAdaptiveBottomSheetMotionSpec(uiPreset) }
     val appearance = rememberVideoCommentAppearance()
-    var isDraggingMainSheet by remember { mutableStateOf(false) }
-    var mainSheetDragTargetOffsetPx by remember { mutableStateOf(0f) }
+    var isDraggingSheet by remember { mutableStateOf(false) }
+    var sheetDragTargetOffsetPx by remember { mutableStateOf(0f) }
     var mainSheetMeasuredHeightPx by remember { mutableStateOf(0f) }
-    val mainSheetDragOffsetPx by animateFloatAsState(
-        targetValue = mainSheetDragTargetOffsetPx,
-        animationSpec = tween(durationMillis = if (isDraggingMainSheet) 0 else 180),
+    val sheetDragOffsetPx by animateFloatAsState(
+        targetValue = sheetDragTargetOffsetPx,
+        animationSpec = tween(durationMillis = if (isDraggingSheet) 0 else 180),
         label = "video_comment_main_sheet_offset"
     )
+    val latestSheetDragOffsetPx = rememberUpdatedState(sheetDragOffsetPx)
     val mainSheetVisibilityProgress = remember(
         hostContent,
         mainSheetVisible,
-        mainSheetDragOffsetPx,
+        sheetDragOffsetPx,
         mainSheetMeasuredHeightPx
     ) {
         when {
-            hostContent == VideoCommentSheetHostContent.MAIN_LIST && mainSheetVisible ->
+            hostContent != VideoCommentSheetHostContent.HIDDEN && mainSheetVisible ->
                 resolvePortraitCommentVisibilityProgress(
-                    sheetOffsetPx = mainSheetDragOffsetPx,
+                    sheetOffsetPx = sheetDragOffsetPx,
                     sheetHeightPx = mainSheetMeasuredHeightPx
                 )
             hostContent == VideoCommentSheetHostContent.THREAD_DETAIL -> 1f
@@ -245,6 +269,13 @@ fun VideoCommentSheetHost(
 
     LaunchedEffect(mainSheetVisible, hostContent, mainSheetVisibilityProgress) {
         onMainSheetVisibilityProgressChange(mainSheetVisibilityProgress)
+    }
+
+    LaunchedEffect(hostVisible) {
+        if (!hostVisible) {
+            isDraggingSheet = false
+            sheetDragTargetOffsetPx = 0f
+        }
     }
 
     var fallbackPreviewVisible by remember { mutableStateOf(false) }
@@ -391,37 +422,52 @@ fun VideoCommentSheetHost(
                         .onSizeChanged { size ->
                             mainSheetMeasuredHeightPx = size.height.toFloat()
                         }
-                        .offset { IntOffset(x = 0, y = mainSheetDragOffsetPx.roundToInt()) }
+                        .offset { IntOffset(x = 0, y = sheetDragOffsetPx.roundToInt()) }
                         .pointerInput(mainSheetVisible, hostContent, mainSheetMeasuredHeightPx) {
-                            if (!mainSheetVisible || hostContent != VideoCommentSheetHostContent.MAIN_LIST) {
+                            if (hostContent == VideoCommentSheetHostContent.HIDDEN) {
                                 return@pointerInput
                             }
                             detectVerticalDragGestures(
                                 onDragStart = {
-                                    isDraggingMainSheet = true
+                                    isDraggingSheet = true
+                                    sheetDragTargetOffsetPx = resolveVideoCommentSheetDragStartOffset(
+                                        renderedOffsetPx = latestSheetDragOffsetPx.value,
+                                        targetOffsetPx = sheetDragTargetOffsetPx
+                                    )
                                 },
                                 onVerticalDrag = { change, dragAmount ->
-                                    if (dragAmount > 0f || mainSheetDragTargetOffsetPx > 0f) {
+                                    if (
+                                        shouldHandleVideoCommentSheetVerticalDrag(
+                                            dragAmountPx = dragAmount,
+                                            currentOffsetPx = sheetDragTargetOffsetPx
+                                        )
+                                    ) {
                                         change.consume()
-                                        mainSheetDragTargetOffsetPx =
-                                            (mainSheetDragTargetOffsetPx + dragAmount).coerceAtLeast(0f)
+                                        sheetDragTargetOffsetPx = resolveVideoCommentSheetDragTargetOffset(
+                                            currentOffsetPx = sheetDragTargetOffsetPx,
+                                            dragAmountPx = dragAmount
+                                        )
                                     }
                                 },
                                 onDragEnd = {
-                                    isDraggingMainSheet = false
+                                    isDraggingSheet = false
                                     if (
                                         shouldDismissPortraitCommentSheetByDrag(
-                                            sheetOffsetPx = mainSheetDragTargetOffsetPx,
+                                            sheetOffsetPx = sheetDragTargetOffsetPx,
                                             sheetHeightPx = mainSheetMeasuredHeightPx
                                         )
                                     ) {
-                                        onDismiss()
+                                        if (hostContent == VideoCommentSheetHostContent.THREAD_DETAIL) {
+                                            commentViewModel.closeSubReply()
+                                        } else {
+                                            onDismiss()
+                                        }
                                     }
-                                    mainSheetDragTargetOffsetPx = 0f
+                                    sheetDragTargetOffsetPx = 0f
                                 },
                                 onDragCancel = {
-                                    isDraggingMainSheet = false
-                                    mainSheetDragTargetOffsetPx = 0f
+                                    isDraggingSheet = false
+                                    sheetDragTargetOffsetPx = 0f
                                 }
                             )
                         }
