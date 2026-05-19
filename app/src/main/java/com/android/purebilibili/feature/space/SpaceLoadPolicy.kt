@@ -47,6 +47,16 @@ internal fun resolveSpaceSearchPlaceholder(scope: SpaceSearchScope): String {
     }
 }
 
+internal fun shouldEnableSpaceLazyGridSharedTransition(
+    hasSharedTransitionScope: Boolean,
+    hasAnimatedVisibilityScope: Boolean
+): Boolean {
+    // 空间页主体是 LazyVerticalGrid；在共享边界过渡叠加 Miuix overscroll 时，
+    // Compose 布局阶段可能重复 place 同一个节点，稳定性优先于跨页视觉过渡。
+    if (!hasSharedTransitionScope || !hasAnimatedVisibilityScope) return false
+    return false
+}
+
 internal fun shouldApplySpaceLoadResult(
     requestMid: Long,
     activeMid: Long,

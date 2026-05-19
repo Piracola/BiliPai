@@ -639,6 +639,14 @@ private fun SpaceContent(
             selectedSubTab = state.selectedSubTab
         )
     }
+    val lazyGridSharedTransitionEnabled = remember(sharedTransitionScope, animatedVisibilityScope) {
+        shouldEnableSpaceLazyGridSharedTransition(
+            hasSharedTransitionScope = sharedTransitionScope != null,
+            hasAnimatedVisibilityScope = animatedVisibilityScope != null
+        )
+    }
+    val lazyGridSharedTransitionScope = sharedTransitionScope.takeIf { lazyGridSharedTransitionEnabled }
+    val lazyGridAnimatedVisibilityScope = animatedVisibilityScope.takeIf { lazyGridSharedTransitionEnabled }
     var contributionVideoLayoutMode by rememberSaveable(state.userInfo.mid) {
         mutableStateOf(defaultSpaceContributionVideoLayoutMode())
     }
@@ -744,8 +752,8 @@ private fun SpaceContent(
                     onTopPhotoClick = onTopPhotoClick,
                     onAvatarClick = onAvatarClick,
                     onLiveClick = { url, title -> onWebClick(url, title) },
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope
+                    sharedTransitionScope = lazyGridSharedTransitionScope,
+                    animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                 )
             }
 
@@ -1172,8 +1180,8 @@ private fun SpaceContent(
                                             badgeLabel = resolveSpaceVideoChargeBadgeLabel(video),
                                             onClick = { playVideoFromSpace(video.bvid) },
                                             sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(video.bvid),
-                                            sharedTransitionScope = sharedTransitionScope,
-                                            animatedVisibilityScope = animatedVisibilityScope
+                                            sharedTransitionScope = lazyGridSharedTransitionScope,
+                                            animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                                         )
                                     }
                                 }
@@ -1300,8 +1308,8 @@ private fun SpaceContent(
                                     )
                                 },
                                 sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(archive.bvid),
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope
+                                sharedTransitionScope = lazyGridSharedTransitionScope,
+                                animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                             )
                         }
                     }
@@ -1353,8 +1361,8 @@ private fun SpaceContent(
                                     )
                                 },
                                 sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(archive.bvid),
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope
+                                sharedTransitionScope = lazyGridSharedTransitionScope,
+                                animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                             )
                         }
                     }
