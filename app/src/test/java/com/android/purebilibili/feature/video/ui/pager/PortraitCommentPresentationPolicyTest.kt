@@ -83,6 +83,22 @@ class PortraitCommentPresentationPolicyTest {
     }
 
     @Test
+    fun `portrait comment transform keeps landscape video centered when sheet is collapsed`() {
+        val transform = resolvePortraitCommentPlayerTransform(
+            commentVisibilityProgress = 0f,
+            containerWidthPx = 600,
+            containerHeightPx = 1000,
+            currentVideoAspect = 16f / 9f,
+            viewportVerticalOffsetPx = -48f,
+            fillContainer = false
+        )
+
+        assertEquals(1f, transform.scale, 0.001f)
+        assertEquals(0f, transform.translationYPx, 0.001f)
+        assertTrue(transform.playerGesturesEnabled)
+    }
+
+    @Test
     fun `portrait comment transform aligns landscape video viewport bottom to sheet top`() {
         val containerWidth = 600
         val containerHeight = 1000

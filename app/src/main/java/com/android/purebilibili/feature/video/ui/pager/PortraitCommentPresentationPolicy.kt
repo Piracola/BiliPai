@@ -72,7 +72,9 @@ internal fun resolvePortraitCommentPlayerTransform(
             viewportVerticalOffsetPx = viewportVerticalOffsetPx,
             fillContainer = fillContainer
         )
-        visibleBottomPx - videoBottomPx * scale
+        val targetTranslationPx = visibleBottomPx - videoBottomPx * scale
+        val collapsedTranslationPx = containerHeightPx.toFloat() - videoBottomPx
+        targetTranslationPx - collapsedTranslationPx * (1f - progress)
     } else {
         0f
     }
