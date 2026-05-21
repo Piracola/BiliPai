@@ -83,6 +83,20 @@ class HomeBottomBarScrollPolicyTest {
     }
 
     @Test
+    fun videoNavigation_afterContentInteractionRestore_usesScrollDirectionNormally() {
+        val update = reduceHomeBottomBarListScroll(
+            previousState = HomeBottomBarScrollState(firstVisibleItem = 2, scrollOffset = 120),
+            firstVisibleItem = 4,
+            scrollOffset = 60,
+            isVideoNavigating = true,
+            contentInteractionRestored = true
+        )
+
+        assertEquals(BottomBarVisibilityIntent.HIDE, update.visibilityIntent)
+        assertEquals(HomeBottomBarScrollState(firstVisibleItem = 4, scrollOffset = 60), update.state)
+    }
+
+    @Test
     fun chromeScrollOffset_usesCurrentOffsetAtTopAndSaturatesPastFirstItem() {
         assertEquals(
             0f,

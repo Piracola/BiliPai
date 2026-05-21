@@ -892,6 +892,19 @@ fun HomeScreen(
     
     //  [修复] 跟踪是否正在导航到/从视频页 - 必须在 LaunchedEffect 之前声明
     var isVideoNavigating by remember { mutableStateOf(false) }
+    var isHomeContentInteractionRestored by remember { mutableStateOf(true) }
+
+    LaunchedEffect(isReturningFromVideoDetail, cardTransitionEnabled, isQuickReturningFromVideoDetail) {
+        if (!isReturningFromVideoDetail) return@LaunchedEffect
+        val restoreDelayMs = resolveHomeContentInteractionRestoreDelayMs(
+            cardTransitionEnabled = cardTransitionEnabled,
+            isQuickReturnFromDetail = isQuickReturningFromVideoDetail
+        )
+        if (restoreDelayMs > 0L) {
+            delay(restoreDelayMs)
+        }
+        isHomeContentInteractionRestored = true
+    }
     
     //  [新增] 滚动方向检测状态（用于上滑隐藏模式）
     var bottomBarScrollState by remember(state.currentCategory) {
@@ -924,7 +937,8 @@ fun HomeScreen(
                 previousState = bottomBarScrollState,
                 firstVisibleItem = firstVisibleItem,
                 scrollOffset = scrollOffset,
-                isVideoNavigating = isVideoNavigating
+                isVideoNavigating = isVideoNavigating,
+                contentInteractionRestored = isHomeContentInteractionRestored
             )
 
             bottomBarScrollState = scrollUpdate.state
@@ -1105,6 +1119,7 @@ fun HomeScreen(
             delayTopTabsUntilCardSettled = false
             setBottomBarVisible(false)
             isVideoNavigating = true
+            isHomeContentInteractionRestored = false
             onVideoClick(request)
         }
     }
@@ -2035,4 +2050,13 @@ internal fun resolveBottomBarRestoreDelayMs(
     if (!cardTransitionEnabled) return 150L
     if (isQuickReturnFromDetail) return 340L
     return 380L
+}
+
+internal fun resolveHomeContentInteractionRestoreDelayMs(
+    cardTransitionEnabled: Boolean,
+    isQuickReturnFromDetail: Boolean
+): Long {
+    // 视觉返场保护仍由 suppression / 底栏恢复窗口负责；
+    // 首页列表手势应在页面重新可见时立即恢复，避免第一下滑动被导航态吞掉。
+    return 0L
 }

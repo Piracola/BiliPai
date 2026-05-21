@@ -15,6 +15,7 @@ internal fun reduceHomeBottomBarListScroll(
     firstVisibleItem: Int,
     scrollOffset: Int,
     isVideoNavigating: Boolean,
+    contentInteractionRestored: Boolean = false,
     topRevealThresholdPx: Int = 100,
     offsetHysteresisPx: Int = 200
 ): HomeBottomBarScrollUpdate {
@@ -22,7 +23,7 @@ internal fun reduceHomeBottomBarListScroll(
         firstVisibleItem = firstVisibleItem,
         scrollOffset = scrollOffset
     )
-    if (isVideoNavigating) {
+    if (isVideoNavigating && !contentInteractionRestored) {
         return HomeBottomBarScrollUpdate(
             state = nextState,
             visibilityIntent = null
