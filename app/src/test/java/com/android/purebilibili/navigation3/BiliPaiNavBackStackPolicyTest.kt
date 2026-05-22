@@ -1,8 +1,11 @@
 package com.android.purebilibili.navigation3
 
 import com.android.purebilibili.navigation.ScreenRoutes
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class BiliPaiNavBackStackPolicyTest {
 
@@ -45,5 +48,20 @@ class BiliPaiNavBackStackPolicyTest {
             listOf(BiliPaiNavKey.MainHost),
             popBiliPaiNavKey(listOf(BiliPaiNavKey.MainHost, BiliPaiNavKey.VideoDetail("BV1")))
         )
+    }
+
+    @Test
+    fun onboardingFinishEntersMainHostInsteadOfDirectHomeRoute() {
+        val sourceFile = listOf(
+            File("app/src/main/java/com/android/purebilibili/navigation/AppNavigation.kt"),
+            File("src/main/java/com/android/purebilibili/navigation/AppNavigation.kt")
+        ).first { it.exists() }
+        val source = sourceFile.readText()
+        val onboardingFinishBlock = source
+            .substringAfter("BiliPaiNavEntryContentRole.ONBOARDING")
+            .substringBefore("BiliPaiNavEntryContentRole.SETTINGS")
+
+        assertTrue(onboardingFinishBlock.contains("navigation3BackStack = listOf(BiliPaiNavKey.MainHost)"))
+        assertFalse(onboardingFinishBlock.contains("navigation3BackStack = listOf(BiliPaiNavKey.Home)"))
     }
 }

@@ -723,25 +723,32 @@ fun AppNavigation(
             )
         }
         val shouldInterceptSystemBack = backGestureDecision.interceptSystemBack
-        val activeBottomTabRoute = if (currentNavigation3Key == BiliPaiNavKey.MainHost) {
-            currentBottomNavItem.route
-        } else {
-            currentRoute
-        }
+        val activeBottomTabRoute = resolveActiveBottomTabRoute(
+            currentKey = currentNavigation3Key,
+            currentBottomItem = currentBottomNavItem
+        )
         val isSettingsScreen = activeBottomTabRoute == ScreenRoutes.Settings.route
         val shouldHideBottomBarOnTablet = isTabletLayout && isSettingsScreen
 
         // [UX] 底栏仅在“用户配置为可见的一级入口”显示；Story 始终沉浸式隐藏。
-        val isBottomBarDestination =
-            activeBottomTabRoute != ScreenRoutes.Story.route && activeBottomTabRoute in visibleBottomBarRoutes
+        val isBottomBarDestination = shouldShowBottomBarForNavigation(
+            activeRoute = activeBottomTabRoute,
+            visibleBottomBarRoutes = visibleBottomBarRoutes,
+            useSideNavigation = false,
+            shouldHideBottomBarOnTablet = false,
+            shouldDeferReveal = false
+        )
         val shouldDeferBottomBarReveal = shouldDeferBottomBarRevealOnVideoReturn(
             isReturningFromDetail = navigation3ReturnSession.isReturningFromDetail,
             currentRoute = currentRoute
         )
-        val showBottomBar = isBottomBarDestination &&
-            !useSideNavigation &&
-            !shouldHideBottomBarOnTablet &&
-            !shouldDeferBottomBarReveal
+        val showBottomBar = shouldShowBottomBarForNavigation(
+            activeRoute = activeBottomTabRoute,
+            visibleBottomBarRoutes = visibleBottomBarRoutes,
+            useSideNavigation = useSideNavigation,
+            shouldHideBottomBarOnTablet = shouldHideBottomBarOnTablet,
+            shouldDeferReveal = shouldDeferBottomBarReveal
+        )
         
         // 核心可见性逻辑：
         // 1. 永久隐藏模式 -> 始终隐藏
@@ -1537,7 +1544,7 @@ fun AppNavigation(
                             com.android.purebilibili.feature.onboarding.OnboardingScreen(
                                 onFinish = {
                                     welcomePrefs.edit().putBoolean("first_launch_shown", true).apply()
-                                    navigation3BackStack = listOf(BiliPaiNavKey.Home)
+                                    navigation3BackStack = listOf(BiliPaiNavKey.MainHost)
                                 }
                             )
                         BiliPaiNavEntryContentRole.SETTINGS -> SettingsScreen(

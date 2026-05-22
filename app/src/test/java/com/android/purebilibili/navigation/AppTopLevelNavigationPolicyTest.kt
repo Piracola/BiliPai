@@ -1,6 +1,7 @@
 package com.android.purebilibili.navigation
 
 import com.android.purebilibili.feature.home.components.BottomNavItem
+import com.android.purebilibili.navigation3.BiliPaiNavKey
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -301,6 +302,136 @@ class AppTopLevelNavigationPolicyTest {
                     ScreenRoutes.History.route,
                     ScreenRoutes.Profile.route
                 )
+            )
+        )
+    }
+
+    @Test
+    fun mainHostUsesCurrentBottomPagerItemAsActiveBottomRoute() {
+        assertEquals(
+            ScreenRoutes.Home.route,
+            resolveActiveBottomTabRoute(
+                currentKey = BiliPaiNavKey.MainHost,
+                currentBottomItem = BottomNavItem.HOME
+            )
+        )
+        assertEquals(
+            ScreenRoutes.Dynamic.route,
+            resolveActiveBottomTabRoute(
+                currentKey = BiliPaiNavKey.MainHost,
+                currentBottomItem = BottomNavItem.DYNAMIC
+            )
+        )
+    }
+
+    @Test
+    fun directTopLevelKeyUsesItsOwnRouteForBottomBarDestination() {
+        assertEquals(
+            ScreenRoutes.Home.route,
+            resolveActiveBottomTabRoute(
+                currentKey = BiliPaiNavKey.Home,
+                currentBottomItem = BottomNavItem.DYNAMIC
+            )
+        )
+        assertEquals(
+            ScreenRoutes.Dynamic.route,
+            resolveActiveBottomTabRoute(
+                currentKey = BiliPaiNavKey.Dynamic,
+                currentBottomItem = BottomNavItem.HOME
+            )
+        )
+    }
+
+    @Test
+    fun bottomBarShowsForConfiguredMainHostAndDirectTopLevelRoutes() {
+        val defaultRoutes = setOf(
+            ScreenRoutes.Home.route,
+            ScreenRoutes.Dynamic.route,
+            ScreenRoutes.History.route,
+            ScreenRoutes.Profile.route
+        )
+
+        assertTrue(
+            shouldShowBottomBarForNavigation(
+                activeRoute = resolveActiveBottomTabRoute(BiliPaiNavKey.MainHost, BottomNavItem.HOME),
+                visibleBottomBarRoutes = defaultRoutes,
+                useSideNavigation = false,
+                shouldHideBottomBarOnTablet = false,
+                shouldDeferReveal = false
+            )
+        )
+        assertTrue(
+            shouldShowBottomBarForNavigation(
+                activeRoute = resolveActiveBottomTabRoute(BiliPaiNavKey.Home, BottomNavItem.HOME),
+                visibleBottomBarRoutes = defaultRoutes,
+                useSideNavigation = false,
+                shouldHideBottomBarOnTablet = false,
+                shouldDeferReveal = false
+            )
+        )
+        assertTrue(
+            shouldShowBottomBarForNavigation(
+                activeRoute = resolveActiveBottomTabRoute(BiliPaiNavKey.Dynamic, BottomNavItem.HOME),
+                visibleBottomBarRoutes = defaultRoutes,
+                useSideNavigation = false,
+                shouldHideBottomBarOnTablet = false,
+                shouldDeferReveal = false
+            )
+        )
+    }
+
+    @Test
+    fun bottomBarHidesForUnconfiguredHomeAndExcludedNavigationStates() {
+        val routesWithoutHome = setOf(
+            ScreenRoutes.Dynamic.route,
+            ScreenRoutes.History.route,
+            ScreenRoutes.Profile.route
+        )
+        val defaultRoutes = routesWithoutHome + ScreenRoutes.Home.route
+
+        assertFalse(
+            shouldShowBottomBarForNavigation(
+                activeRoute = resolveActiveBottomTabRoute(BiliPaiNavKey.Home, BottomNavItem.DYNAMIC),
+                visibleBottomBarRoutes = routesWithoutHome,
+                useSideNavigation = false,
+                shouldHideBottomBarOnTablet = false,
+                shouldDeferReveal = false
+            )
+        )
+        assertFalse(
+            shouldShowBottomBarForNavigation(
+                activeRoute = ScreenRoutes.Story.route,
+                visibleBottomBarRoutes = defaultRoutes + ScreenRoutes.Story.route,
+                useSideNavigation = false,
+                shouldHideBottomBarOnTablet = false,
+                shouldDeferReveal = false
+            )
+        )
+        assertFalse(
+            shouldShowBottomBarForNavigation(
+                activeRoute = ScreenRoutes.Settings.route,
+                visibleBottomBarRoutes = defaultRoutes + ScreenRoutes.Settings.route,
+                useSideNavigation = false,
+                shouldHideBottomBarOnTablet = true,
+                shouldDeferReveal = false
+            )
+        )
+        assertFalse(
+            shouldShowBottomBarForNavigation(
+                activeRoute = ScreenRoutes.Home.route,
+                visibleBottomBarRoutes = defaultRoutes,
+                useSideNavigation = true,
+                shouldHideBottomBarOnTablet = false,
+                shouldDeferReveal = false
+            )
+        )
+        assertFalse(
+            shouldShowBottomBarForNavigation(
+                activeRoute = ScreenRoutes.Home.route,
+                visibleBottomBarRoutes = defaultRoutes,
+                useSideNavigation = false,
+                shouldHideBottomBarOnTablet = false,
+                shouldDeferReveal = true
             )
         )
     }

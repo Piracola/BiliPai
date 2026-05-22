@@ -1,6 +1,8 @@
 package com.android.purebilibili.navigation
 
 import com.android.purebilibili.feature.home.components.BottomNavItem
+import com.android.purebilibili.navigation3.BiliPaiNavKey
+import com.android.purebilibili.navigation3.toLegacyRoute
 
 internal enum class TopLevelNavigationAction {
     SKIP,
@@ -90,6 +92,31 @@ internal fun resolveBottomPagerItemForPage(
     visibleItems: List<BottomNavItem>
 ): BottomNavItem {
     return visibleItems.getOrNull(page) ?: BottomNavItem.HOME
+}
+
+internal fun resolveActiveBottomTabRoute(
+    currentKey: BiliPaiNavKey?,
+    currentBottomItem: BottomNavItem
+): String? {
+    return if (currentKey == BiliPaiNavKey.MainHost) {
+        currentBottomItem.route
+    } else {
+        currentKey?.toLegacyRoute()
+    }
+}
+
+internal fun shouldShowBottomBarForNavigation(
+    activeRoute: String?,
+    visibleBottomBarRoutes: Set<String>,
+    useSideNavigation: Boolean,
+    shouldHideBottomBarOnTablet: Boolean,
+    shouldDeferReveal: Boolean
+): Boolean {
+    return activeRoute != ScreenRoutes.Story.route &&
+        activeRoute in visibleBottomBarRoutes &&
+        !useSideNavigation &&
+        !shouldHideBottomBarOnTablet &&
+        !shouldDeferReveal
 }
 
 internal fun resolveVideoCardSourceRouteForNavigation(
