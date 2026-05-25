@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-05-24 · Synced to v8.4.0 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-05-25 · Synced to v8.4.1 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-8.4.0-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-8.4.1-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -435,12 +435,13 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v8.4.0 · 2026-05-24)
+### Latest (v8.4.1 · 2026-05-25)
 
-- Promoted 8.4.0 to the stable release with `versionCode` `206`.
-- Included post-Beta1 fixes for live danmaku reconnection, space-page entry points, the home drawer history entry, player interaction defaults, and foldable portrait-video detail layout.
-- Added an in-app global icon-library setting for Material Symbols, Lucide, Phosphor, and Tabler, with semantic icon deduplication coverage.
-- Kept the Beta1 recommendation filtering, JSON rule, skin-package management, bottom-bar skin icon, first-view recommendation plugin, and plugin-stat notification updates.
+- Bumped the app to `8.4.1` with `versionCode` `207`.
+- Rolled back the in-app global icon-library setting and restored the simpler semantic icon path.
+- Cleaned up dead predictive-back code, tightened video shared-element return ownership, and improved Navigation3 entry handling for home-to-space jumps.
+- Fixed live danmaku reconnection and refresh blank states, comment gRPC special-character decoding, follow-and-triple command handling, feed refresh paths, external multi-part playback jumps, and mini-player landscape orientation jitter.
+- Improved iOS top-tab pill tracking and scaled overlay scrims, surface alpha, and blur budget by presentation progress for sheets, dialogs, comment panels, and the side drawer.
 
 ---
 

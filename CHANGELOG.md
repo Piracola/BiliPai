@@ -1,5 +1,30 @@
 # Changelog
 
+## v8.4.1 (2026-05-25)
+
+### 版本信息
+- 版本号从 `8.4.0` 升级到 `8.4.1`，`versionCode` 升级到 `207`。
+- 本次为 8.4.0 后的维护更新，重点修复直播弹幕、评论解码、首页刷新、关注页刷新、播放队列、横屏小窗、空间跳转、返回动画和交互浮层动效预算问题。
+
+### 更新内容
+- **应用内图标库回滚**：回滚 8.4.0 引入的全局图标库设置，移除多图标库切换相关状态、入口、向量工厂和静态守门，避免设置体系复杂化和图标语义漂移。
+- **预测性返回死链路清理**：删除已暂停预测性返回后的残留策略、Modifier、状态和 Navigation3 桥接代码，设置页同步收口搜索与动画选项，降低返回链路维护成本。
+- **共享元素返回收口**：收紧视频卡片、空间页、平板影院布局和相关推荐入口的共享元素返回路径，减少非目标页面误吃视频返回转场、返回尾段错位和 stale metadata 风险。
+- **播放与详情稳定性**：新增播完后评论收起播放器策略；修复多 P 视频从外部队列跳转时的播放解析；修复小窗进入横屏全屏时方向抖动；补充竖屏详情和视频加载请求策略测试。
+- **关注页与首页刷新**：修复关注页下拉刷新分类同步、增量刷新基线和视频动态刷新；收窄关注页刷新入口，保留列表滚动状态；优化首页下拉刷新手感和 iOS 刷新指示器动效。
+- **首页空间跳转**：修复首页 UP 头像跳转空间链路，补齐首页卡片到空间页的 Navigation3 entry、转场和结构测试。
+- **首页不感兴趣同步**：将“不感兴趣 UP”同步到 B 站黑名单，减少首页推荐中已屏蔽 UP 反复出现的情况。
+- **直播弹幕稳定性**：修复直播弹幕业务流停摆后不重连，以及刷新后弹幕层空屏的问题；新增连接健康和弹幕渲染策略测试。
+- **评论与命令弹幕修复**：修复评论 gRPC 特殊字符解码；修复关注并三连命令弹幕误触发取关的问题。
+- **顶部与浮层动效优化**：修复 iOS 顶部标签胶囊跟随位置；新增交互浮层进度视觉策略，让底部弹窗、评论面板、对话框和侧边抽屉在打开/关闭过程中按进度调整遮罩、面板透明度和模糊预算，降低拖拽和过渡阶段的实时 blur 压力。
+- **冷启动导航修复**：修复冷启动底栏占位路由不显示，减少启动后底栏状态和当前页面不一致的问题。
+- **版本与文档同步**：版本号升级到 `8.4.1` / `versionCode 207`，README、README_EN 和更新日志同步到 8.4.1。
+
+### 验证
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.core.ui.AdaptiveBottomSheetPolicyTest' --tests 'com.android.purebilibili.feature.home.components.DrawerMotionBudgetPolicyTest' --tests 'com.android.purebilibili.feature.home.components.MineSideDrawerVisualPolicyTest' --tests 'com.android.purebilibili.feature.video.ui.components.VideoCommentSheetHostPolicyTest'`
+- `./gradlew :app:compileDebugKotlin`
+- `git diff --check`
+
 ## v8.4.0 (2026-05-24)
 
 ### 版本信息

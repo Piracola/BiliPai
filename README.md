@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-8.4.0-007AFF?style=flat-square&labelColor=ffffff" alt="Version 8.4.0" />
+  <img src="https://img.shields.io/badge/Version-8.4.1-007AFF?style=flat-square&labelColor=ffffff" alt="Version 8.4.1" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
@@ -37,7 +37,7 @@
   </a>
 </p>
 
-<sub>README 更新：2026-05-24 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
+<sub>README 更新：2026-05-25 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
 
 </div>
 
@@ -181,12 +181,13 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `8.4.0 / versionCode 206`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v8.4.0`：
+当前仓库版本号已更新到 `8.4.1 / versionCode 207`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v8.4.1`：
 
-- 汇总 8.4.0-Beta1 后的直播弹幕重连、空间页、首页侧栏、播放器默认设置和折叠屏竖屏视频详情修复。
-- 新增应用内全局图标库设置，支持 Material Symbols、Lucide、Phosphor、Tabler，并补齐语义图标去重约束。
-- 修复普通折叠屏内屏观看竖屏视频时播放器占满首屏的问题，评论区和推荐入口保持可访问。
-- 保留 Beta1 的推荐过滤、JSON 规则、皮肤包管理、底栏皮肤图标、初见推荐插件和插件统计通知改动。
+- 回滚应用内全局图标库设置，恢复更稳定的统一语义图标路径，减少设置复杂度。
+- 清理预测性返回死链路，收紧视频共享元素返回和 Navigation3 入口，降低返回错位、黑屏和 stale metadata 风险。
+- 修复直播弹幕重连与刷新空屏、评论 gRPC 特殊字符解码、关注并三连误取关、首页 UP 头像跳转空间。
+- 修复关注页刷新、首页下拉刷新、多 P 外部队列跳转、小窗横屏全屏方向抖动和播完后评论收起播放器策略。
+- 优化 iOS 顶部胶囊跟随位置，并让底部弹窗、评论面板、对话框、侧边抽屉按展示进度调整遮罩、透明度和模糊预算。
 
 ## 路线图
 
