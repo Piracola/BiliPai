@@ -43,6 +43,29 @@ internal fun trimIncrementalRefreshVideosToEvenCount(videos: List<VideoItem>): L
     return videos.dropLast(1)
 }
 
+internal fun resolveRecommendFeedRequestIndex(
+    isLoadMore: Boolean,
+    isManualRefresh: Boolean,
+    currentRefreshIndex: Int
+): Int {
+    return if (isLoadMore || isManualRefresh) {
+        currentRefreshIndex + 1
+    } else {
+        0
+    }
+}
+
+internal fun shouldAdvanceRecommendFeedRequestIndex(
+    category: HomeCategory,
+    isLoadMore: Boolean,
+    isManualRefresh: Boolean,
+    validVideoCount: Int
+): Boolean {
+    return category == HomeCategory.RECOMMEND &&
+        (isLoadMore || isManualRefresh) &&
+        validVideoCount > 0
+}
+
 internal data class HomeRefreshUndoSnapshot(
     val videos: List<VideoItem>,
     val pageIndex: Int,
@@ -1027,10 +1050,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val currentCategoryState = _uiState.value.categoryStates[currentCategory] ?: CategoryContent()
         // 获取当前页码 (如果是刷新则为0/1，加载更多则+1)
         val pageToFetch = if (isLoadMore) currentCategoryState.pageIndex + 1 else 1 // Assuming 1-based pagination for simplicity in general, adjust per API
+        val recommendRequestIndex = resolveRecommendFeedRequestIndex(
+            isLoadMore = isLoadMore,
+            isManualRefresh = isManualRefresh,
+            currentRefreshIndex = refreshIdx
+        )
 
         //  视频类分类处理
         val videoResult = when (currentCategory) {
-            HomeCategory.RECOMMEND -> VideoRepository.getHomeVideos(if (isLoadMore) refreshIdx + 1 else 0) // Recommend uses idx, slightly different
+            HomeCategory.RECOMMEND -> VideoRepository.getHomeVideos(recommendRequestIndex) // Recommend uses idx, slightly different
             HomeCategory.POPULAR -> {
                 when (_uiState.value.popularSubCategory) {
                     PopularSubCategory.COMPREHENSIVE -> VideoRepository.getPopularVideos(pageToFetch)
@@ -1057,6 +1085,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         videoResult.onSuccess { videos ->
             val validVideos = videos.filter { it.bvid.isNotEmpty() && it.title.isNotEmpty() }
+            if (shouldAdvanceRecommendFeedRequestIndex(
+                    category = currentCategory,
+                    isLoadMore = isLoadMore,
+                    isManualRefresh = isManualRefresh,
+                    validVideoCount = validVideos.size
+                )
+            ) {
+                refreshIdx = maxOf(refreshIdx, recommendRequestIndex)
+            }
             
             //  [Feature] 应用屏蔽 + 原生插件 + JSON 规则插件过滤器
             val blockedFiltered = validVideos.filter { video -> video.owner.mid !in blockedMids }
@@ -1121,8 +1158,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 if (useIncrementalRecommendRefresh && isManualRefresh) {
                     refreshNewItemsCount = addedCount
                 }
-                // Update global helper vars if needed for Recommend
-                if (currentCategory == HomeCategory.RECOMMEND && isLoadMore) refreshIdx++
             } else {
                  //  全被过滤掉了 OR 空列表
                  updateCategoryState(currentCategory) { oldState ->

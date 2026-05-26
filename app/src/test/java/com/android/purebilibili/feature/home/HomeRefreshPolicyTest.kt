@@ -45,6 +45,70 @@ class HomeRefreshPolicyTest {
     }
 
     @Test
+    fun resolveRecommendFeedRequestIndex_advancesForManualRefreshAndLoadMore() {
+        assertEquals(
+            0,
+            resolveRecommendFeedRequestIndex(
+                isLoadMore = false,
+                isManualRefresh = false,
+                currentRefreshIndex = 0
+            )
+        )
+        assertEquals(
+            4,
+            resolveRecommendFeedRequestIndex(
+                isLoadMore = false,
+                isManualRefresh = true,
+                currentRefreshIndex = 3
+            )
+        )
+        assertEquals(
+            4,
+            resolveRecommendFeedRequestIndex(
+                isLoadMore = true,
+                isManualRefresh = false,
+                currentRefreshIndex = 3
+            )
+        )
+    }
+
+    @Test
+    fun shouldAdvanceRecommendFeedRequestIndex_whenRecommendRequestReturnedAnyValidVideo() {
+        assertTrue(
+            shouldAdvanceRecommendFeedRequestIndex(
+                category = HomeCategory.RECOMMEND,
+                isLoadMore = false,
+                isManualRefresh = true,
+                validVideoCount = 8
+            )
+        )
+        assertTrue(
+            shouldAdvanceRecommendFeedRequestIndex(
+                category = HomeCategory.RECOMMEND,
+                isLoadMore = true,
+                isManualRefresh = false,
+                validVideoCount = 8
+            )
+        )
+        assertFalse(
+            shouldAdvanceRecommendFeedRequestIndex(
+                category = HomeCategory.RECOMMEND,
+                isLoadMore = false,
+                isManualRefresh = true,
+                validVideoCount = 0
+            )
+        )
+        assertFalse(
+            shouldAdvanceRecommendFeedRequestIndex(
+                category = HomeCategory.POPULAR,
+                isLoadMore = false,
+                isManualRefresh = true,
+                validVideoCount = 8
+            )
+        )
+    }
+
+    @Test
     fun shouldHandleRefreshNewItemsEvent_requiresPositiveAndGreaterKey() {
         assertFalse(shouldHandleRefreshNewItemsEvent(refreshKey = 0L, handledKey = 0L))
         assertFalse(shouldHandleRefreshNewItemsEvent(refreshKey = 10L, handledKey = 10L))
