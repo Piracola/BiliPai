@@ -17,7 +17,8 @@ class HardcodedColorMigrationGuardTest {
             "src/main/java/com/android/purebilibili/feature/home/components/LiquidIndicator.kt",
             "src/main/java/com/android/purebilibili/feature/home/components/cards/LiveRoomCard.kt",
             "src/main/java/com/android/purebilibili/feature/profile/ProfileScreen.kt",
-            "src/main/java/com/android/purebilibili/feature/download/DownloadListScreen.kt"
+            "src/main/java/com/android/purebilibili/feature/download/DownloadListScreen.kt",
+            "src/main/java/com/android/purebilibili/feature/video/ui/section/VideoActionSection.kt"
         )
         val literalPattern = Regex("""Color\s*\(\s*0x[0-9A-Fa-f]+""")
 

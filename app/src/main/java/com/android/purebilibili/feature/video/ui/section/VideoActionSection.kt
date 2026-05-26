@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import com.android.purebilibili.feature.video.ui.feedback.resolveVideoDetailActionActiveColors
 import com.android.purebilibili.feature.video.ui.feedback.resolveVideoActionCountTint
 import com.android.purebilibili.feature.video.ui.feedback.resolveVideoActionTint
 
@@ -95,7 +96,18 @@ fun ActionButtonsRow(
     onShareClick: () -> Unit = {},
     modifier: Modifier = Modifier.fillMaxWidth()
 ) {
-    val primaryActionColor = MaterialTheme.colorScheme.primary
+    val colorScheme = MaterialTheme.colorScheme
+    val activeColors = remember(
+        colorScheme.primary,
+        colorScheme.secondary,
+        colorScheme.tertiary
+    ) {
+        resolveVideoDetailActionActiveColors(
+            primary = colorScheme.primary,
+            secondary = colorScheme.secondary,
+            tertiary = colorScheme.tertiary
+        )
+    }
     val haptic = rememberHapticFeedback()
     var isTriplePressing by remember { mutableStateOf(false) }
     var tripleCompleted by remember { mutableStateOf(false) }
@@ -147,7 +159,7 @@ fun ActionButtonsRow(
                 icon = if (isLiked) Icons.Rounded.ThumbUp else Icons.Outlined.ThumbUp,
                 text = FormatUtils.formatStat(info.stat.like.toLong()),
                 isActive = isLiked,
-                activeColor = primaryActionColor,
+                activeColor = activeColors.primaryAction,
                 progress = tripleProgress,
                 onClick = onLikeClick,
                 modifier = Modifier.pointerInput(
@@ -193,7 +205,7 @@ fun ActionButtonsRow(
                 icon = AppIcons.BiliCoin,
                 text = FormatUtils.formatStat(info.stat.coin.toLong()),
                 isActive = coinCount > 0,
-                activeColor = primaryActionColor,
+                activeColor = activeColors.primaryAction,
                 progress = tripleProgress,
                 onClick = onCoinClick
             )
@@ -210,7 +222,7 @@ fun ActionButtonsRow(
                 icon = if (isFavorited) Icons.Rounded.Star else Icons.Outlined.StarBorder,
                 text = FormatUtils.formatStat(info.stat.favorite.toLong()),
                 isActive = isFavorited,
-                activeColor = primaryActionColor,
+                activeColor = activeColors.primaryAction,
                 progress = tripleProgress,
                 onClick = onFavoriteClick,
                 onLongClick = onFavoriteLongClick
@@ -228,7 +240,7 @@ fun ActionButtonsRow(
                 icon = if (isInWatchLater) CupertinoIcons.Filled.Clock else CupertinoIcons.Default.Clock,
                 text = if (isInWatchLater) "已添加" else "稍后看",
                 isActive = isInWatchLater,
-                activeColor = Color(0xFF9C27B0),  // 紫色
+                activeColor = activeColors.watchLater,
                 onClick = onWatchLaterClick
             )
         }
@@ -251,7 +263,11 @@ fun ActionButtonsRow(
                 icon = if (isDownloaded) CupertinoIcons.Default.Checkmark else CupertinoIcons.Default.ArrowDown,
                 text = downloadText,
                 isActive = isDownloaded || isDownloading,
-                activeColor = if (isDownloaded) Color(0xFF4CAF50) else Color(0xFF2196F3),
+                activeColor = if (isDownloaded) {
+                    activeColors.downloaded
+                } else {
+                    activeColors.downloadInProgress
+                },
                 onClick = onDownloadClick
             )
         }
