@@ -444,7 +444,28 @@ internal fun shouldTriggerFullscreenBySwipe(
 internal fun shouldAllowPlaybackStateAutoFullscreen(
     smallestScreenWidthDp: Int
 ): Boolean {
-    return smallestScreenWidthDp < 600
+    return smallestScreenWidthDp > 0
+}
+
+internal fun shouldToggleAutoFullscreenForCurrentPlaybackSnapshot(
+    autoEnterFullscreenEnabled: Boolean,
+    autoExitFullscreenEnabled: Boolean,
+    allowPlaybackStateAutoFullscreen: Boolean,
+    playbackState: Int,
+    playWhenReady: Boolean,
+    hasAutoEnteredFullscreen: Boolean,
+    isFullscreen: Boolean
+): Boolean {
+    return shouldToggleAutoFullscreenForPlaybackEvent(
+        autoEnterFullscreenEnabled = autoEnterFullscreenEnabled,
+        autoExitFullscreenEnabled = autoExitFullscreenEnabled,
+        allowPlaybackStateAutoFullscreen = allowPlaybackStateAutoFullscreen,
+        playbackState = playbackState,
+        playWhenReady = playWhenReady,
+        hasAutoEnteredFullscreen = hasAutoEnteredFullscreen,
+        isFullscreen = isFullscreen,
+        previousPlayWhenReady = false
+    )
 }
 
 internal fun shouldToggleAutoFullscreenForPlaybackEvent(

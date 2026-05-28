@@ -695,6 +695,32 @@ fun VideoPlayerSection(
 
     val latestIsFullscreen by rememberUpdatedState(isFullscreen)
     val latestOnToggleFullscreen by rememberUpdatedState(onToggleFullscreen)
+    LaunchedEffect(
+        playerState.player,
+        autoEnterFullscreenEnabled,
+        autoExitFullscreenEnabled,
+        allowPlaybackStateAutoFullscreen,
+        bvid,
+        isFullscreen
+    ) {
+        val playbackState = playerState.player.playbackState
+        val playWhenReady = playerState.player.playWhenReady
+        if (shouldToggleAutoFullscreenForCurrentPlaybackSnapshot(
+                autoEnterFullscreenEnabled = autoEnterFullscreenEnabled,
+                autoExitFullscreenEnabled = autoExitFullscreenEnabled,
+                allowPlaybackStateAutoFullscreen = allowPlaybackStateAutoFullscreen,
+                playbackState = playbackState,
+                playWhenReady = playWhenReady,
+                hasAutoEnteredFullscreen = hasAutoEnteredFullscreen,
+                isFullscreen = latestIsFullscreen
+            )
+        ) {
+            if (playbackState == Player.STATE_READY && playWhenReady && !latestIsFullscreen) {
+                hasAutoEnteredFullscreen = true
+            }
+            latestOnToggleFullscreen()
+        }
+    }
     DisposableEffect(
         playerState.player,
         autoEnterFullscreenEnabled,

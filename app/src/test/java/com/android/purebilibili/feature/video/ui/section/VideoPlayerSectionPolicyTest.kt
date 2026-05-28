@@ -814,10 +814,25 @@ class VideoPlayerSectionPolicyTest {
     }
 
     @Test
-    fun playbackReadyAutoFullscreen_disabledForTabletsEvenWhenUsingCompactLayout() {
-        assertFalse(
+    fun playbackReadyAutoFullscreen_allowsTabletsBecauseSettingIsExplicit() {
+        assertTrue(
             shouldAllowPlaybackStateAutoFullscreen(
                 smallestScreenWidthDp = 600
+            )
+        )
+    }
+
+    @Test
+    fun playbackStateAutoFullscreen_triggersWhenAttachedAfterPlaybackAlreadyStarted() {
+        assertTrue(
+            shouldToggleAutoFullscreenForCurrentPlaybackSnapshot(
+                autoEnterFullscreenEnabled = true,
+                autoExitFullscreenEnabled = true,
+                allowPlaybackStateAutoFullscreen = true,
+                playbackState = Player.STATE_READY,
+                playWhenReady = true,
+                hasAutoEnteredFullscreen = false,
+                isFullscreen = false
             )
         )
     }
