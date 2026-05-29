@@ -105,6 +105,12 @@ fun ForwardedContent(
     ) {
         // 原作者
         if (author != null) {
+            val authorTimeText = remember(author.pub_time, author.pub_ts) {
+                resolveDynamicAuthorTimeText(
+                    pubTime = author.pub_time,
+                    pubTs = author.pub_ts
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "@${author.name}",
@@ -115,7 +121,7 @@ fun ForwardedContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    author.pub_time,
+                    authorTimeText,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)
                 )

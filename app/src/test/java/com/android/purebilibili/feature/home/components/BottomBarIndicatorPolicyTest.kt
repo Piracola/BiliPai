@@ -549,6 +549,43 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
+    fun `shell highlight keeps a floor while dragging so it stays pinned`() {
+        // 慢拖时 press/motion 都低,但拖拽中高光应保持可见(跟手)
+        assertEquals(
+            0.6f,
+            resolveBottomBarShellHighlightAlpha(
+                glassEnabled = true,
+                pressProgress = 0.1f,
+                motionProgress = 0.2f,
+                isDragging = true
+            ),
+            0.001f
+        )
+        // 非拖拽时无地板,沿用 max(press, motion)
+        assertEquals(
+            0.2f,
+            resolveBottomBarShellHighlightAlpha(
+                glassEnabled = true,
+                pressProgress = 0.1f,
+                motionProgress = 0.2f,
+                isDragging = false
+            ),
+            0.001f
+        )
+        // 高 motion 不被地板压低
+        assertEquals(
+            0.9f,
+            resolveBottomBarShellHighlightAlpha(
+                glassEnabled = true,
+                pressProgress = 0f,
+                motionProgress = 0.9f,
+                isDragging = true
+            ),
+            0.001f
+        )
+    }
+
+    @Test
     fun `interactive highlight center follows indicator and panel offset`() {
         assertEquals(
             124f,

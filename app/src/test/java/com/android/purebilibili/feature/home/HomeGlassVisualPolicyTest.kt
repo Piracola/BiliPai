@@ -97,7 +97,8 @@ class HomeGlassVisualPolicyTest {
 
         assertEquals(HomeRefreshTipSurfaceStyle.GLASS, appearance.surfaceStyle)
         assertEquals(0.8f, appearance.borderWidthDp)
-        assertEquals(6f, appearance.shadowElevationDp)
+        assertEquals(0f, appearance.tonalElevationDp)
+        assertEquals(0f, appearance.shadowElevationDp)
     }
 
     @Test

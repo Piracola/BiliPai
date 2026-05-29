@@ -82,6 +82,14 @@ fun DynamicCardV2(
     val uriHandler = LocalUriHandler.current
     val dynamicPreviewTextVisible by SettingsManager.getDynamicImagePreviewTextVisible(context)
         .collectAsState(initial = true)
+    val authorTimeText = remember(author?.pub_time, author?.pub_ts) {
+        author?.let {
+            resolveDynamicAuthorTimeText(
+                pubTime = it.pub_time,
+                pubTs = it.pub_ts
+            )
+        }.orEmpty()
+    }
     val contentHasImages = content?.major?.draw?.items?.isNotEmpty() == true ||
         content?.major?.opus?.pics?.isNotEmpty() == true
     val visibleDynamicDesc = content?.desc?.let { desc ->
@@ -171,7 +179,7 @@ fun DynamicCardV2(
                         color = if (author.vip?.status == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        author.pub_time,
+                        authorTimeText,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f)
                     )
@@ -868,7 +876,12 @@ fun DynamicCardCompact(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    author?.pub_time ?: "",
+                    author?.let {
+                        resolveDynamicAuthorTimeText(
+                            pubTime = it.pub_time,
+                            pubTs = it.pub_ts
+                        )
+                    }.orEmpty(),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)
                 )

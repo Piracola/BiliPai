@@ -1339,10 +1339,14 @@ internal fun resolveBottomBarIndicatorGlowAlpha(
 internal fun resolveBottomBarShellHighlightAlpha(
     glassEnabled: Boolean,
     pressProgress: Float,
-    motionProgress: Float = 0f
+    motionProgress: Float = 0f,
+    isDragging: Boolean = false
 ): Float {
     if (!glassEnabled) return 0f
-    return maxOf(pressProgress, motionProgress).coerceIn(0f, 1f)
+    // 拖拽中保留一道地板:慢拖时 motion/press 都低,但高光应持续锚定在指示器上,
+    // 让它「跟手」而非中途变暗掉队。高 motion 时不被地板压低。
+    val dragFloor = if (isDragging) 0.6f else 0f
+    return maxOf(pressProgress, motionProgress, dragFloor).coerceIn(0f, 1f)
 }
 
 internal fun resolveBottomBarInteractiveHighlightCenterX(
@@ -1389,14 +1393,14 @@ private fun Modifier.bottomBarInteractiveHighlight(
             y = size.height * 0.5f
         )
         drawRect(
-            color = Color.White.copy(alpha = 0.055f * clampedAlpha),
+            color = Color.White.copy(alpha = 0.06f * clampedAlpha),
             blendMode = BlendMode.Plus
         )
         if (highlightShader != null) {
             highlightShader.setFloatUniform("size", size.width, size.height)
             highlightShader.setColorUniform(
                 "color",
-                Color.White.copy(alpha = 0.14f * clampedAlpha).toArgb()
+                Color.White.copy(alpha = 0.17f * clampedAlpha).toArgb()
             )
             highlightShader.setFloatUniform("radius", size.minDimension * 1.2f)
             highlightShader.setFloatUniform("position", center.x, center.y)
@@ -1408,7 +1412,7 @@ private fun Modifier.bottomBarInteractiveHighlight(
             drawRect(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.14f * clampedAlpha),
+                        Color.White.copy(alpha = 0.17f * clampedAlpha),
                         Color.Transparent
                     ),
                     center = center,
@@ -3058,7 +3062,8 @@ private fun KernelSuAlignedBottomBar(
             val shellHighlightAlpha = resolveBottomBarShellHighlightAlpha(
                 glassEnabled = glassEnabled,
                 pressProgress = effectivePressProgress,
-                motionProgress = effectiveIndicatorEffectProgress
+                motionProgress = effectiveIndicatorEffectProgress,
+                isDragging = dampedDragState.isDragging
             )
             val isBottomBarInteractionActive = dampedDragState.isDragging ||
                 dampedDragState.isRunning ||

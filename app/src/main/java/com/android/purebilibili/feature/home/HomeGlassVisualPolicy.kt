@@ -126,8 +126,8 @@ internal fun resolveHomeRefreshTipAppearance(
         HomeRefreshTipAppearance(
             surfaceStyle = HomeRefreshTipSurfaceStyle.GLASS,
             borderWidthDp = 0.8f,
-            tonalElevationDp = 2f,
-            shadowElevationDp = 6f
+            tonalElevationDp = 0f,
+            shadowElevationDp = 0f
         )
     }
 }

@@ -384,7 +384,8 @@ fun BottomBarLiquidSegmentedControl(
         tuning = androidNativeTuning,
         glassEnabled = liquidGlassEnabled,
         blurEnabled = liquidGlassEnabled,
-        blurIntensity = blurIntensity
+        blurIntensity = blurIntensity,
+        liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
     )
     val selectedTextColor = MaterialTheme.colorScheme.primary
     val unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.42f)
@@ -523,7 +524,8 @@ fun BottomBarLiquidSegmentedControl(
                     hazeState = null,
                     motionTier = MotionTier.Normal,
                     isTransitionRunning = false,
-                    forceLowBlurBudget = false
+                    forceLowBlurBudget = false,
+                    liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
                 )
         )
 
