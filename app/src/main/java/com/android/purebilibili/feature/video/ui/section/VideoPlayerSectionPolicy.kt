@@ -909,8 +909,8 @@ internal fun shouldEnableForcedReturnCoverSharedBounds(
 
 internal fun resolveForcedReturnCoverSharedElementSourceRoute(sourceRoute: String?): String? {
     val sourceRouteBase = sourceRoute?.substringBefore("?")
-    return if (sourceRouteBase == com.android.purebilibili.navigation.ScreenRoutes.Home.route) {
-        sourceRouteBase
+    return if (com.android.purebilibili.navigation.isVideoCardReturnTargetRoute(sourceRouteBase)) {
+        sourceRouteBase?.takeIf { it.isNotBlank() }
     } else {
         null
     }

@@ -54,7 +54,6 @@ class VideoPlayerCoverPolicyTest {
 
     @Test
     fun forcedReturnCoverSharedBounds_stillActiveForNonHomeCardReturnTargets() {
-        // 非 home 源（如 dynamic / search / history）此次不调整。
         listOf("dynamic", "search", "history", "favorite", "watch_later", "partition").forEach { route ->
             assertTrue(
                 shouldEnableForcedReturnCoverSharedBounds(
@@ -72,13 +71,11 @@ class VideoPlayerCoverPolicyTest {
     }
 
     @Test
-    fun homeSourceRouteHelperRemainsForLegacyCallSitesEvenAfterShellTakeover() {
-        // 此辅助函数本身用于产出 sharedElement key 的 source 段。即便 home 源不再挂载
-        // forced cover sharedBounds，该函数依旧应当能正确归一化（用于其它路径/未来扩展）。
-        val homeRoute = com.android.purebilibili.navigation.ScreenRoutes.Home.route
-
-        assertTrue(resolveForcedReturnCoverSharedElementSourceRoute(homeRoute) == homeRoute)
-        assertTrue(resolveForcedReturnCoverSharedElementSourceRoute("$homeRoute?from=tab") == homeRoute)
-        assertTrue(resolveForcedReturnCoverSharedElementSourceRoute("search") == null)
+    fun forcedReturnCoverSourceRoute_keepsEveryVideoCardReturnTargetRoute() {
+        listOf("home", "dynamic", "search", "history", "favorite", "watch_later", "partition").forEach { route ->
+            assertTrue(resolveForcedReturnCoverSharedElementSourceRoute(route) == route)
+            assertTrue(resolveForcedReturnCoverSharedElementSourceRoute("$route?from=tab") == route)
+        }
+        assertTrue(resolveForcedReturnCoverSharedElementSourceRoute("settings") == null)
     }
 }

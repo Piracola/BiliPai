@@ -2,6 +2,8 @@
 package com.android.purebilibili.feature.watchlater
 
 import android.app.Application
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +36,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,13 +52,23 @@ import com.android.purebilibili.core.coroutines.AppScope
 import com.android.purebilibili.core.refresh.WatchLaterRefreshBus
 import com.android.purebilibili.core.ui.AdaptiveScaffold
 import com.android.purebilibili.core.ui.AdaptiveTopAppBar
+import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
+import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.core.network.NetworkModule
+import com.android.purebilibili.core.store.SettingsManager
+import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
+import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
+import com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey
+import com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey
+import com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.model.response.Owner
 import com.android.purebilibili.data.model.response.Stat
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
 import com.android.purebilibili.feature.list.resolveDeleteBatchParallelism
+import com.android.purebilibili.core.util.CardPositionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -497,6 +514,11 @@ fun WatchLaterScreen(
     globalHazeState: HazeState? = null // [新增]
 ) {
     val state by viewModel.uiState.collectAsState(context = kotlin.coroutines.EmptyCoroutineContext)
+    val context = LocalContext.current
+    val homeSettings by SettingsManager.getHomeSettings(context).collectAsState(
+        initial = com.android.purebilibili.core.store.HomeSettings(),
+        context = kotlin.coroutines.EmptyCoroutineContext
+    )
     val hazeState = rememberRecoverableHazeState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     var isBatchMode by rememberSaveable { mutableStateOf(false) }
@@ -777,6 +799,7 @@ fun WatchLaterScreen(
                                     item = item,
                                     isBatchMode = isBatchMode,
                                     isSelected = isSelected,
+                                    transitionEnabled = homeSettings.cardTransitionEnabled,
                                     onDelete = { viewModel.startVideoDissolve(item.bvid) },
                                     onClick = {
                                         if (isBatchMode) {
@@ -882,18 +905,110 @@ fun WatchLaterScreen(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun WatchLaterVideoCard(
     item: VideoItem,
     isBatchMode: Boolean,
     isSelected: Boolean,
+    transitionEnabled: Boolean,
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = remember(configuration.screenWidthDp, density) {
+        with(density) { configuration.screenWidthDp.dp.toPx() }
+    }
+    val screenHeightPx = remember(configuration.screenHeightDp, density) {
+        with(density) { configuration.screenHeightDp.dp.toPx() }
+    }
+    val cardBoundsRef = remember { object { var value: androidx.compose.ui.geometry.Rect? = null } }
+    val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
+    val sharedTransitionScope = LocalSharedTransitionScope.current
+    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+    val sharedElementReady = transitionEnabled &&
+        item.bvid.isNotBlank() &&
+        sourceRoute != null &&
+        sharedTransitionScope != null &&
+        animatedVisibilityScope != null
+    val sharedTransitionMotionSpec = remember(sourceRoute, transitionEnabled) {
+        resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = sourceRoute,
+            transitionEnabled = transitionEnabled
+        )
+    }
+    val cardClick = {
+        if (!isBatchMode) {
+            cardBoundsRef.value?.let { bounds ->
+                CardPositionManager.recordVideoCardPosition(
+                    bvid = item.bvid,
+                    sourceRoute = sourceRoute,
+                    bounds = bounds,
+                    screenWidth = screenWidthPx,
+                    screenHeight = screenHeightPx
+                )
+            }
+        }
+        onClick()
+    }
+    val coverShape = RoundedCornerShape(8.dp)
+    val coverModifier = if (sharedElementReady) {
+        with(requireNotNull(sharedTransitionScope)) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(
+                    key = videoCoverSharedElementKey(
+                        item.bvid,
+                        sourceRoute = sourceRoute
+                    )
+                ),
+                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                boundsTransform = { _, _ ->
+                    if (sharedTransitionMotionSpec.enabled) {
+                        tween(
+                            durationMillis = sharedTransitionMotionSpec.durationMillis,
+                            easing = sharedTransitionMotionSpec.easing
+                        )
+                    } else {
+                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
+                    }
+                },
+                clipInOverlayDuringTransition = OverlayClip(coverShape)
+            )
+        }
+    } else {
+        Modifier
+    }
+    var titleModifier: Modifier = Modifier
+    var upNameModifier: Modifier = Modifier
+    var viewsModifier: Modifier = Modifier
+    if (sharedElementReady) {
+        with(requireNotNull(sharedTransitionScope)) {
+            titleModifier = titleModifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = videoTitleSharedElementKey(item.bvid)),
+                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                boundsTransform = { _, _ -> com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec() }
+            )
+            upNameModifier = upNameModifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = videoUpNameSharedElementKey(item.bvid)),
+                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                boundsTransform = { _, _ -> com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec() }
+            )
+            viewsModifier = viewsModifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = videoViewsSharedElementKey(item.bvid)),
+                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                boundsTransform = { _, _ -> com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec() }
+            )
+        }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
+            .onGloballyPositioned { coordinates ->
+                cardBoundsRef.value = coordinates.boundsInRoot()
+            }
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .then(
@@ -911,17 +1026,17 @@ private fun WatchLaterVideoCard(
                     Modifier
                 }
             )
-            .clickable(onClick = onClick)
+            .clickable(onClick = cardClick)
             .padding(8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 封面
         Box(
-            modifier = Modifier
+            modifier = coverModifier
                 .width(140.dp)
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(coverShape)
         ) {
             AsyncImage(
                 model = fixCoverUrl(item.pic),
@@ -958,7 +1073,8 @@ private fun WatchLaterVideoCard(
                 fontWeight = FontWeight.Medium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = titleModifier
             )
             
             Spacer(modifier = Modifier.height(4.dp))
@@ -968,13 +1084,15 @@ private fun WatchLaterVideoCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = upNameModifier
             )
             
             Text(
                 text = "${formatNumber(item.stat.view)}播放",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = viewsModifier
             )
         }
 

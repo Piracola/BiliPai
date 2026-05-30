@@ -77,7 +77,8 @@ internal fun shouldEnableVideoMetadataSharedTransition(
     if (useCardContainerSharedBounds) return false
     // Keep metadata linked during quick return to avoid cover-only snapback.
     if (isQuickReturnLimited && profile == VideoSharedTransitionProfile.COVER_ONLY) return false
-    return profile == VideoSharedTransitionProfile.COVER_AND_METADATA
+    // Home 源也启用 metadata sharedBounds，标题/头像/UP名独立共享
+    return true
 }
 
 internal fun resolveVideoSharedTransitionOwnership(
@@ -92,16 +93,13 @@ internal fun resolveVideoSharedTransitionOwnership(
         )
     }
 
-    val isHomeSource = sourceRoute?.substringBefore("?") == HOME_SOURCE_ROUTE
     return VideoSharedTransitionOwnership(
         useCoverSharedBounds = true,
-        // 首页进入详情时封面是主锚点，元数据跟随普通内容入场，避免多个 sharedBounds 抢焦点。
-        useMetadataSharedBounds = !isHomeSource &&
-            shouldEnableVideoMetadataSharedTransition(
-                coverSharedEnabled = true,
-                isQuickReturnLimited = isQuickReturnLimited,
-                profile = resolveVideoSharedTransitionProfile(sourceRoute)
-            )
+        useMetadataSharedBounds = shouldEnableVideoMetadataSharedTransition(
+            coverSharedEnabled = true,
+            isQuickReturnLimited = isQuickReturnLimited,
+            profile = resolveVideoSharedTransitionProfile(sourceRoute)
+        )
     )
 }
 

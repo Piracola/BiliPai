@@ -66,7 +66,8 @@ class VideoSharedTransitionPolicyTest {
         )
 
         assertTrue(policy.useCoverSharedBounds)
-        assertFalse(policy.useMetadataSharedBounds)
+        // Home 源也启用 metadata sharedBounds，标题、UP主等独立过渡
+        assertTrue(policy.useMetadataSharedBounds)
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.android.purebilibili.feature.dynamic.components
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +41,9 @@ import coil.compose.AsyncImage
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
-import com.android.purebilibili.core.ui.transition.videoCardShellSharedElementKey
+import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
+import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
+import com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.ArchiveMajor
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
@@ -98,20 +101,53 @@ fun VideoCardLarge(
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-
-    val effectiveSharedElementKey = if (archive.bvid.isNotBlank() && sourceRoute != null) {
-        videoCardShellSharedElementKey(archive.bvid, sourceRoute = sourceRoute)
+    val sharedElementReady = archive.bvid.isNotBlank() &&
+        sourceRoute != null &&
+        sharedTransitionScope != null &&
+        animatedVisibilityScope != null
+    val sharedTransitionMotionSpec = remember(sourceRoute) {
+        resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = sourceRoute,
+            transitionEnabled = true
+        )
+    }
+    val effectiveSharedElementKey = if (sharedElementReady) {
+        videoCoverSharedElementKey(archive.bvid, sourceRoute = sourceRoute)
     } else {
         sharedElementKey
     }
-
-    if (effectiveSharedElementKey != null && sharedTransitionScope != null && animatedVisibilityScope != null) {
+    val coverShape = RoundedCornerShape(10.dp)
+    val coverModifier = if (effectiveSharedElementKey != null && sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
-            modifier = modifier.sharedElement(
+            Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = effectiveSharedElementKey),
-                animatedVisibilityScope = animatedVisibilityScope
+                animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = { _, _ ->
+                    if (sharedTransitionMotionSpec.enabled) {
+                        tween(
+                            durationMillis = sharedTransitionMotionSpec.durationMillis,
+                            easing = sharedTransitionMotionSpec.easing
+                        )
+                    } else {
+                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
+                    }
+                },
+                clipInOverlayDuringTransition = OverlayClip(coverShape)
             )
         }
+    } else {
+        Modifier
+    }
+    val titleModifier = if (sharedElementReady) {
+        with(requireNotNull(sharedTransitionScope)) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = videoTitleSharedElementKey(archive.bvid)),
+                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                boundsTransform = { _, _ -> com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec() }
+            )
+        }
+    } else {
+        Modifier
     }
 
     Column(modifier = modifier) {
@@ -120,14 +156,17 @@ fun VideoCardLarge(
             coverUrl = coverUrl,
             context = context,
             isCollection = isCollection,
-            cornerBadgeText = cornerBadgeText
+            cornerBadgeText = cornerBadgeText,
+            coverShape = coverShape,
+            modifier = coverModifier
         )
         Spacer(modifier = Modifier.height(6.dp))
         VideoCardLargeInfo(
             archive = archive,
             isCollection = isCollection,
             collectionTitle = collectionTitle,
-            publishTs = publishTs
+            publishTs = publishTs,
+            titleModifier = titleModifier
         )
     }
 }
@@ -138,13 +177,15 @@ private fun VideoCardLargeCover(
     coverUrl: String,
     context: android.content.Context,
     isCollection: Boolean,
-    cornerBadgeText: String?
+    cornerBadgeText: String?,
+    coverShape: androidx.compose.ui.graphics.Shape,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(16f / 10f)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(coverShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         if (coverUrl.isNotEmpty()) {
@@ -243,7 +284,8 @@ private fun VideoCardLargeInfo(
     archive: ArchiveMajor,
     isCollection: Boolean,
     collectionTitle: String,
-    publishTs: Long
+    publishTs: Long,
+    titleModifier: Modifier = Modifier
 ) {
     if (isCollection && collectionTitle.isNotBlank()) {
         Text(
@@ -260,7 +302,8 @@ private fun VideoCardLargeInfo(
             fontSize = 13.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = titleModifier
         )
     } else {
         Text(
@@ -270,7 +313,8 @@ private fun VideoCardLargeInfo(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             lineHeight = 21.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = titleModifier
         )
     }
 }
