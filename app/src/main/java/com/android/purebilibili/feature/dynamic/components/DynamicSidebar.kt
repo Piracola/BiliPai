@@ -344,34 +344,31 @@ fun SidebarUserItem(
                     }
                 }
 
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp) // 稍大一点的头像
-                            // 选中态边框
-                            .then(
-                                if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                else Modifier.border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), CircleShape)
-                            )
-                            .padding(2.dp)
-                    ) {
-                        AsyncImage(
-                            model = coil.request.ImageRequest.Builder(LocalContext.current)
-                                .data(faceUrl.ifEmpty { null })
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = user.name,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .then(
+                            if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            else Modifier.border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), CircleShape)
                         )
-                    }
+                        .padding(2.dp)
+                ) {
+                    AsyncImage(
+                        model = coil.request.ImageRequest.Builder(LocalContext.current)
+                            .data(faceUrl.ifEmpty { null })
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = user.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
                 }
+            }
 
-                if (shouldShowDynamicUserLiveBadge(user.isLive)) {
-                    DynamicUserLiveBadge(modifier = Modifier.padding(top = 2.dp))
-                }
+            if (shouldShowDynamicUserLiveBadge(user.isLive)) {
+                DynamicUserLiveBadge(modifier = Modifier.padding(top = 2.dp))
             }
 
             if (showLabel) {

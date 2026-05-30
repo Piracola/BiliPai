@@ -16,7 +16,7 @@ fun DynamicUserLiveBadge(
         text = resolveDynamicUserLiveBadgeLabel(),
         modifier = modifier,
         color = MaterialTheme.colorScheme.primary,
-        fontSize = 10.sp,
+        fontSize = 9.sp,
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         softWrap = false
