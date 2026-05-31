@@ -53,7 +53,7 @@ class TopTabLayoutPolicyTest {
     }
 
     @Test
-    fun `md3 top tabs show all text tabs when partition is an inline page`() {
+    fun `md3 top tabs show all tabs for every label mode when partition is an inline page`() {
         assertEquals(
             6,
             resolveMd3TopTabLayoutVisibleSlots(
@@ -78,12 +78,8 @@ class TopTabLayoutPolicyTest {
                 showPartitionAction = false
             )
         )
-    }
-
-    @Test
-    fun `md3 top tabs keep compact scrollable slots for icon modes or external partition action`() {
         assertEquals(
-            3,
+            6,
             resolveMd3TopTabLayoutVisibleSlots(
                 categoryCount = 6,
                 labelMode = 0,
@@ -91,13 +87,17 @@ class TopTabLayoutPolicyTest {
             )
         )
         assertEquals(
-            3,
+            6,
             resolveMd3TopTabLayoutVisibleSlots(
                 categoryCount = 6,
                 labelMode = 1,
                 showPartitionAction = false
             )
         )
+    }
+
+    @Test
+    fun `md3 top tabs keep compact scrollable slots for external partition action`() {
         assertEquals(
             3,
             resolveMd3TopTabLayoutVisibleSlots(

@@ -383,7 +383,7 @@ data class HomeSettings(
     val liquidGlassMode: LiquidGlassMode = LiquidGlassMode.BALANCED,
     val liquidGlassStrength: Float = 0.52f,
     val liquidGlassProgress: Float = 0.5f,
-    val isHeaderCollapseEnabled: Boolean = true, // [New] 首页顶部栏自动收缩开关
+    val isHeaderCollapseEnabled: Boolean = false, // [Retired] 首页顶部栏自动收缩已下线，固定关闭
     val gridColumnCount: Int = 0, // [New] 网格列数 (0=自动, 1-6=固定)
     val homeFeedCardWidthPreset: HomeFeedCardWidthPreset = HomeFeedCardWidthPreset.AUTO,
     val cardAnimationEnabled: Boolean = false,    //  卡片进场动画（默认关闭）
@@ -874,7 +874,7 @@ object SettingsManager {
     //  [新增] 模糊效果开关
     private val KEY_HEADER_BLUR_ENABLED = booleanPreferencesKey("header_blur_enabled")
     private val KEY_HOME_HEADER_BLUR_MODE = intPreferencesKey("home_header_blur_mode")
-    //  [新增] 首页顶部栏自动收缩 (Shrink)
+    //  [已下线] 首页顶部栏自动收缩，仅保留旧键兼容历史数据
     private val KEY_HEADER_COLLAPSE_ENABLED = booleanPreferencesKey("header_collapse_enabled")
     private val KEY_BOTTOM_BAR_BLUR_ENABLED = booleanPreferencesKey("bottom_bar_blur_enabled")
     private val KEY_TOP_BAR_LIQUID_GLASS_ENABLED = booleanPreferencesKey("top_bar_liquid_glass_enabled")
@@ -986,7 +986,7 @@ object SettingsManager {
             ),
             isHeaderBlurEnabled = headerBlurMode != HomeHeaderBlurMode.ALWAYS_OFF,
             headerBlurMode = headerBlurMode,
-            isHeaderCollapseEnabled = preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true,
+            isHeaderCollapseEnabled = false,
             isBottomBarBlurEnabled = preferences[KEY_BOTTOM_BAR_BLUR_ENABLED] ?: true,
             isTopBarLiquidGlassEnabled = false,
             isBottomBarLiquidGlassEnabled = preferences[KEY_BOTTOM_BAR_LIQUID_GLASS_ENABLED] ?: legacyLiquidGlassEnabled,
@@ -2227,12 +2227,12 @@ object SettingsManager {
         }
     }
     
-    //  [新增] --- 首页顶部栏自动收缩 ---
+    //  [已下线] --- 首页顶部栏自动收缩 ---
     fun getHeaderCollapseEnabled(context: Context): Flow<Boolean> = context.settingsDataStore.data
-        .map { preferences -> preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true }
+        .map { false }
 
     suspend fun setHeaderCollapseEnabled(context: Context, value: Boolean) {
-        context.settingsDataStore.edit { preferences -> preferences[KEY_HEADER_COLLAPSE_ENABLED] = value }
+        // 首页顶部标签自动收缩已下线，保留接口兼容旧调用。
     }
     
     //  [新增] --- 底栏模糊效果 ---
@@ -5212,7 +5212,6 @@ object SettingsManager {
             StringShareablePreferenceDefinition(KEY_TOP_TAB_VISIBLE_TABS, SettingsShareSection.APPEARANCE),
             StringShareablePreferenceDefinition(KEY_DYNAMIC_TAB_VISIBLE_TABS, SettingsShareSection.APPEARANCE),
             BooleanShareablePreferenceDefinition(KEY_HEADER_BLUR_ENABLED, SettingsShareSection.APPEARANCE),
-            BooleanShareablePreferenceDefinition(KEY_HEADER_COLLAPSE_ENABLED, SettingsShareSection.APPEARANCE),
             BooleanShareablePreferenceDefinition(KEY_BOTTOM_BAR_BLUR_ENABLED, SettingsShareSection.APPEARANCE),
             BooleanShareablePreferenceDefinition(KEY_BOTTOM_BAR_LIQUID_GLASS_ENABLED, SettingsShareSection.APPEARANCE),
             IntShareablePreferenceDefinition(KEY_BOTTOM_BAR_LIQUID_GLASS_PRESET, SettingsShareSection.APPEARANCE),

@@ -76,11 +76,7 @@ fun resolveHomeTopTabEntries(
         ?.mapNotNull(::resolveHomeTopEntryById)
         ?.toSet()
         .orEmpty()
-    val effectiveVisible = if (resolvedVisible.isEmpty()) {
-        DEFAULT_HOME_TOP_ENTRIES.toSet()
-    } else {
-        resolvedVisible + HomeTopTabEntry.Category(HomeCategory.RECOMMEND)
-    }
+    val effectiveVisible = resolvedVisible.ifEmpty { DEFAULT_HOME_TOP_ENTRIES.toSet() }
 
     val normalizedOrderIds = customOrderIds
         ?.map { it.trim().uppercase() }
@@ -109,11 +105,7 @@ fun resolveHomeTopTabEntries(
         if (entry in effectiveVisible) ordered += entry
     }
 
-    if (ordered.isEmpty()) return DEFAULT_HOME_TOP_ENTRIES
-    val withoutRecommend = ordered.filterNot {
-        it is HomeTopTabEntry.Category && it.category == HomeCategory.RECOMMEND
-    }
-    return listOf(HomeTopTabEntry.Category(HomeCategory.RECOMMEND)) + withoutRecommend
+    return ordered.toList().ifEmpty { DEFAULT_HOME_TOP_ENTRIES }
 }
 
 fun resolveHomeTopCategories(
@@ -128,11 +120,7 @@ fun resolveHomeTopCategories(
         ?.mapNotNull(::resolveHomeTopCategoryById)
         ?.toSet()
         .orEmpty()
-    val effectiveVisible = if (resolvedVisible.isEmpty()) {
-        DEFAULT_HOME_TOP_CATEGORIES.toSet()
-    } else {
-        resolvedVisible + HomeCategory.RECOMMEND
-    }
+    val effectiveVisible = resolvedVisible.ifEmpty { DEFAULT_HOME_TOP_CATEGORIES.toSet() }
 
     val resolvedOrder = customOrderIds
         ?.mapNotNull(::resolveHomeTopCategoryById)
@@ -149,9 +137,7 @@ fun resolveHomeTopCategories(
         if (category in effectiveVisible) ordered += category
     }
 
-    if (ordered.isEmpty()) return DEFAULT_HOME_TOP_CATEGORIES
-    val withoutRecommend = ordered.filterNot { it == HomeCategory.RECOMMEND }
-    return listOf(HomeCategory.RECOMMEND) + withoutRecommend
+    return ordered.toList().ifEmpty { DEFAULT_HOME_TOP_CATEGORIES }
 }
 
 fun resolveHomeTopTabIndex(

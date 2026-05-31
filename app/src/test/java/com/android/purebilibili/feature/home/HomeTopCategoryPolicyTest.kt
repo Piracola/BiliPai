@@ -70,7 +70,7 @@ class HomeTopCategoryPolicyTest {
     }
 
     @Test
-    fun `custom order and visibility should be applied with recommend pinned`() {
+    fun `custom order and visibility should be applied without recommend pinning`() {
         val categories = resolveHomeTopCategories(
             customOrderIds = listOf("LIVE", "TECH", "RECOMMEND", "FOLLOW"),
             visibleIds = setOf("LIVE", "TECH", "FOLLOW")
@@ -78,7 +78,6 @@ class HomeTopCategoryPolicyTest {
 
         assertEquals(
             listOf(
-                HomeCategory.RECOMMEND,
                 HomeCategory.LIVE,
                 HomeCategory.TECH,
                 HomeCategory.FOLLOW
@@ -88,7 +87,7 @@ class HomeTopCategoryPolicyTest {
     }
 
     @Test
-    fun `custom top tab entries should keep recommend pinned and partition visible`() {
+    fun `custom top tab entries should allow partition or any category first`() {
         val entries = resolveHomeTopTabEntries(
             customOrderIds = listOf("PARTITION", "LIVE", "RECOMMEND"),
             visibleIds = setOf("PARTITION", "LIVE")
@@ -96,7 +95,6 @@ class HomeTopCategoryPolicyTest {
 
         assertEquals(
             listOf(
-                HomeTopTabEntry.Category(HomeCategory.RECOMMEND),
                 HomeTopTabEntry.Partition,
                 HomeTopTabEntry.Category(HomeCategory.LIVE)
             ),

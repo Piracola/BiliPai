@@ -125,10 +125,8 @@ internal fun resolveMd3TopTabLayoutVisibleSlots(
     labelMode: Int,
     showPartitionAction: Boolean
 ): Int {
-    val normalizedLabelMode = normalizeTopTabLabelMode(labelMode)
-    val isTextOnly = shouldShowTopTabText(normalizedLabelMode) &&
-        !shouldShowTopTabIcon(normalizedLabelMode)
-    return if (!showPartitionAction && isTextOnly && categoryCount in 4..6) {
+    val hasSupportedLabelMode = normalizeTopTabLabelMode(labelMode) in 0..2
+    return if (!showPartitionAction && hasSupportedLabelMode && categoryCount in 4..6) {
         categoryCount
     } else {
         resolveMd3TopTabVisibleSlots()

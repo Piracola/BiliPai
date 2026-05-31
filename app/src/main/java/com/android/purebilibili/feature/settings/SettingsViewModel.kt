@@ -89,7 +89,7 @@ data class SettingsUiState(
     val liquidGlassProgress: Float = 0.5f,
     // [New] 平板导航模式
     val tabletUseSidebar: Boolean = false,
-    val isHeaderCollapseEnabled: Boolean = true, // [New]
+    val isHeaderCollapseEnabled: Boolean = false, // [Retired]
     val gridColumnCount: Int = 0, // [New]
     val homeFeedCardWidthPreset: HomeFeedCardWidthPreset = HomeFeedCardWidthPreset.AUTO
 ) {
@@ -143,7 +143,7 @@ data class ExtraSettings(
     val liquidGlassStrength: Float, // [New]
     val liquidGlassProgress: Float, // [New]
     val tabletUseSidebar: Boolean, // [New]
-    val isHeaderCollapseEnabled: Boolean, // [New]
+    val isHeaderCollapseEnabled: Boolean, // [Retired]
     val gridColumnCount: Int, // [New]
     val homeFeedCardWidthPreset: HomeFeedCardWidthPreset
 )
@@ -201,7 +201,7 @@ private data class BaseSettings(
     val liquidGlassStrength: Float, // [New]
     val liquidGlassProgress: Float, // [New]
     val tabletUseSidebar: Boolean, // [New]
-    val isHeaderCollapseEnabled: Boolean, // [New]
+    val isHeaderCollapseEnabled: Boolean, // [Retired]
     val gridColumnCount: Int, // [New]
     val homeFeedCardWidthPreset: HomeFeedCardWidthPreset
 )
@@ -300,7 +300,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         SettingsManager.getLiquidGlassStrength(context).asAnyFlow(), // [New]
         SettingsManager.getLiquidGlassProgress(context).asAnyFlow(), // [New]
         SettingsManager.getTabletUseSidebar(context).asAnyFlow(), // [New]
-        SettingsManager.getHeaderCollapseEnabled(context).asAnyFlow(), // [New]
+        SettingsManager.getHeaderCollapseEnabled(context).asAnyFlow(), // [Retired]
         SettingsManager.getGridColumnCount(context).asAnyFlow(), // [New]
         SettingsManager.getHomeFeedCardWidthPreset(context).asAnyFlow()
     ) { values ->
@@ -400,7 +400,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             liquidGlassStrength = ui2.lgt, // [New]
             liquidGlassProgress = ui2.lgp, // [New]
             tabletUseSidebar = ui2.tus, // [New]
-            isHeaderCollapseEnabled = ui2.hc, // [New]
+            isHeaderCollapseEnabled = ui2.hc, // [Retired]
             gridColumnCount = ui2.gcc, // [New]
             homeFeedCardWidthPreset = ui2.hfcwp,
             headerBlurEnabled = false, // 暂存，将在下一步合并
@@ -489,7 +489,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             liquidGlassStrength = extra.liquidGlassStrength, // [New]
             liquidGlassProgress = extra.liquidGlassProgress, // [New]
             tabletUseSidebar = extra.tabletUseSidebar, // [New]
-            isHeaderCollapseEnabled = extra.isHeaderCollapseEnabled, // [New]
+            isHeaderCollapseEnabled = extra.isHeaderCollapseEnabled, // [Retired]
             gridColumnCount = extra.gridColumnCount, // [New]
             homeFeedCardWidthPreset = extra.homeFeedCardWidthPreset
         )
@@ -547,7 +547,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             liquidGlassStrength = settings.liquidGlassStrength, // [New]
             liquidGlassProgress = settings.liquidGlassProgress, // [New]
             tabletUseSidebar = settings.tabletUseSidebar, // [New]
-            isHeaderCollapseEnabled = settings.isHeaderCollapseEnabled, // [New]
+            isHeaderCollapseEnabled = settings.isHeaderCollapseEnabled, // [Retired]
             gridColumnCount = settings.gridColumnCount, // [New]
             homeFeedCardWidthPreset = settings.homeFeedCardWidthPreset,
 

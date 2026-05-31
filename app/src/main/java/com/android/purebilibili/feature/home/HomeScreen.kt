@@ -281,14 +281,17 @@ fun HomeScreen(
         }
     }
 
-    // 顶部标签按参考图强制固定为六项，避免历史偏好或外观预设回退到三标签/分区按钮样式。
-    val defaultTopTabIds = remember { resolveDefaultHomeTopTabIds() }
+    val homeTopTabSettings by SettingsManager.getHomeTopTabSettings(context).collectAsState(
+        initial = com.android.purebilibili.core.store.HomeTopTabSettings(),
+        context = kotlin.coroutines.EmptyCoroutineContext
+    )
+    // 顶部标签顺序和可见项交给设置页控制；默认仍是六项。
     // [Refactor] Hoist PagerState to be available for both Content and Header
     // 确保 pagerState 在所有作用域均可见，以便传给 iOSHomeHeader
-    val topTabEntries = remember(defaultTopTabIds) {
+    val topTabEntries = remember(homeTopTabSettings) {
         resolveHomeTopTabEntries(
-            customOrderIds = defaultTopTabIds,
-            visibleIds = defaultTopTabIds.toSet()
+            customOrderIds = homeTopTabSettings.orderIds,
+            visibleIds = homeTopTabSettings.visibleIds
         )
     }
     val localizedTopTabLabels = topTabEntries.map { entry ->

@@ -26,6 +26,7 @@ class HomeSettingsMappingPolicyTest {
         assertEquals(HomeTopRightAction.SETTINGS, result.homeTopRightAction)
         assertTrue(result.isHeaderBlurEnabled)
         assertEquals(HomeHeaderBlurMode.FOLLOW_PRESET, result.headerBlurMode)
+        assertFalse(result.isHeaderCollapseEnabled)
         assertTrue(result.isBottomBarBlurEnabled)
         assertFalse(result.isTopBarLiquidGlassEnabled)
         assertTrue(result.isBottomBarLiquidGlassEnabled)

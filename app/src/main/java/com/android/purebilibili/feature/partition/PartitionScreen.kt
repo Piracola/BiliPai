@@ -2,6 +2,7 @@
 package com.android.purebilibili.feature.partition
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 //  Cupertino Icons - iOS SF Symbols 风格图标
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
@@ -17,8 +19,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,9 +45,15 @@ import com.android.purebilibili.core.ui.globalWallpaperAwareBackground
 import com.android.purebilibili.core.util.responsiveContentWidth
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.core.util.FormatUtils
+import com.android.purebilibili.core.store.HomeSettings
+import com.android.purebilibili.core.store.SettingsManager
+import com.android.purebilibili.core.store.resolveEffectiveLiquidGlassEnabled
+import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
+import com.android.purebilibili.feature.home.components.LiquidGlassTuning
+import com.android.purebilibili.feature.home.components.resolveLiquidGlassTuning
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import com.android.purebilibili.core.ui.blur.unifiedBlur
@@ -234,6 +247,29 @@ fun PartitionContent(
     onVideoClick: (VideoItem) -> Unit = {},
     viewModel: PartitionFeedViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val uiPreset = LocalUiPreset.current
+    val homeSettings by SettingsManager.getHomeSettings(context).collectAsState(initial = HomeSettings())
+    val liquidGlassIndicatorEnabled = remember(
+        homeSettings.isBottomBarLiquidGlassEnabled,
+        homeSettings.androidNativeLiquidGlassEnabled,
+        uiPreset
+    ) {
+        resolveEffectiveLiquidGlassEnabled(
+            requestedEnabled = homeSettings.isBottomBarLiquidGlassEnabled,
+            uiPreset = uiPreset,
+            androidNativeLiquidGlassEnabled = homeSettings.androidNativeLiquidGlassEnabled
+        )
+    }
+    val liquidGlassTuning = remember(
+        homeSettings.liquidGlassMode,
+        homeSettings.liquidGlassStrength
+    ) {
+        resolveLiquidGlassTuning(
+            mode = homeSettings.liquidGlassMode,
+            strength = homeSettings.liquidGlassStrength
+        )
+    }
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val layoutDirection = LocalLayoutDirection.current
@@ -281,6 +317,8 @@ fun PartitionContent(
                     bottom = bottomPadding,
                     end = 4.dp
                 ),
+                liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled,
+                liquidGlassTuning = liquidGlassTuning,
                 onPartitionSelected = viewModel::selectPartition
             )
 
@@ -306,6 +344,8 @@ private fun PartitionSideRail(
     selectedId: Int,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues,
+    liquidGlassIndicatorEnabled: Boolean,
+    liquidGlassTuning: LiquidGlassTuning,
     onPartitionSelected: (PartitionCategory) -> Unit
 ) {
     LazyColumn(
@@ -320,6 +360,8 @@ private fun PartitionSideRail(
             PartitionSideRailItem(
                 partition = partition,
                 selected = partition.id == selectedId,
+                liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled,
+                liquidGlassTuning = liquidGlassTuning,
                 onClick = { onPartitionSelected(partition) }
             )
         }
@@ -330,26 +372,46 @@ private fun PartitionSideRail(
 private fun PartitionSideRailItem(
     partition: PartitionCategory,
     selected: Boolean,
+    liquidGlassIndicatorEnabled: Boolean,
+    liquidGlassTuning: LiquidGlassTuning,
     onClick: () -> Unit
 ) {
     val selectedColor = MaterialTheme.colorScheme.primary
+    val shape = AppShapes.container(ContainerLevel.Pill)
+    val useLiquidGlassIndicator = selected && liquidGlassIndicatorEnabled
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .clip(AppShapes.container(ContainerLevel.Pill))
+            .clip(shape)
+            .then(
+                if (useLiquidGlassIndicator) {
+                    Modifier.partitionLiquidGlassIndicator(
+                        baseColor = selectedColor,
+                        highlightColor = MaterialTheme.colorScheme.onPrimary,
+                        tuning = liquidGlassTuning,
+                        shape = shape
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .height(36.dp)
-                .clip(AppShapes.container(ContainerLevel.Pill))
-                .background(if (selected) selectedColor else Color.Transparent)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
+        if (useLiquidGlassIndicator) {
+            Spacer(modifier = Modifier.width(14.dp))
+        } else {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(36.dp)
+                    .clip(AppShapes.container(ContainerLevel.Pill))
+                    .background(if (selected) selectedColor else Color.Transparent)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
         Text(
             text = partition.name,
             maxLines = 1,
@@ -360,6 +422,50 @@ private fun PartitionSideRailItem(
             color = if (selected) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+private fun Modifier.partitionLiquidGlassIndicator(
+    baseColor: Color,
+    highlightColor: Color,
+    tuning: LiquidGlassTuning,
+    shape: Shape
+): Modifier {
+    val progress = tuning.progress.coerceIn(0f, 1f)
+    val baseAlpha = (tuning.surfaceAlpha + tuning.indicatorTintAlpha * 0.45f).coerceIn(0.18f, 0.52f)
+    val highlightAlpha = (0.08f + tuning.whiteOverlayAlpha + tuning.indicatorLensBoost * 0.018f).coerceIn(0.08f, 0.22f)
+    val rimAlpha = (0.18f + progress * 0.16f).coerceIn(0.18f, 0.34f)
+
+    return this
+        .background(baseColor.copy(alpha = baseAlpha), shape)
+        .drawBehind {
+            val radius = size.height / 2f
+            drawRoundRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        highlightColor.copy(alpha = highlightAlpha),
+                        baseColor.copy(alpha = 0.02f)
+                    ),
+                    center = Offset(size.width * 0.32f, size.height * 0.18f),
+                    radius = size.width * 0.78f
+                ),
+                cornerRadius = CornerRadius(radius, radius)
+            )
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        highlightColor.copy(alpha = highlightAlpha * 0.72f),
+                        Color.Transparent,
+                        baseColor.copy(alpha = 0.08f + progress * 0.06f)
+                    )
+                ),
+                cornerRadius = CornerRadius(radius, radius)
+            )
+        }
+        .border(
+            width = 0.7.dp,
+            color = highlightColor.copy(alpha = rimAlpha),
+            shape = shape
+        )
 }
 
 @Composable

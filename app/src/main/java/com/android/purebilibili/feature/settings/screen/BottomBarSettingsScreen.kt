@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Person
@@ -134,6 +135,7 @@ internal fun resolveTopTabIcon(
             "LIVE" -> Icons.Outlined.LiveTv
             "ANIME" -> Icons.Outlined.Tv
             "GAME" -> Icons.Outlined.PlayCircleOutline
+            "PARTITION" -> Icons.Outlined.GridView
             "KNOWLEDGE" -> Icons.Outlined.Lightbulb
             "TECH" -> Icons.Outlined.SmartToy
             else -> Icons.Outlined.Home
@@ -145,6 +147,7 @@ internal fun resolveTopTabIcon(
             "LIVE" -> CupertinoIcons.Default.Video
             "ANIME" -> CupertinoIcons.Default.Tv
             "GAME" -> CupertinoIcons.Default.PlayCircle
+            "PARTITION" -> CupertinoIcons.Outlined.Grid
             "KNOWLEDGE" -> CupertinoIcons.Default.Lightbulb
             "TECH" -> CupertinoIcons.Default.Cpu
             else -> CupertinoIcons.Default.House
@@ -167,15 +170,16 @@ internal fun resolveAllBottomBarTabs(uiPreset: UiPreset = UiPreset.IOS): List<Bo
     BottomBarTabConfig("SETTINGS", "设置", resolveBottomBarTabIcon("SETTINGS", uiPreset), isDefault = false)
 )
 
-private val defaultTopTabIds = listOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME")
+private val defaultTopTabIds = listOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME", "PARTITION")
 
 internal fun resolveAllTopTabs(uiPreset: UiPreset = UiPreset.IOS): List<TopTabConfig> = listOf(
-    TopTabConfig("RECOMMEND", "推荐", resolveTopTabIcon("RECOMMEND", uiPreset), fixedVisible = true),
+    TopTabConfig("RECOMMEND", "推荐", resolveTopTabIcon("RECOMMEND", uiPreset)),
     TopTabConfig("FOLLOW", "关注", resolveTopTabIcon("FOLLOW", uiPreset)),
     TopTabConfig("POPULAR", "热门", resolveTopTabIcon("POPULAR", uiPreset)),
     TopTabConfig("LIVE", "直播", resolveTopTabIcon("LIVE", uiPreset)),
     TopTabConfig("ANIME", "追番", resolveTopTabIcon("ANIME", uiPreset)),
     TopTabConfig("GAME", "游戏", resolveTopTabIcon("GAME", uiPreset)),
+    TopTabConfig("PARTITION", "分区", resolveTopTabIcon("PARTITION", uiPreset)),
     TopTabConfig("KNOWLEDGE", "知识", resolveTopTabIcon("KNOWLEDGE", uiPreset)),
     TopTabConfig("TECH", "科技", resolveTopTabIcon("TECH", uiPreset))
 )
@@ -250,7 +254,6 @@ fun BottomBarSettingsContent(
     val visibleTabs by SettingsManager.getBottomBarVisibleTabs(context).collectAsState(initial = setOf("HOME", "DYNAMIC", "HISTORY", "PROFILE"))
     val topTabOrder by SettingsManager.getTopTabOrder(context).collectAsState(initial = defaultTopTabIds)
     val topTabVisible by SettingsManager.getTopTabVisibleTabs(context).collectAsState(initial = defaultTopTabIds.toSet())
-    val headerCollapseEnabled by SettingsManager.getHeaderCollapseEnabled(context).collectAsState(initial = true)
     val topTabLabelMode by SettingsManager.getTopTabLabelMode(context)
         .collectAsState(initial = SettingsManager.TopTabLabelMode.TEXT_ONLY)
     val headerBlurMode by SettingsManager.getHomeHeaderBlurMode(context)
@@ -271,7 +274,7 @@ fun BottomBarSettingsContent(
     }
     var localTopTabVisible by remember(topTabVisible) {
         mutableStateOf(
-            (topTabVisible.filter { id -> allTopTabs.any { it.id == id } }.toSet() + "RECOMMEND")
+            topTabVisible.filter { id -> allTopTabs.any { it.id == id } }.toSet()
         )
     }
     
@@ -309,7 +312,7 @@ fun BottomBarSettingsContent(
     fun saveTopTabConfig() {
         scope.launch {
             SettingsManager.setTopTabOrder(context, localTopTabOrder)
-            SettingsManager.setTopTabVisibleTabs(context, localTopTabVisible + "RECOMMEND")
+            SettingsManager.setTopTabVisibleTabs(context, localTopTabVisible)
         }
     }
 
@@ -328,9 +331,7 @@ fun BottomBarSettingsContent(
         val mutable = localTopTabOrder.toMutableList()
         val item = mutable.removeAt(globalFrom)
         mutable.add(globalTo, item)
-        // 推荐固定在首位
-        val withoutRecommend = mutable.filterNot { it == "RECOMMEND" }
-        localTopTabOrder = listOf("RECOMMEND") + withoutRecommend
+        localTopTabOrder = mutable
         saveTopTabConfig()
     }
     
@@ -779,47 +780,10 @@ fun BottomBarSettingsContent(
                             HorizontalDivider()
 
                             Text(
-                                text = "推荐固定显示。可调整其余标签的显示/隐藏、顺序，以及下滑时的自动收起行为。",
+                                text = "可调整顶部标签的显示/隐藏和顺序，第一位会直接显示在首页顶部。",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = CupertinoIcons.Default.ChevronUp,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "顶部栏自动收缩",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "列表离开顶部时自动隐藏推荐、直播那一排标签，回到顶部时恢复",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                AppAdaptiveSwitch(
-                                    checked = headerCollapseEnabled,
-                                    onCheckedChange = { checked ->
-                                        scope.launch {
-                                            SettingsManager.setHeaderCollapseEnabled(context, checked)
-                                        }
-                                    }
-                                )
-                            }
 
                             val visibleTopOrder = localTopTabOrder.filter { it in localTopTabVisible }
                             Text(
@@ -859,7 +823,7 @@ fun BottomBarSettingsContent(
                                     }
                                     IconButton(
                                         onClick = { moveTopTab(tab.id, -1) },
-                                        enabled = !tab.fixedVisible && index > 1
+                                        enabled = !tab.fixedVisible && index > 0
                                     ) {
                                         Icon(
                                             CupertinoIcons.Default.ChevronUp,
@@ -919,9 +883,6 @@ fun BottomBarSettingsContent(
                                             if (checked && tab.id !in localTopTabOrder) {
                                                 localTopTabOrder = localTopTabOrder + tab.id
                                             }
-                                            // 推荐固定在首位
-                                            val withoutRecommend = localTopTabOrder.filterNot { it == "RECOMMEND" }
-                                            localTopTabOrder = listOf("RECOMMEND") + withoutRecommend
                                             saveTopTabConfig()
                                         },
                                         enabled = canToggle

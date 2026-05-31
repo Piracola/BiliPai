@@ -365,16 +365,6 @@ class SettingsSearchPolicyTest {
     }
 
     @Test
-    fun queryByAutoCollapse_hitsTopTabManagementEntry() {
-        val result = resolveSettingsSearchResults("自动收缩").firstOrNull {
-            it.target == SettingsSearchTarget.BOTTOM_BAR && it.title == "顶部标签管理"
-        }
-
-        assertEquals("显示/隐藏、排序、自动收缩、右上角入口", result?.subtitle)
-        assertEquals("导航设置", result?.section)
-    }
-
-    @Test
     fun queryByHomeTopRightMessage_hitsTopTabManagementEntry() {
         val result = resolveSettingsSearchResults("首页右上角消息").firstOrNull {
             it.target == SettingsSearchTarget.BOTTOM_BAR &&
@@ -382,7 +372,7 @@ class SettingsSearchPolicyTest {
         }
 
         assertEquals("顶部标签管理", result?.title)
-        assertEquals("显示/隐藏、排序、自动收缩、右上角入口", result?.subtitle)
+        assertEquals("显示/隐藏、排序、右上角入口", result?.subtitle)
     }
 
     @Test

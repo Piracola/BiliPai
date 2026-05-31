@@ -333,8 +333,6 @@ private val SETTINGS_SEARCH_INDEX: List<SettingsSearchEntry> = listOf(
             "tab",
             "顶部标签",
             "顶部标签页",
-            "顶部栏自动收缩",
-            "首页收缩",
             "侧边导航栏",
             "侧边栏",
             "平板导航",
@@ -641,7 +639,7 @@ private val SETTINGS_SEARCH_INDEX: List<SettingsSearchEntry> = listOf(
     SettingsSearchEntry(
         target = SettingsSearchTarget.BOTTOM_BAR,
         title = "顶部标签管理",
-        subtitle = "显示/隐藏、排序、自动收缩、右上角入口",
+        subtitle = "显示/隐藏、排序、右上角入口",
         section = "导航设置",
         aliases = listOf(
             "顶部标签",
@@ -650,10 +648,6 @@ private val SETTINGS_SEARCH_INDEX: List<SettingsSearchEntry> = listOf(
             "顶部标签管理",
             "标签排序",
             "标签显示",
-            "顶部栏自动收缩",
-            "自动收缩",
-            "自动隐藏",
-            "回到顶部显示",
             "推荐分类",
             "直播标签",
             "首页右上角",
