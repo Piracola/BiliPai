@@ -1636,6 +1636,10 @@ fun iOSHomeHeader(
         materialMode = topChromeMaterialMode,
         interactionBudget = interactionBudget
     )
+    val usePlainMd3TopTabUnderline = shouldUsePlainMd3TopTabUnderline(
+        uiPreset = uiPreset,
+        liquidGlassEnabled = topChromeLiquidGlassEnabled
+    )
     val drawTopTabOuterChromeSurface = shouldDrawHomeTopTabOuterChromeSurface(
         uiPreset = uiPreset,
         androidNativeVariant = androidNativeVariant,
@@ -2142,7 +2146,8 @@ fun iOSHomeHeader(
                 skinPlainStyle = shouldUseSkinPlainTopTabs,
                 skinPlainContentColor = null,
                 topTabSkinIconPaths = uiSkinDecoration?.topTabSkinIconPaths.orEmpty(),
-                partitionSkinIconPath = uiSkinDecoration?.topTabPartitionIconPath()
+                partitionSkinIconPath = uiSkinDecoration?.topTabPartitionIconPath(),
+                forceMaterialUnderline = usePlainMd3TopTabUnderline
             )
         }
     }

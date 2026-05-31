@@ -702,6 +702,53 @@ class TopTabStylePolicyTest {
     }
 
     @Test
+    fun `md3 and miuix use screenshot underline when liquid glass is off`() {
+        assertTrue(
+            shouldUsePlainMd3TopTabUnderline(
+                uiPreset = UiPreset.MD3,
+                liquidGlassEnabled = false
+            )
+        )
+        assertFalse(
+            shouldUsePlainMd3TopTabUnderline(
+                uiPreset = UiPreset.MD3,
+                liquidGlassEnabled = true
+            )
+        )
+        assertFalse(
+            shouldUsePlainMd3TopTabUnderline(
+                uiPreset = UiPreset.IOS,
+                liquidGlassEnabled = false
+            )
+        )
+    }
+
+    @Test
+    fun `md3 top tabs remove outer dock when liquid glass is off`() {
+        assertFalse(
+            shouldDrawHomeTopTabOuterChromeSurface(
+                uiPreset = UiPreset.MD3,
+                androidNativeVariant = AndroidNativeVariant.MATERIAL3,
+                materialMode = TopTabMaterialMode.BLUR
+            )
+        )
+        assertFalse(
+            shouldDrawHomeTopTabOuterChromeSurface(
+                uiPreset = UiPreset.MD3,
+                androidNativeVariant = AndroidNativeVariant.MATERIAL3,
+                materialMode = TopTabMaterialMode.PLAIN
+            )
+        )
+        assertTrue(
+            shouldDrawHomeTopTabOuterChromeSurface(
+                uiPreset = UiPreset.MD3,
+                androidNativeVariant = AndroidNativeVariant.MATERIAL3,
+                materialMode = TopTabMaterialMode.LIQUID_GLASS
+            )
+        )
+    }
+
+    @Test
     fun `md3 top tabs use underline row semantics and tighter action shape`() {
         assertEquals(
             "UNDERLINE_FIXED",

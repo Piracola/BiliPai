@@ -620,6 +620,13 @@ internal fun shouldUseMd3TopTabMaterialIndicator(
     return resolveTopTabIndicatorStyle(uiPreset) == TopTabIndicatorStyle.MATERIAL
 }
 
+internal fun shouldUsePlainMd3TopTabUnderline(
+    uiPreset: UiPreset,
+    liquidGlassEnabled: Boolean
+): Boolean {
+    return uiPreset == UiPreset.MD3 && !liquidGlassEnabled
+}
+
 fun resolveTopTabLabelTextSizeSp(labelMode: Int): Float {
     val tuning = resolveTopTabVisualTuning()
     return when (normalizeTopTabLabelMode(labelMode)) {
@@ -707,5 +714,8 @@ internal fun shouldDrawHomeTopTabOuterChromeSurface(
     androidNativeVariant: AndroidNativeVariant,
     materialMode: TopTabMaterialMode
 ): Boolean {
+    if (uiPreset == UiPreset.MD3 && materialMode != TopTabMaterialMode.LIQUID_GLASS) {
+        return false
+    }
     return !(uiPreset == UiPreset.MD3 && androidNativeVariant == AndroidNativeVariant.MIUIX)
 }

@@ -683,7 +683,8 @@ private fun LightweightHomeTopTabs(
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
     partitionSkinIconPath: String? = null,
     hasOuterChromeSurface: Boolean = false,
-    showPartitionAction: Boolean = true
+    showPartitionAction: Boolean = true,
+    forceMaterialUnderline: Boolean = false
 ) {
     val uiPreset = LocalUiPreset.current
     val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
@@ -691,7 +692,11 @@ private fun LightweightHomeTopTabs(
     val normalizedLabelMode = normalizeTopTabLabelMode(labelMode)
     val showIcon = shouldShowTopTabIcon(normalizedLabelMode)
     val showText = shouldShowTopTabText(normalizedLabelMode)
-    val effectiveRenderer = if (skinPlainStyle) HomeTopTabRenderer.MD3 else renderer
+    val effectiveRenderer = if (skinPlainStyle || forceMaterialUnderline) {
+        HomeTopTabRenderer.MD3
+    } else {
+        renderer
+    }
     val safeSelectedIndex = selectedIndex.coerceIn(0, (categories.size - 1).coerceAtLeast(0))
     val topTabDragMotionSpec = remember { resolveSegmentedControlMotionSpec() }
     var topTabIndicatorDragEngaged by remember { mutableStateOf(false) }
@@ -1546,7 +1551,8 @@ fun CategoryTabRow(
     skinPlainStyle: Boolean = false,
     skinPlainContentColor: Color? = null,
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
-    partitionSkinIconPath: String? = null
+    partitionSkinIconPath: String? = null,
+    forceMaterialUnderline: Boolean = false
 ) {
     val presetStyle = resolveHomeTopPresetStyle(
         uiPreset = LocalUiPreset.current,
@@ -1589,7 +1595,8 @@ fun CategoryTabRow(
         topTabSkinIconPaths = topTabSkinIconPaths,
         partitionSkinIconPath = partitionSkinIconPath,
         hasOuterChromeSurface = hasOuterChromeSurface,
-        showPartitionAction = showPartitionAction
+        showPartitionAction = showPartitionAction,
+        forceMaterialUnderline = forceMaterialUnderline
     )
 }
 
