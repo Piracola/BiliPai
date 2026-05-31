@@ -18,7 +18,7 @@ class PartitionScreenStructureTest {
         assertTrue(source.contains("resolveEffectiveLiquidGlassEnabled("))
         assertTrue(source.contains("BottomBarLiquidIndicatorSurface("))
         assertTrue(source.contains("liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled"))
-        assertTrue(source.contains("partitionSideRailSweepSelection("))
+        assertFalse(source.contains("partitionSideRailSweepSelection("))
         assertTrue(source.contains("CardPositionManager.recordVideoCardPosition("))
         assertTrue(source.contains("videoCoverSharedElementKey("))
         assertTrue(source.contains("LocalVideoCardSharedElementSourceRoute.current"))
@@ -28,34 +28,12 @@ class PartitionScreenStructureTest {
     }
 
     @Test
-    fun `side rail sweep resolves visible item under finger`() {
-        val visibleItems = listOf(
-            PartitionSideRailVisibleItem(index = 0, offset = 8, size = 48),
-            PartitionSideRailVisibleItem(index = 1, offset = 60, size = 48),
-            PartitionSideRailVisibleItem(index = 2, offset = 112, size = 48)
-        )
+    fun `side rail leaves vertical drag to lazy list scrolling`() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/partition/PartitionScreen.kt")
 
-        assertTrue(
-            resolvePartitionSideRailSweepIndex(
-                pointerY = 64f,
-                visibleItems = visibleItems,
-                itemCount = 3
-            ) == 1
-        )
-        assertTrue(
-            resolvePartitionSideRailSweepIndex(
-                pointerY = 180f,
-                visibleItems = visibleItems,
-                itemCount = 3
-            ) == null
-        )
-        assertTrue(
-            resolvePartitionSideRailSweepIndex(
-                pointerY = 64f,
-                visibleItems = visibleItems,
-                itemCount = 1
-            ) == null
-        )
+        assertFalse(source.contains("pointerInput(partitions)"))
+        assertFalse(source.contains("awaitFirstDown("))
+        assertFalse(source.contains("PointerEventPass.Initial"))
     }
 
     private fun loadSource(path: String): String {

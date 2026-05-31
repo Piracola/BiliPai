@@ -3,12 +3,9 @@ package com.android.purebilibili.feature.partition
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,8 +22,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -360,12 +355,7 @@ private fun PartitionSideRail(
     LazyColumn(
         state = listState,
         modifier = modifier
-            .fillMaxHeight()
-            .partitionSideRailSweepSelection(
-                listState = listState,
-                partitions = partitions,
-                onPartitionSelected = onPartitionSelected
-            ),
+            .fillMaxHeight(),
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -445,65 +435,6 @@ private fun PartitionSideRailItem(
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 color = if (selected) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-internal data class PartitionSideRailVisibleItem(
-    val index: Int,
-    val offset: Int,
-    val size: Int
-)
-
-internal fun resolvePartitionSideRailSweepIndex(
-    pointerY: Float,
-    visibleItems: List<PartitionSideRailVisibleItem>,
-    itemCount: Int
-): Int? {
-    if (itemCount <= 0) return null
-    return visibleItems
-        .firstOrNull { item ->
-            val start = item.offset.toFloat()
-            val end = (item.offset + item.size).toFloat()
-            pointerY in start..end
-        }
-        ?.index
-        ?.takeIf { it in 0 until itemCount }
-}
-
-private fun Modifier.partitionSideRailSweepSelection(
-    listState: LazyListState,
-    partitions: List<PartitionCategory>,
-    onPartitionSelected: (PartitionCategory) -> Unit
-): Modifier = pointerInput(partitions) {
-    fun selectAt(pointerY: Float) {
-        val visibleItems = listState.layoutInfo.visibleItemsInfo.map { item ->
-            PartitionSideRailVisibleItem(
-                index = item.index,
-                offset = item.offset,
-                size = item.size
-            )
-        }
-        val targetIndex = resolvePartitionSideRailSweepIndex(
-            pointerY = pointerY,
-            visibleItems = visibleItems,
-            itemCount = partitions.size
-        ) ?: return
-        onPartitionSelected(partitions[targetIndex])
-    }
-
-    awaitEachGesture {
-        val down = awaitFirstDown(
-            requireUnconsumed = false,
-            pass = PointerEventPass.Initial
-        )
-        selectAt(down.position.y)
-
-        while (true) {
-            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-            if (!change.pressed) break
-            selectAt(change.position.y)
         }
     }
 }
