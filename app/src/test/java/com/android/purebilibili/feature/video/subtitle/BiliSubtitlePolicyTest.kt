@@ -175,7 +175,7 @@ class BiliSubtitlePolicyTest {
     }
 
     @Test
-    fun resolveDefaultSubtitleLanguages_prefersPlayerInfoPrimaryLanguageWhenProvided() {
+    fun resolveDefaultSubtitleLanguages_keepsChineseAheadOfPlayerInfoLanguage() {
         val tracks = listOf(
             SubtitleTrackMeta(lan = "zh-Hans", lanDoc = "中文（简体）", subtitleUrl = "https://a"),
             SubtitleTrackMeta(lan = "ja-JP", lanDoc = "日语", subtitleUrl = "https://b"),
@@ -187,8 +187,91 @@ class BiliSubtitlePolicyTest {
             preferredPrimaryLanguage = "ja"
         )
 
+        assertEquals("zh-Hans", selection.primaryLanguage)
+        assertEquals("en-US", selection.secondaryLanguage)
+    }
+
+    @Test
+    fun resolveDefaultSubtitleLanguages_usesPlayerInfoLanguageOnlyWhenChineseMissing() {
+        val tracks = listOf(
+            SubtitleTrackMeta(lan = "ar-SA", lanDoc = "阿拉伯语", subtitleUrl = "https://a"),
+            SubtitleTrackMeta(lan = "ja-JP", lanDoc = "日语", subtitleUrl = "https://b"),
+            SubtitleTrackMeta(lan = "en-US", lanDoc = "英语", subtitleUrl = "https://c")
+        )
+
+        val selection = resolveDefaultSubtitleLanguages(
+            tracks = tracks,
+            preferredPrimaryLanguage = "ja"
+        )
+
         assertEquals("ja-JP", selection.primaryLanguage)
         assertEquals("en-US", selection.secondaryLanguage)
+    }
+
+    @Test
+    fun mapPlayerInfoSubtitleTracks_keepsAllTrustedLanguages() {
+        val tracks = mapPlayerInfoSubtitleTracks(
+            listOf(
+                SubtitleItem(
+                    id = 1L,
+                    lan = "ar-SA",
+                    lanDoc = "阿拉伯语",
+                    subtitleUrl = "//aisubtitle.hdslb.com/bfs/subtitle/ar.json"
+                ),
+                SubtitleItem(
+                    id = 2L,
+                    lan = "ja-JP",
+                    lanDoc = "日语",
+                    subtitleUrl = "//aisubtitle.hdslb.com/bfs/subtitle/ja.json"
+                ),
+                SubtitleItem(
+                    id = 3L,
+                    lan = "zh-Hans",
+                    lanDoc = "中文（简体）",
+                    subtitleUrl = "//aisubtitle.hdslb.com/bfs/subtitle/zh.json"
+                ),
+                SubtitleItem(
+                    id = 4L,
+                    lan = "en-US",
+                    lanDoc = "英语",
+                    subtitleUrl = "//aisubtitle.hdslb.com/bfs/subtitle/en.json"
+                )
+            )
+        )
+
+        assertEquals(
+            setOf("ar-SA", "ja-JP", "zh-Hans", "en-US"),
+            tracks.map { it.lan }.toSet()
+        )
+    }
+
+    @Test
+    fun buildSubtitleTrackOptions_marksSelectedTrackAndUsesLanguageDocs() {
+        val tracks = listOf(
+            SubtitleTrackMeta(
+                id = 1L,
+                lan = "ar-SA",
+                lanDoc = "阿拉伯语",
+                subtitleUrl = "https://aisubtitle.hdslb.com/bfs/subtitle/ar.json"
+            ),
+            SubtitleTrackMeta(
+                id = 2L,
+                lan = "ja-JP",
+                lanDoc = "日语",
+                subtitleUrl = "https://aisubtitle.hdslb.com/bfs/subtitle/ja.json",
+                aiStatus = 1
+            )
+        )
+
+        val options = buildSubtitleTrackOptions(
+            tracks = tracks,
+            selectedTrackKey = tracks.last().trackKey
+        )
+
+        assertEquals(listOf("阿拉伯语", "日语 · AI"), options.map { it.label })
+        assertFalse(options.first().selected)
+        assertTrue(options.last().selected)
+        assertTrue(options.last().likelyAi)
     }
 
     @Test

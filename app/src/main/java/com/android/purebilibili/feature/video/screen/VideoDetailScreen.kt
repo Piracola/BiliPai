@@ -165,7 +165,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
-import com.android.purebilibili.core.ui.transition.VideoSharedTransitionTargetMode
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionEasing
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionSourceCornerDp
@@ -1035,7 +1034,8 @@ private fun PortraitInlineVideoPlayerHost(
             sourceRouteForSharedElement = sourceRouteForSharedElement,
             suppressSubtitleOverlay = suppressSubtitleOverlay,
             subtitleDisplayModePreferenceOverride = subtitleDisplayModePreferenceOverride,
-            onSubtitleDisplayModePreferenceOverrideChange = onSubtitleDisplayModePreferenceOverrideChange
+            onSubtitleDisplayModePreferenceOverrideChange = onSubtitleDisplayModePreferenceOverrideChange,
+            onSubtitleTrackSelected = viewModel::selectSubtitleTrack
         )
     }
 }
@@ -1105,7 +1105,7 @@ fun VideoDetailScreen(
             ?: resolveVideoSharedTransitionSourceCornerDp(sourceRouteForSharedElement)
     }
     val videoSharedPlaybackIntent = remember(context, startAudioFromRoute) {
-        if (!startAudioFromRoute && !com.android.purebilibili.core.store.SettingsManager.getAutoPlaySync(context)) {
+        if (!startAudioFromRoute && !com.android.purebilibili.core.store.SettingsManager.getClickToPlaySync(context)) {
             VideoSharedTransitionPlaybackIntent.CoverFirst
         } else {
             VideoSharedTransitionPlaybackIntent.ImmediatePlayback
@@ -2967,7 +2967,8 @@ fun VideoDetailScreen(
                 sourceRouteForSharedElement = sourceRouteForSharedElement,
                 suppressSubtitleOverlay = shouldSuppressSubtitleOverlay,
                 subtitleDisplayModePreferenceOverride = subtitleDisplayModeOverride,
-                onSubtitleDisplayModePreferenceOverrideChange = { subtitleDisplayModeOverride = it }
+                onSubtitleDisplayModePreferenceOverrideChange = { subtitleDisplayModeOverride = it },
+                onSubtitleTrackSelected = viewModel::selectSubtitleTrack
             )
         } else {
                 //  沉浸式布局：视频延伸到状态栏 + 内容区域
@@ -3255,6 +3256,7 @@ fun VideoDetailScreen(
                             hasAnimatedVisibilityScope = animatedVisibilityScope != null
                         ) &&
                         activeVideoSharedTransitionVisualSpec.useCoverSharedBounds &&
+                        videoSharedPlaybackIntent == VideoSharedTransitionPlaybackIntent.ImmediatePlayback &&
                         !forceCoverOnlyForReturn
                     ) {
                         with(requireNotNull(sharedTransitionScope)) {

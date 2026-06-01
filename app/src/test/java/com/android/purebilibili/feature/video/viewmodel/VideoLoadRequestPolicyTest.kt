@@ -738,6 +738,13 @@ class VideoLoadRequestPolicyTest {
             subtitleEnabled = true,
             subtitlePrimaryLanguage = "zh-CN",
             subtitleSecondaryLanguage = "en-US",
+            subtitleTracks = listOf(
+                com.android.purebilibili.feature.video.subtitle.SubtitleTrackMeta(
+                    lan = "zh-CN",
+                    lanDoc = "中文",
+                    subtitleUrl = "https://aisubtitle.hdslb.com/bfs/subtitle/zh.json"
+                )
+            ),
             subtitlePrimaryCues = listOf(
                 com.android.purebilibili.feature.video.subtitle.SubtitleCue(
                     startMs = 0L,
@@ -760,6 +767,7 @@ class VideoLoadRequestPolicyTest {
         assertNull(cleared.subtitleSecondaryLanguage)
         assertNull(cleared.subtitlePrimaryTrackKey)
         assertNull(cleared.subtitleSecondaryTrackKey)
+        assertTrue(cleared.subtitleTracks.isEmpty())
         assertTrue(cleared.subtitlePrimaryCues.isEmpty())
         assertTrue(cleared.subtitleSecondaryCues.isEmpty())
     }

@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+internal const val VIDEO_COMMENT_TYPE = 1
 
 // 评论排序模式：
 // - mode=3: 最热（WBI）
@@ -30,6 +33,48 @@ enum class CommentSortMode(val apiMode: Int, val label: String) {
 }
 
 private const val SUB_REPLY_PAGE_SIZE = 20
+
+internal data class CommentSubjectKey(
+    val oid: Long,
+    val type: Int = VIDEO_COMMENT_TYPE
+) {
+    val isValid: Boolean get() = oid > 0L && type > 0
+}
+
+internal fun shouldApplyCommentSubjectResult(
+    expectedSubject: CommentSubjectKey,
+    currentSubject: CommentSubjectKey
+): Boolean {
+    return expectedSubject.isValid && expectedSubject == currentSubject
+}
+
+internal fun shouldApplySubReplyResult(
+    expectedSubject: CommentSubjectKey,
+    expectedRootId: Long,
+    currentSubject: CommentSubjectKey,
+    activeRootId: Long?,
+    conversationActive: Boolean
+): Boolean {
+    return shouldApplyCommentSubjectResult(expectedSubject, currentSubject) &&
+        expectedRootId > 0L &&
+        activeRootId == expectedRootId &&
+        !conversationActive
+}
+
+internal fun shouldApplyConversationReplyResult(
+    expectedSubject: CommentSubjectKey,
+    expectedRootId: Long,
+    expectedDialogId: Long,
+    currentSubject: CommentSubjectKey,
+    activeRootId: Long?,
+    activeDialogId: Long?
+): Boolean {
+    return shouldApplyCommentSubjectResult(expectedSubject, currentSubject) &&
+        expectedRootId > 0L &&
+        expectedDialogId > 0L &&
+        activeRootId == expectedRootId &&
+        activeDialogId == expectedDialogId
+}
 
 // 评论状态
 data class CommentUiState(
@@ -159,6 +204,7 @@ class VideoCommentViewModel : ViewModel() {
     val fraudEvent = _fraudEvent.asSharedFlow()
 
     private var currentAid: Long = 0
+    private var currentSubject: CommentSubjectKey = CommentSubjectKey(0L)
     
     //  存储原始评论列表（未经筛选），用于筛选切换
     private var allReplies: List<ReplyItem> = emptyList()
@@ -180,6 +226,7 @@ class VideoCommentViewModel : ViewModel() {
             return
         }
         currentAid = aid
+        currentSubject = CommentSubjectKey(oid = aid)
         allReplies = emptyList()
         // 获取当前登录用户 mid
         val myMid = com.android.purebilibili.core.store.TokenManager.midCache ?: 0L
@@ -190,6 +237,7 @@ class VideoCommentViewModel : ViewModel() {
             currentMid = myMid,
             replyCount = expectedReplyCount.coerceAtLeast(0)
         )
+        _subReplyState.value = SubReplyUiState()
         loadComments()
     }
     
@@ -260,6 +308,8 @@ class VideoCommentViewModel : ViewModel() {
     fun loadComments() {
         val currentState = _commentState.value
         if (currentState.isRepliesEnd || currentState.isRepliesLoading) return
+        val requestSubject = currentSubject
+        if (!requestSubject.isValid) return
 
         _commentState.value = currentState.copy(isRepliesLoading = true, repliesError = null)
 
@@ -267,7 +317,7 @@ class VideoCommentViewModel : ViewModel() {
             val pageToLoad = currentState.nextPage
             //  使用当前排序模式
             val result = CommentRepository.getComments(
-                aid = currentAid, 
+                aid = requestSubject.oid,
                 page = pageToLoad, 
                 ps = 20,
                 mode = currentState.sortMode.apiMode,
@@ -275,6 +325,9 @@ class VideoCommentViewModel : ViewModel() {
             )
 
             result.onSuccess { data ->
+                if (!shouldApplyCommentSubjectResult(requestSubject, currentSubject)) {
+                    return@onSuccess
+                }
                 val current = _commentState.value
                 val newReplies = data.replies ?: emptyList()
                 val previousRepliesSize = allReplies.size
@@ -336,6 +389,9 @@ class VideoCommentViewModel : ViewModel() {
                     grpcNextOffset = data.grpcNextOffset.takeIf { it.isNotBlank() }
                 )
             }.onFailure { e ->
+                if (!shouldApplyCommentSubjectResult(requestSubject, currentSubject)) {
+                    return@onFailure
+                }
                 android.util.Log.e("CommentVM", " loadComments error: ${e.message}")
                 _commentState.value = _commentState.value.copy(
                     isRepliesLoading = false,
@@ -349,6 +405,8 @@ class VideoCommentViewModel : ViewModel() {
     // --- 二级评论逻辑 ---
 
     fun openSubReply(rootReply: ReplyItem, targetReplyId: Long = 0L) {
+        val requestSubject = currentSubject
+        if (!requestSubject.isValid) return
         _subReplyState.value = SubReplyUiState(
             visible = true,
             rootReply = rootReply,
@@ -362,7 +420,7 @@ class VideoCommentViewModel : ViewModel() {
             page = 1,
             upMid = _commentState.value.upMid  // [修复] 使用正确的 UP 主 mid
         )
-        loadSubReplies(rootReply.oid, rootReply.rpid, 1)
+        loadSubReplies(requestSubject, rootReply.rpid, 1, paginationOffset = null)
     }
 
     fun openSubReplyFromRoute(rootReplyId: Long, targetReplyId: Long = 0L): Boolean {
@@ -377,7 +435,7 @@ class VideoCommentViewModel : ViewModel() {
             return true
         }
 
-        val routeAid = currentAid
+        val routeSubject = currentSubject
         _subReplyState.value = _subReplyState.value.copy(
             visible = false,
             isLoading = true,
@@ -387,13 +445,16 @@ class VideoCommentViewModel : ViewModel() {
 
         viewModelScope.launch {
             CommentRepository.getSubCommentsForSubject(
-                oid = routeAid,
-                type = 1,
+                oid = routeSubject.oid,
+                type = routeSubject.type,
                 rootId = rootReplyId,
                 page = 1,
                 ps = SUB_REPLY_PAGE_SIZE,
                 preferRestPaging = true
             ).onSuccess { data ->
+                if (!shouldApplyCommentSubjectResult(routeSubject, currentSubject)) {
+                    return@onSuccess
+                }
                 val rootReply = resolveRoutedCommentRootReply(
                     loadedReplies = emptyList(),
                     remoteData = data,
@@ -438,6 +499,9 @@ class VideoCommentViewModel : ViewModel() {
                     targetReplyId = targetReplyId.takeIf { it != rootReplyId } ?: 0L
                 )
             }.onFailure { error ->
+                if (!shouldApplyCommentSubjectResult(routeSubject, currentSubject)) {
+                    return@onFailure
+                }
                 _subReplyState.value = _subReplyState.value.copy(
                     isLoading = false,
                     error = error.message ?: "回复加载失败"
@@ -448,7 +512,14 @@ class VideoCommentViewModel : ViewModel() {
     }
 
     fun closeSubReply() {
-        _subReplyState.value = _subReplyState.value.copy(visible = false)
+        _subReplyState.update { current ->
+            current.copy(
+                visible = false,
+                conversationAnchor = null,
+                isLoading = false,
+                error = null
+            )
+        }
     }
 
     fun onExternalCommentSent(
@@ -471,7 +542,12 @@ class VideoCommentViewModel : ViewModel() {
                     isLoading = true,
                     error = null
                 )
-                loadSubReplies(activeRootReply.oid, activeRootReply.rpid, 1)
+                loadSubReplies(
+                    subject = currentSubject,
+                    rootId = activeRootReply.rpid,
+                    page = 1,
+                    paginationOffset = null
+                )
             } else {
                 reloadCommentsFromStart()
             }
@@ -542,7 +618,12 @@ class VideoCommentViewModel : ViewModel() {
         if (anchor != null) {
             loadConversationReplies(anchor, nextPage)
         } else {
-            loadSubReplies(state.rootReply.oid, state.rootReply.rpid, nextPage)
+            loadSubReplies(
+                subject = currentSubject,
+                rootId = state.rootReply.rpid,
+                page = nextPage,
+                paginationOffset = state.grpcNextOffset
+            )
         }
     }
 
@@ -584,19 +665,35 @@ class VideoCommentViewModel : ViewModel() {
         )
     }
 
-    private fun loadSubReplies(oid: Long, rootId: Long, page: Int) {
+    private fun loadSubReplies(
+        subject: CommentSubjectKey,
+        rootId: Long,
+        page: Int,
+        paginationOffset: String? = _subReplyState.value.grpcNextOffset
+    ) {
+        if (!subject.isValid || rootId <= 0L) return
         viewModelScope.launch {
             val result = CommentRepository.getSubCommentsForSubject(
-                oid = oid,
-                type = 1,
+                oid = subject.oid,
+                type = subject.type,
                 rootId = rootId,
                 page = page,
                 ps = SUB_REPLY_PAGE_SIZE,
-                paginationOffset = _subReplyState.value.grpcNextOffset,
+                paginationOffset = paginationOffset,
                 preferRestPaging = true
             )
             result.onSuccess { data ->
                 val current = _subReplyState.value
+                if (!shouldApplySubReplyResult(
+                        expectedSubject = subject,
+                        expectedRootId = rootId,
+                        currentSubject = currentSubject,
+                        activeRootId = current.rootReply?.rpid,
+                        conversationActive = current.conversationAnchor != null
+                    )
+                ) {
+                    return@onSuccess
+                }
                 val newItems = data.replies ?: emptyList()
                 val updatedItems = if (page == 1) newItems else (current.items + newItems).distinctBy { it.rpid }
                 val nextOffset = data.grpcNextOffset.takeIf { it.isNotBlank() }
@@ -627,6 +724,17 @@ class VideoCommentViewModel : ViewModel() {
                     baseGrpcNextOffset = nextOffset
                 )
             }.onFailure {
+                val current = _subReplyState.value
+                if (!shouldApplySubReplyResult(
+                        expectedSubject = subject,
+                        expectedRootId = rootId,
+                        currentSubject = currentSubject,
+                        activeRootId = current.rootReply?.rpid,
+                        conversationActive = current.conversationAnchor != null
+                    )
+                ) {
+                    return@onFailure
+                }
                 _subReplyState.value = _subReplyState.value.copy(
                     isLoading = false,
                     error = it.message
@@ -646,17 +754,32 @@ class VideoCommentViewModel : ViewModel() {
             _subReplyState.value = _subReplyState.value.copy(isLoading = false, isEnd = true)
             return
         }
+        val subject = currentSubject
+        if (!subject.isValid) return
+        val rootId = root.rpid
+        val paginationOffset = _subReplyState.value.grpcNextOffset
         viewModelScope.launch {
             val result = CommentRepository.getDialogCommentsForSubject(
-                oid = root.oid,
-                type = 1,
-                rootId = root.rpid,
+                oid = subject.oid,
+                type = subject.type,
+                rootId = rootId,
                 dialogId = dialogId,
                 page = page,
-                paginationOffset = _subReplyState.value.grpcNextOffset
+                paginationOffset = paginationOffset
             )
             result.onSuccess { data ->
                 val current = _subReplyState.value
+                if (!shouldApplyConversationReplyResult(
+                        expectedSubject = subject,
+                        expectedRootId = rootId,
+                        expectedDialogId = dialogId,
+                        currentSubject = currentSubject,
+                        activeRootId = current.rootReply?.rpid,
+                        activeDialogId = current.conversationAnchor?.let(::resolveConversationDialogId)
+                    )
+                ) {
+                    return@onSuccess
+                }
                 val newItems = data.replies.orEmpty()
                 val nextOffset = data.grpcNextOffset.takeIf { it.isNotBlank() }
                 val updatedItems = if (page == 1) {
@@ -676,6 +799,17 @@ class VideoCommentViewModel : ViewModel() {
                 )
             }.onFailure { error ->
                 val current = _subReplyState.value
+                if (!shouldApplyConversationReplyResult(
+                        expectedSubject = subject,
+                        expectedRootId = rootId,
+                        expectedDialogId = dialogId,
+                        currentSubject = currentSubject,
+                        activeRootId = current.rootReply?.rpid,
+                        activeDialogId = current.conversationAnchor?.let(::resolveConversationDialogId)
+                    )
+                ) {
+                    return@onFailure
+                }
                 _subReplyState.value = current.copy(
                     items = current.items.ifEmpty {
                         resolveLocalConversationItems(anchorReply, current.baseItems)
@@ -817,7 +951,12 @@ class VideoCommentViewModel : ViewModel() {
                                 isLoading = true,
                                 grpcNextOffset = null
                             )
-                            loadSubReplies(root.oid, root.rpid, 1)
+                            loadSubReplies(
+                                subject = currentSubject,
+                                rootId = root.rpid,
+                                page = 1,
+                                paginationOffset = null
+                            )
                         }
                     }
                     
@@ -1014,7 +1153,7 @@ class VideoCommentViewModel : ViewModel() {
         android.util.Log.d("CommentVM", " deleteSubComment: rpid=$rpid, remaining=${updatedItems.size}")
         
         // 发起网络删除请求（使用 rootReply 的 oid）
-        val oid = current.rootReply?.oid ?: return
+        val oid = currentSubject.oid.takeIf { it > 0L } ?: return
         viewModelScope.launch {
             CommentRepository.deleteComment(oid, rpid).onFailure { e ->
                 android.util.Log.e("CommentVM", "Delete sub-comment failed for $rpid: ${e.message}")

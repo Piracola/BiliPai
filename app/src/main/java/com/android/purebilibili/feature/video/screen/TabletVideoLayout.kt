@@ -233,7 +233,8 @@ fun TabletVideoLayout(
                             onDownloadAudio = { viewModel.downloadAudio(context) },
                             // 🔁 [新增] 播放模式
                             currentPlayMode = currentPlayMode,
-                            onPlayModeClick = onPlayModeClick
+                            onPlayModeClick = onPlayModeClick,
+                            onSubtitleTrackSelected = viewModel::selectSubtitleTrack
                         )
                     }
                 }

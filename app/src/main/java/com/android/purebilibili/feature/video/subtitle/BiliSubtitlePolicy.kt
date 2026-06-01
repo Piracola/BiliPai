@@ -40,6 +40,14 @@ data class SubtitleTrackMeta(
         )
 }
 
+data class SubtitleTrackOption(
+    val trackKey: String,
+    val languageCode: String,
+    val label: String,
+    val selected: Boolean,
+    val likelyAi: Boolean
+)
+
 data class SubtitleLanguageSelection(
     val primaryLanguage: String?,
     val secondaryLanguage: String?
@@ -150,6 +158,35 @@ fun mapPlayerInfoSubtitleTracks(subtitles: List<SubtitleItem>): List<SubtitleTra
     )
 }
 
+fun resolveSubtitleTrackDisplayLabel(track: SubtitleTrackMeta): String {
+    val baseLabel = track.lanDoc.trim().ifBlank { track.lan.trim() }
+    val aiSuffix = if (isLikelyAiSubtitleTrack(track) &&
+        !baseLabel.contains("AI", ignoreCase = true) &&
+        !baseLabel.contains("自动") &&
+        !baseLabel.contains("机翻")
+    ) {
+        " · AI"
+    } else {
+        ""
+    }
+    return (baseLabel + aiSuffix).ifBlank { "未知字幕" }
+}
+
+fun buildSubtitleTrackOptions(
+    tracks: List<SubtitleTrackMeta>,
+    selectedTrackKey: String?
+): List<SubtitleTrackOption> {
+    return tracks.map { track ->
+        SubtitleTrackOption(
+            trackKey = track.trackKey,
+            languageCode = track.lan,
+            label = resolveSubtitleTrackDisplayLabel(track),
+            selected = track.trackKey == selectedTrackKey,
+            likelyAi = isLikelyAiSubtitleTrack(track)
+        )
+    }
+}
+
 fun normalizeSubtitleVerticalOffsetFraction(value: Float): Float {
     return value.coerceIn(-0.30f, 0.30f)
 }
@@ -227,16 +264,16 @@ fun resolveDefaultSubtitleLanguages(
         )
     }
 
-    val primary = findTrackByPreferredLanguage(
-        tracks = tracks,
-        preferredLanguage = preferredPrimaryLanguage
-    ) ?: tracks.firstOrNull { track ->
+    val primary = tracks.firstOrNull { track ->
         track.lan.equals("zh-Hans", ignoreCase = true)
     } ?: tracks.firstOrNull { track ->
         track.lan.equals("zh-CN", ignoreCase = true)
     } ?: tracks.firstOrNull { track ->
         track.lan.startsWith("zh", ignoreCase = true)
-    } ?: tracks.first()
+    } ?: findTrackByPreferredLanguage(
+        tracks = tracks,
+        preferredLanguage = preferredPrimaryLanguage
+    ) ?: tracks.first()
 
     val englishSecondary = tracks.firstOrNull { track ->
         track.lan.equals("en-US", ignoreCase = true)

@@ -55,6 +55,7 @@ import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.draw.clip
 import com.android.purebilibili.feature.video.subtitle.SubtitleDisplayMode
+import com.android.purebilibili.feature.video.subtitle.SubtitleTrackOption
 import com.android.purebilibili.feature.video.subtitle.resolveSubtitleDisplayOptions
 import com.android.purebilibili.feature.video.playback.policy.resolveDisplayedPlaybackTransitionPosition
 import kotlin.math.roundToInt
@@ -302,6 +303,14 @@ internal fun shouldConsumeBackgroundGesturesForFloatingPanels(
     showMoreActionsPanel: Boolean
 ): Boolean = showSubtitlePanel || showMoreActionsPanel
 
+internal fun resolveSubtitlePanelTrackOptions(
+    trackOptions: List<SubtitleTrackOption>
+): List<SubtitleTrackOption> {
+    return trackOptions
+        .filter { it.trackKey.isNotBlank() && it.label.isNotBlank() }
+        .distinctBy { it.trackKey }
+}
+
 private fun Modifier.consumeTap(onTap: () -> Unit): Modifier {
     return pointerInput(onTap) {
         awaitEachGesture {
@@ -377,8 +386,10 @@ fun BottomControlBar(
     val subtitleDisplayMode = subtitleControlState.displayMode
     val subtitlePrimaryLabel = subtitleControlState.primaryLabel
     val subtitleSecondaryLabel = subtitleControlState.secondaryLabel
+    val subtitleTrackOptions = subtitleControlState.trackOptions
     val subtitleLargeTextEnabled = subtitleControlState.largeTextEnabled
     val onSubtitleDisplayModeChange = subtitleControlCallbacks.onDisplayModeChange
+    val onSubtitleTrackSelected = subtitleControlCallbacks.onTrackSelected
     val onSubtitleLargeTextChange = subtitleControlCallbacks.onLargeTextChange
 
     val configuration = LocalConfiguration.current
@@ -528,6 +539,9 @@ fun BottomControlBar(
             hasPrimaryTrack = subtitlePrimaryAvailable,
             hasSecondaryTrack = subtitleSecondaryAvailable
         )
+    }
+    val subtitlePanelTrackOptions = remember(subtitleTrackOptions) {
+        resolveSubtitlePanelTrackOptions(subtitleTrackOptions)
     }
 
     val displayedPositionMs = seekPositionMs.coerceAtLeast(0L)
@@ -827,7 +841,7 @@ fun BottomControlBar(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "字幕语言",
+                        text = "字幕显示",
                         color = Color.White.copy(alpha = 0.88f),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -849,6 +863,29 @@ fun BottomControlBar(
                                 onSubtitleDisplayModeChange(option.mode)
                             }
                         )
+                    }
+                    if (subtitlePanelTrackOptions.isNotEmpty()) {
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.10f))
+                        Text(
+                            text = "字幕轨道",
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 2.dp)
+                        )
+                        subtitlePanelTrackOptions.forEach { option ->
+                            SubtitlePanelOption(
+                                label = option.label,
+                                selected = option.selected,
+                                enabled = true,
+                                minWidthDp = 96,
+                                onClick = {
+                                    showSubtitlePanel = false
+                                    onSubtitleTrackSelected(option.trackKey)
+                                    onSubtitleDisplayModeChange(SubtitleDisplayMode.PRIMARY_ONLY)
+                                }
+                            )
+                        }
                     }
                     if (subtitleOptions.size > 1) {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.10f))

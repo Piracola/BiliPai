@@ -123,7 +123,6 @@ import com.android.purebilibili.core.ui.performance.TrackJankStateFlag
 import com.android.purebilibili.core.ui.performance.TrackJankStateValue
 import com.android.purebilibili.core.ui.blur.unifiedBlur
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
-import com.android.purebilibili.core.ui.transition.VideoSharedTransitionTargetMode
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionSourceCornerDp
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
@@ -135,6 +134,7 @@ import com.android.purebilibili.core.util.rememberHapticFeedback
 import com.android.purebilibili.feature.screenshot.AppScreenshotGestureBlockState
 import com.android.purebilibili.feature.video.subtitle.SubtitleDisplayMode
 import com.android.purebilibili.feature.video.subtitle.SubtitleAutoPreference
+import com.android.purebilibili.feature.video.subtitle.buildSubtitleTrackOptions
 import com.android.purebilibili.feature.video.subtitle.isSubtitleFeatureEnabledForUser
 import com.android.purebilibili.feature.video.subtitle.normalizeSubtitleDisplayMode
 import com.android.purebilibili.feature.video.subtitle.normalizeSubtitleVerticalOffsetFraction
@@ -142,6 +142,7 @@ import com.android.purebilibili.feature.video.subtitle.resolveDefaultSubtitleDis
 import com.android.purebilibili.feature.video.subtitle.resolveSubtitleControlAvailability
 import com.android.purebilibili.feature.video.subtitle.resolveSubtitleDisplayModeByAutoPreference
 import com.android.purebilibili.feature.video.subtitle.resolveSubtitleTextAt
+import com.android.purebilibili.feature.video.subtitle.resolveSubtitleTrackDisplayLabel
 import com.android.purebilibili.feature.video.subtitle.shouldRenderPrimarySubtitle
 import com.android.purebilibili.feature.video.subtitle.shouldRenderSecondarySubtitle
 import com.android.purebilibili.feature.video.usecase.playPlayerFromUserAction
@@ -427,6 +428,7 @@ fun VideoPlayerSection(
     suppressSubtitleOverlay: Boolean = false,
     subtitleDisplayModePreferenceOverride: SubtitleDisplayMode? = null,
     onSubtitleDisplayModePreferenceOverrideChange: (SubtitleDisplayMode) -> Unit = {},
+    onSubtitleTrackSelected: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val localDensity = LocalDensity.current
@@ -2340,7 +2342,8 @@ fun VideoPlayerSection(
                             resizeMode = viewportAspectRatio.playerResizeMode
                             visibility = if (shouldShowInlinePlayerView(
                                     isPortraitFullscreen = isPortraitFullscreen,
-                                    forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation
+                                    forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
+                                    shouldKeepCoverForManualStart = keepCoverForManualStart
                                 )
                             ) {
                                 View.VISIBLE
@@ -2362,7 +2365,8 @@ fun VideoPlayerSection(
                         playerView.keepScreenOn = keepVideoPlaybackAwake
                         playerView.visibility = if (shouldShowInlinePlayerView(
                                 isPortraitFullscreen = isPortraitFullscreen,
-                                forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation
+                                forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
+                                shouldKeepCoverForManualStart = keepCoverForManualStart
                             )
                         ) {
                             View.VISIBLE
@@ -2526,17 +2530,6 @@ fun VideoPlayerSection(
         shouldKeepCoverForManualStart = keepCoverForManualStart,
         hasStartedSmoothReveal = hasStartedSmoothReveal
     )
-    val showManualStartPlayButton = shouldShowManualStartPlayButton(
-        shouldKeepCoverForManualStart = keepCoverForManualStart
-    )
-    val enableManualStartCoverOverlay = shouldEnableManualStartCoverOverlay(
-        shouldKeepCoverForManualStart = keepCoverForManualStart
-    )
-    val baseFillPlayerViewportForManualStartCover = shouldFillPlayerViewportForManualStartCover(
-        shouldKeepCoverForManualStart = keepCoverForManualStart,
-        forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
-        isVerticalVideo = isVerticalVideo
-    )
     val manualStartPlayButtonLayoutSpec = remember {
         resolveManualStartPlayButtonLayoutSpec()
     }
@@ -2574,7 +2567,7 @@ fun VideoPlayerSection(
         isVerticalVideo,
         context
     ) {
-        val coverFirstBySetting = !SettingsManager.getAutoPlaySync(context) &&
+        val coverFirstBySetting = !SettingsManager.getClickToPlaySync(context) &&
             playerState.player.currentPosition <= 0L
         resolveVideoSharedTransitionVisualSpec(
             sourceRoute = sourceRouteForSharedElement,
@@ -2586,22 +2579,33 @@ fun VideoPlayerSection(
                 VideoSharedTransitionPlaybackIntent.ImmediatePlayback
             },
             fullscreen = isFullscreen && !isPortraitFullscreen,
-            autoPortrait = isPortraitFullscreen,
-            initialVertical = isPortraitFullscreen,
+            autoPortrait = isPortraitFullscreen || isVerticalVideo,
+            initialVertical = isPortraitFullscreen || isVerticalVideo,
             isVerticalVideo = isVerticalVideo,
             isReturning = forceCoverDuringReturnAnimation
         )
     }
-    val fillPlayerViewportForManualStartCover =
-        baseFillPlayerViewportForManualStartCover || videoSharedTransitionVisualSpec.fillTargetViewport
+    val entryPresentationSpec = remember(
+        keepCoverForManualStart,
+        forceCoverDuringReturnAnimation,
+        isVerticalVideo,
+        videoSharedTransitionVisualSpec.targetMode
+    ) {
+        resolveVideoPlayerEntryPresentationSpec(
+            shouldKeepCoverForManualStart = keepCoverForManualStart,
+            forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
+            isVerticalVideo = isVerticalVideo,
+            targetMode = videoSharedTransitionVisualSpec.targetMode
+        )
+    }
+    val fillPlayerViewportForManualStartCover = entryPresentationSpec.fillCoverViewport
     val suppressCoverFade = forceCoverDuringReturnAnimation || videoSharedTransitionVisualSpec.suppressCoverFade
     val coverMotionSpec = remember(suppressCoverFade) {
         resolveVideoPlayerCoverMotionSpec(suppressCoverFade)
     }
     val disableCoverFadeAnimation = !coverMotionSpec.shouldAnimateFade
     val coverOverlaySharedBoundsEnabled = shouldEnableCoverOverlaySharedBounds(
-        useCoverOverlaySharedBounds = forceCoverDuringReturnAnimation ||
-            videoSharedTransitionVisualSpec.targetMode == VideoSharedTransitionTargetMode.InlineCover,
+        useCoverOverlaySharedBounds = entryPresentationSpec.coverUsesSharedBounds,
         transitionEnabled = transitionEnabled,
         hasSharedTransitionScope = sharedTransitionScope != null,
         hasAnimatedVisibilityScope = animatedVisibilityScope != null,
@@ -2610,15 +2614,6 @@ fun VideoPlayerSection(
     val forcedReturnCoverSharedElementSourceRoute = resolveForcedReturnCoverSharedElementSourceRoute(
         sourceRouteForSharedElement
     )
-    
-    // [Debug] Logging
-    LaunchedEffect(showCover, currentCoverUrl, isFirstFrameRendered, hasStartedSmoothReveal, uiState) {
-        android.util.Log.d(
-            "VideoPlayerCover",
-            "🔍 Check: bvid=$bvid, showCover=$showCover, isFirstFrame=$isFirstFrameRendered, " +
-                "hasStartedSmoothReveal=$hasStartedSmoothReveal, coverUrl=$coverUrl, finalUrl=$currentCoverUrl"
-        )
-    }
 
     AnimatedVisibility(
         visible = showCover && currentCoverUrl.isNotEmpty(),
@@ -2668,7 +2663,7 @@ fun VideoPlayerSection(
             }
             Box(
                 modifier = coverContainerModifier
-                    .clickable(enabled = enableManualStartCoverOverlay) {
+                    .clickable(enabled = entryPresentationSpec.enableManualStartCoverOverlay) {
                         playPlayerFromUserAction(playerState.player)
                     }
             ) {
@@ -2678,19 +2673,17 @@ fun VideoPlayerSection(
                         // [关键] 尝试使用首页卡片的缓存 Key 作为占位，实现无缝过渡
                         // 假设首页卡片使用的是普通模式 ("n")
                         .placeholderMemoryCacheKey("cover_${bvid}_n")
-                        .listener(
-                            onStart = { android.util.Log.d("VideoPlayerCover", "🖼️ Image loading started: $currentCoverUrl") },
-                            onSuccess = { _, _ -> android.util.Log.d("VideoPlayerCover", "🖼️ Image loaded successfully") },
-                            onError = { _, result -> android.util.Log.e("VideoPlayerCover", "❌ Image load failed: ${result.throwable.message}", result.throwable) }
-                        )
                         .crossfade(shouldEnableCoverImageCrossfade(forceCoverDuringReturnAnimation))
                         .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale = when (entryPresentationSpec.coverContentScaleMode) {
+                        VideoPlayerCoverContentScaleMode.Crop -> ContentScale.Crop
+                        VideoPlayerCoverContentScaleMode.Fit -> ContentScale.Fit
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
 
-                if (showManualStartPlayButton) {
+                if (entryPresentationSpec.showManualStartPlayButton) {
                     if (manualStartPlayButtonLayoutSpec.showCoverScrim) {
                         Box(
                             modifier = Modifier
@@ -3021,6 +3014,12 @@ fun VideoPlayerSection(
         val subtitleOverlayEnabled = subtitleFeatureEnabled && subtitleDisplayMode != SubtitleDisplayMode.OFF
         val subtitlePrimaryLabel = remember(uiState) {
             val success = uiState as? PlayerUiState.Success
+            val selectedTrack = success?.subtitleTracks?.firstOrNull {
+                it.trackKey == success.subtitlePrimaryTrackKey
+            }
+            if (selectedTrack != null) {
+                return@remember resolveSubtitleTrackDisplayLabel(selectedTrack)
+            }
             resolveSubtitleLanguageLabel(
                 languageCode = success?.takeIf {
                     it.subtitleOwnerBvid == it.info.bvid && it.subtitleOwnerCid == it.info.cid
@@ -3030,11 +3029,27 @@ fun VideoPlayerSection(
         }
         val subtitleSecondaryLabel = remember(uiState) {
             val success = uiState as? PlayerUiState.Success
+            val selectedTrack = success?.subtitleTracks?.firstOrNull {
+                it.trackKey == success.subtitleSecondaryTrackKey
+            }
+            if (selectedTrack != null) {
+                return@remember resolveSubtitleTrackDisplayLabel(selectedTrack)
+            }
             resolveSubtitleLanguageLabel(
                 languageCode = success?.takeIf {
                     it.subtitleOwnerBvid == it.info.bvid && it.subtitleOwnerCid == it.info.cid
                 }?.subtitleSecondaryLanguage,
                 fallbackLabel = "英文"
+            )
+        }
+        val subtitleTrackOptions = remember(uiState) {
+            val success = uiState as? PlayerUiState.Success ?: return@remember emptyList()
+            if (success.subtitleOwnerBvid != success.info.bvid || success.subtitleOwnerCid != success.info.cid) {
+                return@remember emptyList()
+            }
+            buildSubtitleTrackOptions(
+                tracks = success.subtitleTracks,
+                selectedTrackKey = success.subtitlePrimaryTrackKey
             )
         }
 
@@ -4012,6 +4027,7 @@ fun VideoPlayerSection(
                     displayMode = if (subtitleFeatureEnabled) subtitleDisplayMode else SubtitleDisplayMode.OFF,
                     primaryLabel = subtitlePrimaryLabel,
                     secondaryLabel = subtitleSecondaryLabel,
+                    trackOptions = subtitleTrackOptions,
                     largeTextEnabled = subtitleLargeTextByUser
                 ),
                 subtitleControlCallbacks = SubtitleControlCallbacks(
@@ -4036,6 +4052,9 @@ fun VideoPlayerSection(
                             SubtitleDisplayMode.OFF
                         }
                         applySubtitleDisplayModePreferenceChange(nextMode)
+                    },
+                    onTrackSelected = { trackKey ->
+                        onSubtitleTrackSelected(trackKey)
                     },
                     onLargeTextChange = { enabled ->
                         com.android.purebilibili.core.util.Logger.d(

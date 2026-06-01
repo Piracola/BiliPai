@@ -387,6 +387,7 @@ sealed class PlayerUiState {
         val subtitleSecondaryLanguage: String? = null,
         val subtitlePrimaryTrackKey: String? = null,
         val subtitleSecondaryTrackKey: String? = null,
+        val subtitleTracks: List<SubtitleTrackMeta> = emptyList(),
         val subtitlePrimaryLikelyAi: Boolean = false,
         val subtitleSecondaryLikelyAi: Boolean = false,
         val subtitlePrimaryCues: List<SubtitleCue> = emptyList(),
@@ -843,6 +844,7 @@ internal fun clearSubtitleFields(state: PlayerUiState.Success): PlayerUiState.Su
         subtitleSecondaryLanguage = null,
         subtitlePrimaryTrackKey = null,
         subtitleSecondaryTrackKey = null,
+        subtitleTracks = emptyList(),
         subtitlePrimaryLikelyAi = false,
         subtitleSecondaryLikelyAi = false,
         subtitlePrimaryCues = emptyList(),
@@ -4533,6 +4535,7 @@ class PlayerViewModel : ViewModel() {
                     subtitleSecondaryLanguage = null,
                     subtitlePrimaryTrackKey = null,
                     subtitleSecondaryTrackKey = null,
+                    subtitleTracks = emptyList(),
                     subtitlePrimaryLikelyAi = false,
                     subtitleSecondaryLikelyAi = false,
                     subtitlePrimaryCues = emptyList(),
@@ -4553,12 +4556,42 @@ class PlayerViewModel : ViewModel() {
         return tracks
     }
 
+    private fun resolveSecondarySubtitleTrack(
+        tracks: List<SubtitleTrackMeta>,
+        primaryTrack: SubtitleTrackMeta
+    ): SubtitleTrackMeta? {
+        return tracks.firstOrNull { track ->
+            track.lan.startsWith("en", ignoreCase = true) && track.trackKey != primaryTrack.trackKey
+        } ?: tracks.firstOrNull { track ->
+            track.trackKey != primaryTrack.trackKey
+        }
+    }
+
+    fun selectSubtitleTrack(trackKey: String) {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val normalizedTrackKey = trackKey.trim()
+        if (normalizedTrackKey.isBlank() || current.subtitleTracks.isEmpty()) return
+        if (current.subtitleOwnerBvid != current.info.bvid || current.subtitleOwnerCid != current.info.cid) return
+
+        loadSubtitleTracksFromPlayerInfo(
+            bvid = current.info.bvid,
+            cid = current.info.cid,
+            subtitles = emptyList(),
+            preferredPrimaryLanguage = null,
+            requestToken = currentLoadRequestToken,
+            precomputedTracks = current.subtitleTracks,
+            selectedPrimaryTrackKey = normalizedTrackKey
+        )
+    }
+
     private fun loadSubtitleTracksFromPlayerInfo(
         bvid: String,
         cid: Long,
         subtitles: List<SubtitleItem>,
         preferredPrimaryLanguage: String? = null,
-        requestToken: Long = currentLoadRequestToken
+        requestToken: Long = currentLoadRequestToken,
+        precomputedTracks: List<SubtitleTrackMeta>? = null,
+        selectedPrimaryTrackKey: String? = null
     ) {
         val current = _uiState.value as? PlayerUiState.Success ?: return
         if (current.info.bvid != bvid || current.info.cid != cid) return
@@ -4574,21 +4607,30 @@ class PlayerViewModel : ViewModel() {
             return
         }
 
-        val trackMetas = mapSubtitleTracksForPlayback(subtitles)
+        val trackMetas = precomputedTracks ?: mapSubtitleTracksForPlayback(subtitles)
         if (trackMetas.isEmpty()) {
             clearSubtitleTracksForCurrentVideo(bvid = bvid, cid = cid)
             return
         }
 
+        val selectedPrimaryTrack = selectedPrimaryTrackKey
+            ?.let { key -> trackMetas.firstOrNull { it.trackKey == key } }
         val selection = resolveDefaultSubtitleLanguages(
             tracks = trackMetas,
             preferredPrimaryLanguage = preferredPrimaryLanguage
         )
-        var primaryTrack = trackMetas.firstOrNull { it.lan == selection.primaryLanguage } ?: trackMetas.first()
-        var secondaryTrack = selection.secondaryLanguage
-            ?.let { targetLan ->
-                trackMetas.firstOrNull { it.lan == targetLan && it.lan != primaryTrack.lan }
-            }
+        var primaryTrack = selectedPrimaryTrack
+            ?: trackMetas.firstOrNull { it.lan == selection.primaryLanguage }
+            ?: trackMetas.first()
+        var secondaryTrack = if (selectedPrimaryTrack != null) {
+            resolveSecondarySubtitleTrack(trackMetas, primaryTrack)
+        } else {
+            selection.secondaryLanguage
+                ?.let { targetLan ->
+                    trackMetas.firstOrNull { it.lan == targetLan && it.trackKey != primaryTrack.trackKey }
+                }
+                ?: resolveSecondarySubtitleTrack(trackMetas, primaryTrack)
+        }
         var primaryTrackKey = buildSubtitleTrackBindingKey(
             subtitleId = primaryTrack.id,
             subtitleIdStr = primaryTrack.idStr,
@@ -4631,6 +4673,7 @@ class PlayerViewModel : ViewModel() {
                     subtitleSecondaryLanguage = secondaryTrack?.lan,
                     subtitlePrimaryTrackKey = primaryTrackKey,
                     subtitleSecondaryTrackKey = secondaryTrackKey,
+                    subtitleTracks = trackMetas,
                     subtitlePrimaryLikelyAi = isLikelyAiSubtitleTrack(primaryTrack),
                     subtitleSecondaryLikelyAi = secondaryTrack?.let(::isLikelyAiSubtitleTrack) ?: false,
                     subtitlePrimaryCues = emptyList(),
@@ -4660,6 +4703,7 @@ class PlayerViewModel : ViewModel() {
                     subtitleLan = track.lan
                 )
             } ?: Result.success(emptyList())
+            var activeTrackMetas = trackMetas
 
             val shouldRetryWithFreshPlayerInfo = shouldRetrySubtitleLoadWithPlayerInfo(
                 primaryResult.exceptionOrNull()?.message
@@ -4678,6 +4722,7 @@ class PlayerViewModel : ViewModel() {
                     .orEmpty()
                     .let(::mapSubtitleTracksForPlayback)
                 if (refreshedTracks.isNotEmpty()) {
+                    activeTrackMetas = refreshedTracks
                     val retryPrimaryTrack = refreshedTracks.firstOrNull { track ->
                         buildSubtitleTrackBindingKey(
                             subtitleId = track.id,
@@ -4713,7 +4758,7 @@ class PlayerViewModel : ViewModel() {
                                 subtitleUrl = track.subtitleUrl
                             ) == secondaryTrackKey
                         } ?: refreshedTracks.firstOrNull { track ->
-                            track.lan == secondaryTrack?.lan && track.lan != primaryTrack.lan
+                            track.lan == secondaryTrack?.lan && track.trackKey != primaryTrack.trackKey
                         }
                         if (retrySecondaryTrack != null && secondaryResult.isFailure) {
                             secondaryTrack = retrySecondaryTrack
@@ -4756,6 +4801,7 @@ class PlayerViewModel : ViewModel() {
                     state.copy(
                         subtitlePrimaryTrackKey = primaryTrackKey,
                         subtitleSecondaryTrackKey = secondaryTrackKey,
+                        subtitleTracks = activeTrackMetas,
                         subtitlePrimaryLikelyAi = isLikelyAiSubtitleTrack(primaryTrack),
                         subtitleSecondaryLikelyAi = secondaryTrack?.let(::isLikelyAiSubtitleTrack) ?: false
                     )

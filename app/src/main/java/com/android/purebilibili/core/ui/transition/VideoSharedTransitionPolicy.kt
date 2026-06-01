@@ -104,9 +104,9 @@ internal fun resolveVideoSharedTransitionVisualSpec(
     val shouldPreferPortraitTarget = initialVertical || (autoPortrait && isVerticalVideo)
     val targetMode = when {
         isReturning -> VideoSharedTransitionTargetMode.InlineCover
+        shouldPreferPortraitTarget -> VideoSharedTransitionTargetMode.PortraitFullscreen
         playbackIntent == VideoSharedTransitionPlaybackIntent.CoverFirst ->
             VideoSharedTransitionTargetMode.InlineCover
-        shouldPreferPortraitTarget -> VideoSharedTransitionTargetMode.PortraitFullscreen
         fullscreen -> VideoSharedTransitionTargetMode.LandscapeFullscreen
         else -> VideoSharedTransitionTargetMode.InlinePlayer
     }

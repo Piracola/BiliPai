@@ -497,7 +497,8 @@ private fun CinemaStagePlayer(
                 onDislike = { viewModel.markVideoNotInterested() },
                 onCoin = { viewModel.showCoinDialog() },
                 onToggleFavorite = { viewModel.toggleFavorite() },
-                onTriple = { viewModel.doTripleAction() }
+                onTriple = { viewModel.doTripleAction() },
+                onSubtitleTrackSelected = viewModel::selectSubtitleTrack
             )
         }
     }

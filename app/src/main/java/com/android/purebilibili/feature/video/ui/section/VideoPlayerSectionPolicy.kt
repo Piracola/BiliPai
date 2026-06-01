@@ -741,6 +741,43 @@ internal fun shouldEnableManualStartCoverOverlay(
     return shouldKeepCoverForManualStart
 }
 
+internal enum class VideoPlayerCoverContentScaleMode {
+    Crop,
+    Fit
+}
+
+internal data class VideoPlayerEntryPresentationSpec(
+    val coverUsesSharedBounds: Boolean,
+    val fillCoverViewport: Boolean,
+    val showManualStartPlayButton: Boolean,
+    val enableManualStartCoverOverlay: Boolean,
+    val coverContentScaleMode: VideoPlayerCoverContentScaleMode
+)
+
+internal fun resolveVideoPlayerEntryPresentationSpec(
+    shouldKeepCoverForManualStart: Boolean,
+    forceCoverDuringReturnAnimation: Boolean,
+    isVerticalVideo: Boolean,
+    targetMode: com.android.purebilibili.core.ui.transition.VideoSharedTransitionTargetMode
+): VideoPlayerEntryPresentationSpec {
+    val targetFillsViewport =
+        targetMode == com.android.purebilibili.core.ui.transition.VideoSharedTransitionTargetMode.LandscapeFullscreen ||
+            targetMode == com.android.purebilibili.core.ui.transition.VideoSharedTransitionTargetMode.PortraitFullscreen
+    val fillCoverViewport = !forceCoverDuringReturnAnimation &&
+        (targetFillsViewport || (shouldKeepCoverForManualStart && isVerticalVideo))
+    return VideoPlayerEntryPresentationSpec(
+        coverUsesSharedBounds = forceCoverDuringReturnAnimation || shouldKeepCoverForManualStart,
+        fillCoverViewport = fillCoverViewport,
+        showManualStartPlayButton = shouldKeepCoverForManualStart,
+        enableManualStartCoverOverlay = shouldKeepCoverForManualStart,
+        coverContentScaleMode = if (fillCoverViewport && isVerticalVideo) {
+            VideoPlayerCoverContentScaleMode.Fit
+        } else {
+            VideoPlayerCoverContentScaleMode.Crop
+        }
+    )
+}
+
 internal fun shouldFillPlayerViewportForManualStartCover(
     shouldKeepCoverForManualStart: Boolean,
     forceCoverDuringReturnAnimation: Boolean,
@@ -853,9 +890,12 @@ internal fun shouldKeepInlinePlayerContentOnReset(
 
 internal fun shouldShowInlinePlayerView(
     isPortraitFullscreen: Boolean,
-    forceCoverDuringReturnAnimation: Boolean
+    forceCoverDuringReturnAnimation: Boolean,
+    shouldKeepCoverForManualStart: Boolean = false
 ): Boolean {
-    return !isPortraitFullscreen && !forceCoverDuringReturnAnimation
+    return !isPortraitFullscreen &&
+        !forceCoverDuringReturnAnimation &&
+        !shouldKeepCoverForManualStart
 }
 
 internal fun shouldEnableCoverImageCrossfade(

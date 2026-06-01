@@ -165,6 +165,25 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
+    fun sharedTransitionVisualSpec_coverFirstVertical_usesPortraitViewport() {
+        val spec = resolveVideoSharedTransitionVisualSpec(
+            sourceRoute = "home",
+            sourceCornerDp = 12,
+            playbackIntent = VideoSharedTransitionPlaybackIntent.CoverFirst,
+            fullscreen = false,
+            autoPortrait = true,
+            initialVertical = true,
+            isVerticalVideo = true,
+            isReturning = false
+        )
+
+        assertEquals(VideoSharedTransitionTargetMode.PortraitFullscreen, spec.targetMode)
+        assertEquals(0, spec.targetCornerDp)
+        assertTrue(spec.fillTargetViewport)
+        assertTrue(spec.useCoverSharedBounds)
+    }
+
+    @Test
     fun sharedTransitionVisualSpec_immediateLandscapeFullscreen_usesSquareViewport() {
         val spec = resolveVideoSharedTransitionVisualSpec(
             sourceRoute = "partition",
