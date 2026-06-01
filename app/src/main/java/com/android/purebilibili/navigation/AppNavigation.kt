@@ -1610,6 +1610,12 @@ fun AppNavigation(
                         }
                         BiliPaiNavEntryContentRole.ONBOARDING ->
                             com.android.purebilibili.feature.onboarding.OnboardingScreen(
+                                onApplySettingsProfile = { profile ->
+                                    com.android.purebilibili.feature.onboarding.applyOnboardingSettingsGuidePreset(
+                                        context,
+                                        profile
+                                    )
+                                },
                                 onFinish = {
                                     welcomePrefs.edit().putBoolean("first_launch_shown", true).apply()
                                     navigation3BackStack = listOf(BiliPaiNavKey.MainHost)

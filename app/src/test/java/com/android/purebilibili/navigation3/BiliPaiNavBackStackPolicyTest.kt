@@ -98,6 +98,8 @@ class BiliPaiNavBackStackPolicyTest {
             .substringAfter("BiliPaiNavEntryContentRole.ONBOARDING")
             .substringBefore("BiliPaiNavEntryContentRole.SETTINGS")
 
+        assertTrue(onboardingFinishBlock.contains("onApplySettingsProfile"))
+        assertTrue(onboardingFinishBlock.contains("applyOnboardingSettingsGuidePreset("))
         assertTrue(onboardingFinishBlock.contains("navigation3BackStack = listOf(BiliPaiNavKey.MainHost)"))
         assertFalse(onboardingFinishBlock.contains("navigation3BackStack = listOf(BiliPaiNavKey.Home)"))
     }
