@@ -658,6 +658,38 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
+    fun `bottom bar keeps BiliPai drag scale target while using KernelSU velocity constants`() {
+        val source = listOf(
+            java.io.File("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt"),
+            java.io.File("src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
+        ).first { it.exists() }.readText()
+
+        assertTrue(source.contains("private const val BOTTOM_BAR_INDICATOR_DRAG_SCALE_TARGET = 88f / 56f"))
+        assertTrue(source.contains("private const val KSU_INDICATOR_VELOCITY_NORMALIZATION_DIVISOR = 10f"))
+        assertTrue(source.contains("private const val KSU_INDICATOR_VELOCITY_SCALE_X_MULTIPLIER = 0.75f"))
+        assertTrue(source.contains("private const val KSU_INDICATOR_VELOCITY_SCALE_Y_MULTIPLIER = 0.25f"))
+        assertTrue(source.contains("private const val KSU_INDICATOR_VELOCITY_CLAMP = 0.2f"))
+    }
+
+    @Test
+    fun `indicator lens is driven by press progress while motion remains for capture`() {
+        val source = listOf(
+            java.io.File("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt"),
+            java.io.File("src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
+        ).first { it.exists() }.readText()
+        val rendererSource = source
+            .substringAfter("private fun KernelSuAlignedBottomBar(")
+            .substringBefore("@Composable\nprivate fun KernelSuBottomBarShell(")
+        val lensSource = rendererSource
+            .substringAfter("val indicatorLensSpec = resolveBottomBarBackdropPresetIndicatorLens(")
+            .substringBefore(")")
+
+        assertTrue(lensSource.contains("progress = effectivePressProgress"))
+        assertTrue(rendererSource.contains("val effectiveIndicatorEffectProgress = maxOf("))
+        assertTrue(rendererSource.contains("indicatorProgress = effectiveIndicatorEffectProgress"))
+    }
+
+    @Test
     fun `indicator keeps enlarged base during active drag while preserving velocity deformation`() {
         val partial = resolveBottomBarIndicatorLayerTransform(
             motionProgress = 0.12f,

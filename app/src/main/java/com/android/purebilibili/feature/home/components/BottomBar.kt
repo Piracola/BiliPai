@@ -3248,7 +3248,7 @@ private fun KernelSuAlignedBottomBar(
             val shellCaptureRefractionHeightDp = materialSpec.shellRefractionHeightDp
             val shellCaptureRefractionAmountDp = materialSpec.shellRefractionAmountDp
             val indicatorLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
-                progress = effectiveIndicatorEffectProgress
+                progress = effectivePressProgress
             )
             val indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
                 preset = liquidGlassPreset,
