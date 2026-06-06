@@ -60,7 +60,7 @@ class BottomBarMiuixStructureTest {
         assertTrue(source.contains("BottomBarGlassMaterialSpec"))
         assertTrue(source.contains("resolveBottomBarGlassMaterialSpec("))
         assertTrue(source.contains("resolveBottomBarGlassMaterialContainerColor("))
-        assertTrue(source.contains("MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)"))
+        assertTrue(source.contains("resolveKernelSuBottomBarContainerColor(darkTheme = isDarkTheme)"))
         assertTrue(source.contains("miuixBlur(4.dp.toPx(), 4.dp.toPx())"))
         assertTrue(source.contains("refractionHeight = 24.dp.toPx()"))
         assertTrue(source.contains("refractionAmount = 24.dp.toPx()"))

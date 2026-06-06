@@ -1294,6 +1294,15 @@ internal fun resolveAndroidNativeIdleIndicatorSurfaceColor(
     }
 }
 
+internal fun resolveKernelSuBottomBarContainerColor(darkTheme: Boolean): Color {
+    val surfaceContainer = if (darkTheme) {
+        Color(0xFF242424)
+    } else {
+        Color.White
+    }
+    return surfaceContainer.copy(alpha = 0.4f)
+}
+
 internal fun resolveBottomBarIdleIndicatorSurfaceColor(
     preset: BottomBarLiquidGlassPreset,
     darkTheme: Boolean
@@ -2899,8 +2908,9 @@ private fun KernelSuAlignedBottomBar(
 ) {
     val shellShape = resolveSharedBottomBarCapsuleShape()
     val tabsBackdrop = rememberMiuixLayerBackdrop()
+    val isDarkTheme = isSystemInDarkTheme()
     val ksuContainerColor = if (glassEnabled) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+        resolveKernelSuBottomBarContainerColor(darkTheme = isDarkTheme)
     } else {
         containerColor
     }
@@ -2916,7 +2926,6 @@ private fun KernelSuAlignedBottomBar(
     }
     val selectedIndex = visibleItems.indexOf(currentItem).coerceAtLeast(0)
     val isValidSelection = currentItem in visibleItems
-    val isDarkTheme = isSystemInDarkTheme()
     val baseSelectedColor = MaterialTheme.colorScheme.primary
     val baseUnselectedColor = MaterialTheme.colorScheme.onSurface
     val skinContentColors = resolveBottomBarSkinContentColors(

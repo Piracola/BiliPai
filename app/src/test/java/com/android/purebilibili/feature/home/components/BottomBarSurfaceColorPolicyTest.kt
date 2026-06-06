@@ -463,6 +463,27 @@ class BottomBarSurfaceColorPolicyTest {
     }
 
     @Test
+    fun `ksu light glass shell uses native white surface container`() {
+        val color = resolveKernelSuBottomBarContainerColor(darkTheme = false)
+
+        assertEquals(Color.White.red, color.red, 0.001f)
+        assertEquals(Color.White.green, color.green, 0.001f)
+        assertEquals(Color.White.blue, color.blue, 0.001f)
+        assertEquals(0.4f, color.alpha, 0.003f)
+    }
+
+    @Test
+    fun `ksu dark glass shell uses native 242424 surface container`() {
+        val color = resolveKernelSuBottomBarContainerColor(darkTheme = true)
+        val expected = Color(0xFF242424)
+
+        assertEquals(expected.red, color.red, 0.001f)
+        assertEquals(expected.green, color.green, 0.001f)
+        assertEquals(expected.blue, color.blue, 0.001f)
+        assertEquals(0.4f, color.alpha, 0.003f)
+    }
+
+    @Test
     fun `android native idle glass indicator uses ksu neutral overlay in dark mode`() {
         val idleIndicator = resolveAndroidNativeIdleIndicatorSurfaceColor(
             darkTheme = true
