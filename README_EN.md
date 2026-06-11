@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-06-06 · Synced to v9.1.2 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-06-11 · Synced to v9.1.3 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-9.1.2-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-9.1.3-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -436,12 +436,12 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v9.1.2 · 2026-06-06)
+### Latest (v9.1.3 · 2026-06-11)
 
-- Fixed incomplete nested comment counts and pagination, plus oversized image preview crashes.
-- Included dynamic unread badges in bottom bar refraction and corrected History header blur.
-- Preserved the Popular tab after returning from video detail.
-- Increased tablet subtitle sizes and restored scrolling in landscape tablet settings.
+- Fixed frozen playback progress and preserved message-linked comment threads while replying.
+- Kept the comment bar available when bottom bar liquid glass is disabled.
+- Refreshed following data against the server to remove stale users and include new follows.
+- Improved comment entry visibility, shared-element return behavior, and home feed scrolling visuals.
 
 ---
 

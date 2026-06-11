@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-9.1.2-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.1.2" />
+  <img src="https://img.shields.io/badge/Version-9.1.3-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.1.3" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
@@ -182,11 +182,11 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `9.1.2 / versionCode 223`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.1.2`：
+当前仓库版本号已更新到 `9.1.3 / versionCode 224`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.1.3`：
 
-- 修复楼中楼评论数量与分页不完整，以及超大图片预览崩溃。
-- 修复动态角标折射、历史页顶栏毛玻璃和热门视频返回后的顶栏选中态。
-- 增大平板字幕，并恢复 Android 平板横屏设置页滚动。
+- 修复播放器进度冻结、消息评论回复定位与播放结束跳转问题。
+- 修复关注列表长期读取旧缓存、关闭底栏液态玻璃后评论栏消失。
+- 完善视频评论入口、共享元素返回链路，并降低首页滚动闪烁。
 
 ## 路线图
 
