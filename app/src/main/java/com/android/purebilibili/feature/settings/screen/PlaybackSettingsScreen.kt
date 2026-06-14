@@ -1623,7 +1623,7 @@ private fun PlaybackFullscreenGestureSettingsSection(
             .getShowOnlineCount(context).collectAsStateWithLifecycle(initialValue = false)
         val bottomProgressBehavior by com.android.purebilibili.core.store.SettingsManager
             .getBottomProgressBehavior(context)
-            .collectAsStateWithLifecycle(initialValue = BottomProgressBehavior.ALWAYS_SHOW)
+            .collectAsStateWithLifecycle(initialValue = BottomProgressBehavior.ALWAYS_HIDE)
         val playerControlVisibility by SettingsManager
             .getPlayerControlVisibilitySettings(context)
             .collectAsStateWithLifecycle(

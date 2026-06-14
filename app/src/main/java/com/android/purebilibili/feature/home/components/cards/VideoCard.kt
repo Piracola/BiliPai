@@ -174,6 +174,80 @@ internal fun resolveHomeVideoCardMetadataColors(
     )
 }
 
+@Composable
+internal fun VideoCardDurationPublishRow(
+    durationText: String,
+    publishTimeText: String,
+    emphasizePublishTime: Boolean,
+    publishTimeColor: Color,
+    topSpacingDp: Int
+) {
+    if (durationText.isBlank() && publishTimeText.isBlank()) return
+
+    Spacer(modifier = Modifier.height(topSpacingDp.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        if (publishTimeText.isNotBlank()) {
+            VideoCardPublishTime(
+                text = publishTimeText,
+                emphasized = emphasizePublishTime,
+                color = publishTimeColor,
+                modifier = Modifier.weight(1f, fill = !emphasizePublishTime)
+            )
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        if (durationText.isNotBlank()) {
+            Text(
+                text = durationText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun VideoCardPublishTime(
+    text: String,
+    emphasized: Boolean,
+    color: Color,
+    modifier: Modifier
+) {
+    if (emphasized) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+            shape = AppShapes.container(ContainerLevel.Pill),
+            modifier = modifier
+        ) {
+            Text(
+                text = text,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = color.copy(alpha = 0.92f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            )
+        }
+    } else {
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier
+        )
+    }
+}
+
 private fun resolveVideoCardPillColors(
     glassEnabled: Boolean,
     blurEnabled: Boolean,
@@ -255,6 +329,7 @@ fun ElegantVideoCard(
     showUpBadge: Boolean = true,
     homeDurationStyle: HomeDurationStyle = HomeDurationStyle.OUTSIDE_COVER,
     coverAspectRatio: Float = 16f / 10f,
+    compactMetadata: Boolean = false,
     showOnlineCount: Boolean = false,
     upFollowerCount: Int? = null,
     upVideoCount: Int? = null,
@@ -625,7 +700,7 @@ fun ElegantVideoCard(
             Box(modifier = coverModifier.fillMaxSize()) {
                 // 🚀 [性能优化] 使用从父级传入的 isDataSaverActive，避免每个卡片重复计算
                 val imageWidth = if (isDataSaverActive) 240 else 360
-                val imageHeight = if (isDataSaverActive) 150 else 225
+                val imageHeight = (imageWidth / coverAspectRatio).roundToInt()
 
                 // 封面图 -  [性能优化] 降低图片尺寸
                 AsyncImage(
@@ -885,14 +960,17 @@ fun ElegantVideoCard(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = infoSurfaceAppearance.borderAlpha),
                     shape = infoSurfaceShape
                 )
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(
+                    horizontal = 10.dp,
+                    vertical = if (compactMetadata) 6.dp else 8.dp
+                )
         } else {
             Modifier.fillMaxWidth()
         }
 
         Column(modifier = infoContainerModifier) {
         if (!infoSurfaceAppearance.useTintedSurface) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(if (compactMetadata) 6.dp else 8.dp))
         }
         
         // 标题行：标题 + 更多按钮
@@ -926,8 +1004,8 @@ fun ElegantVideoCard(
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,  // HIG body 标准
-                    lineHeight = 20.sp,  // HIG 行高
+                    fontSize = if (compactMetadata) 14.sp else 15.sp,
+                    lineHeight = if (compactMetadata) 18.sp else 20.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
                 modifier = titleModifier
@@ -1011,7 +1089,7 @@ fun ElegantVideoCard(
             }
         }
         
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(if (compactMetadata) 4.dp else 6.dp))
         
         val metadataColors = resolveHomeVideoCardMetadataColors(
             onSurfaceColor = MaterialTheme.colorScheme.onSurface
@@ -1136,43 +1214,13 @@ fun ElegantVideoCard(
             
         }
 
-        if (showDurationOutside) {
-            Text(
-                text = durationText,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.align(Alignment.End)
-            )
-        }
-
-        if (publishTimeRowText.isNotBlank()) {
-            Spacer(modifier = Modifier.height(6.dp))
-            if (emphasizePublishTime) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                    shape = AppShapes.container(ContainerLevel.Pill)
-                ) {
-                    Text(
-                        text = publishTimeRowText,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = metadataColors.publishTimeColor.copy(alpha = 0.92f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
-                }
-            } else {
-                Text(
-                    text = publishTimeRowText,
-                    fontSize = 11.sp,
-                    color = metadataColors.publishTimeColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        VideoCardDurationPublishRow(
+            durationText = durationText.takeIf { showDurationOutside }.orEmpty(),
+            publishTimeText = publishTimeRowText,
+            emphasizePublishTime = emphasizePublishTime,
+            publishTimeColor = metadataColors.publishTimeColor,
+            topSpacingDp = if (compactMetadata) 4 else 6
+        )
 
         if (scrollLitePolicy.showSecondaryStatsRow) {
             Spacer(modifier = Modifier.height(6.dp))

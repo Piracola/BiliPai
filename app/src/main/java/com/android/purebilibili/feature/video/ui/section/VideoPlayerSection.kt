@@ -809,8 +809,10 @@ fun VideoPlayerSection(
         .collectAsStateWithLifecycle(initialValue = true)
 
     // 控制器显示状态
-    var showControls by remember { mutableStateOf(true) }
-    var hasAutoHiddenControlsForCurrentVideo by remember(bvid) { mutableStateOf(false) }
+    var showControls by remember(bvid) { mutableStateOf(INITIAL_PLAYER_CONTROLS_VISIBLE) }
+    var hasAutoHiddenControlsForCurrentVideo by remember(bvid) {
+        mutableStateOf(INITIAL_PLAYER_CHROME_AUTO_HIDE_HANDLED)
+    }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
     
     // 🔒 [新增] 屏幕锁定状态（全屏时防误触）

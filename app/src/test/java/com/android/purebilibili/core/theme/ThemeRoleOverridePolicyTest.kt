@@ -1,5 +1,6 @@
 package com.android.purebilibili.core.theme
 
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import com.android.purebilibili.core.store.ThemeModeRoleOverrides
@@ -40,5 +41,33 @@ class ThemeRoleOverridePolicyTest {
                 ThemeModeRoleOverrides("#FFFFFF", "#EEEEEE", "#F2F2F2", "#0061A4")
             )
         )
+    }
+
+    @Test
+    fun currentSchemes_becomeAdvancedColorStartingValues() {
+        val result = themeRoleOverridesFromSchemes(
+            lightScheme = lightColorScheme(
+                primary = Color(0xFF00BCD4),
+                background = Color(0xFFF8FDFF),
+                onBackground = Color(0xFF102023),
+                onSurfaceVariant = Color(0xFF405C61)
+            ),
+            darkScheme = darkColorScheme(
+                primary = Color(0xFF4FD8EA),
+                background = Color(0xFF071416),
+                onBackground = Color(0xFFD8F6FA),
+                onSurfaceVariant = Color(0xFFA8C9CE)
+            )
+        )
+
+        assertFalse(result.enabled)
+        assertEquals("#F8FDFF", result.light.backgroundHex)
+        assertEquals("#102023", result.light.primaryTextHex)
+        assertEquals("#405C61", result.light.secondaryTextHex)
+        assertEquals("#00BCD4", result.light.controlAccentHex)
+        assertEquals("#071416", result.dark.backgroundHex)
+        assertEquals("#D8F6FA", result.dark.primaryTextHex)
+        assertEquals("#A8C9CE", result.dark.secondaryTextHex)
+        assertEquals("#4FD8EA", result.dark.controlAccentHex)
     }
 }

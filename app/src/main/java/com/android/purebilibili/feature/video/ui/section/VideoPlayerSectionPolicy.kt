@@ -14,6 +14,9 @@ import io.github.alexzhirkevich.cupertino.icons.outlined.*
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+internal const val INITIAL_PLAYER_CONTROLS_VISIBLE = false
+internal const val INITIAL_PLAYER_CHROME_AUTO_HIDE_HANDLED = true
+
 enum class VideoGestureMode { None, Brightness, Volume, Seek, SwipeToFullscreen }
 
 private const val PLAYER_DRAG_GESTURE_BOTTOM_EXCLUSION_BUFFER_DP = 12

@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-9.2.2-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.2.2" />
+  <img src="https://img.shields.io/badge/Version-9.2.3-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.2.3" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
@@ -182,10 +182,10 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `9.2.2 / versionCode 227`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.2.2`：
+当前仓库版本号已更新到 `9.2.3 / versionCode 228`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.2.3`：
 
-- 新增首页卡片与时长展示选项、高级明暗配色，并优化首页滚动和卡片性能。
-- 完善播放器控件、进度条布局、音量与输入草稿，修复 seek 后进度回跳和弹幕消失。
+- 视频页默认隐藏控件，底部模式进一步贴边，减少进入播放时的视觉闪现和遮挡。
+- 官方首页卡片改为 `4:3`，合并时长与发布日期；高级配色从当前主题参数开始编辑。
 
 ## 路线图
 

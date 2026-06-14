@@ -431,6 +431,7 @@ fun AppearanceSettingsContent(
     val themeRoleOverrides by SettingsManager
         .getThemeRoleOverrides(context)
         .collectAsStateWithLifecycle(initialValue = ThemeRoleOverrides())
+    val baseThemeRoleOverrides = LocalBaseThemeRoleOverrides.current
     val showOnlineCount by SettingsManager
         .getShowOnlineCount(context)
         .collectAsStateWithLifecycle(initialValue = false)
@@ -642,7 +643,11 @@ fun AppearanceSettingsContent(
                                 scope.launch {
                                     SettingsManager.setThemeRoleOverrides(
                                         context,
-                                        themeRoleOverrides.copy(enabled = enabled)
+                                        if (enabled) {
+                                            baseThemeRoleOverrides.copy(enabled = true)
+                                        } else {
+                                            themeRoleOverrides.copy(enabled = false)
+                                        }
                                     )
                                 }
                             },
@@ -1403,7 +1408,7 @@ fun AppearanceSettingsContent(
                         Column(modifier = Modifier.padding(16.dp)) {
                             IOSSlidingSegmentedSetting(
                                 title = "首页卡片样式：${homeFeedCardStyle.label}",
-                                subtitle = "官方样式使用 16:9 封面与更紧凑的留白",
+                                subtitle = "官方样式使用 4:3 封面、贴边宽图与更紧凑的信息区",
                                 options = HomeFeedCardStyle.entries.map {
                                     PlaybackSegmentOption(it, it.label)
                                 },

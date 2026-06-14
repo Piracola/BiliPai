@@ -322,7 +322,7 @@ enum class BottomProgressBehavior(
 
     companion object {
         fun fromValue(value: Int): BottomProgressBehavior {
-            return entries.find { it.value == value } ?: ALWAYS_SHOW
+            return entries.find { it.value == value } ?: ALWAYS_HIDE
         }
     }
 }
@@ -5351,7 +5351,7 @@ object SettingsManager {
         context.settingsDataStore.data.map { preferences ->
             BottomProgressBehavior.fromValue(
                 preferences[KEY_BOTTOM_PROGRESS_BEHAVIOR]
-                    ?: BottomProgressBehavior.ALWAYS_SHOW.value
+                    ?: BottomProgressBehavior.ALWAYS_HIDE.value
             )
         }
 

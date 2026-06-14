@@ -15,6 +15,14 @@ class PlayerPresentationSettingsTest {
     }
 
     @Test
+    fun `invalid bottom progress behavior falls back to hidden`() {
+        assertEquals(
+            BottomProgressBehavior.ALWAYS_HIDE,
+            BottomProgressBehavior.fromValue(Int.MAX_VALUE)
+        )
+    }
+
+    @Test
     fun `player controls remain visible by default`() {
         val settings = PlayerControlVisibilitySettings()
         assertTrue(settings.showCastButton)

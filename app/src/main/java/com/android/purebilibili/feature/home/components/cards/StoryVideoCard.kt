@@ -95,6 +95,7 @@ fun StoryVideoCard(
     homeDurationStyle: HomeDurationStyle = HomeDurationStyle.OUTSIDE_COVER,
     coverAspectRatio: Float = 16f / 10f,
     cardHorizontalPadding: Dp = 16.dp,
+    compactMetadata: Boolean = false,
     showOnlineCount: Boolean = false,
     showPublishTime: Boolean = false,
     upFollowerCount: Int? = null,
@@ -350,18 +351,7 @@ fun StoryVideoCard(
             }
         }
         
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (showDurationOutside) {
-            Text(
-                text = durationText,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.align(Alignment.End)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-        }
+        Spacer(modifier = Modifier.height(if (compactMetadata) 8.dp else 12.dp))
         
         //  标题
         // 🔗 [共享元素] 标题
@@ -381,43 +371,23 @@ fun StoryVideoCard(
         Text(
             text = video.title,
             color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 17.sp, // 比双列略大
+            fontSize = if (compactMetadata) 15.sp else 17.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            lineHeight = 23.sp,
+            lineHeight = if (compactMetadata) 20.sp else 23.sp,
             modifier = titleModifier
         )
 
-        if (publishTimeRowText.isNotBlank()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            if (emphasizePublishTime) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                    shape = AppShapes.container(ContainerLevel.Pill)
-                ) {
-                    Text(
-                        text = publishTimeRowText,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.92f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
-                }
-            } else {
-                Text(
-                    text = publishTimeRowText,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        VideoCardDurationPublishRow(
+            durationText = durationText.takeIf { showDurationOutside }.orEmpty(),
+            publishTimeText = publishTimeRowText,
+            emphasizePublishTime = emphasizePublishTime,
+            publishTimeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+            topSpacingDp = if (compactMetadata) 4 else 8
+        )
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(if (compactMetadata) 6.dp else 8.dp))
         
         // UP主信息 + 数据
         Row(

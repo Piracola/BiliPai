@@ -826,6 +826,12 @@ fun PureBiliBiliTheme(
     val resolvedDarkMaterialScheme = remember(darkMaterialScheme, themeRoleOverrides) {
         applyThemeRoleOverrides(darkMaterialScheme, themeRoleOverrides, darkTheme = true)
     }
+    val baseThemeRoleOverrides = remember(lightMaterialScheme, darkMaterialScheme) {
+        themeRoleOverridesFromSchemes(
+            lightScheme = lightMaterialScheme,
+            darkScheme = darkMaterialScheme
+        )
+    }
     val staticMaterialScheme = if (darkTheme) resolvedDarkMaterialScheme else resolvedLightMaterialScheme
     val miuixLightColors = remember(resolvedLightMaterialScheme) {
         resolveMiuixColorsFromMaterialBridge(
@@ -874,6 +880,7 @@ fun PureBiliBiliTheme(
         LocalUiPreset provides uiPreset,
         LocalAndroidNativeVariant provides androidNativeVariant,
         LocalDynamicColorActive provides isDynamicColorActive,
+        LocalBaseThemeRoleOverrides provides baseThemeRoleOverrides,
         LocalCornerRadiusScale provides resolveCornerRadiusScale(
             uiPreset = uiPreset,
             androidNativeVariant = androidNativeVariant

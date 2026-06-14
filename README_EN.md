@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-06-14 · Synced to v9.2.2 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-06-14 · Synced to v9.2.3 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-9.2.2-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-9.2.3-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -436,10 +436,10 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v9.2.2 · 2026-06-14)
+### Latest (v9.2.3 · 2026-06-14)
 
-- Added home card and duration styles, advanced light/dark color overrides, and smoother home scrolling.
-- Improved player controls, progress layout, volume and composer drafts; fixed seek progress rollback and disappearing danmaku.
+- 视频页默认隐藏控件与细进度条，底部模式进一步贴近播放器边缘。
+- 官方首页卡片改为 `4:3`，时长与发布日期合并显示；高级配色从当前主题参数开始编辑。
 
 ---
 

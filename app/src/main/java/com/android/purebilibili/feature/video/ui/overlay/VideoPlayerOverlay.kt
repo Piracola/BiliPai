@@ -799,7 +799,7 @@ fun VideoPlayerOverlay(
         )
     val bottomProgressBehavior by SettingsManager
         .getBottomProgressBehavior(context)
-        .collectAsStateWithLifecycle(initialValue = BottomProgressBehavior.ALWAYS_SHOW
+        .collectAsStateWithLifecycle(initialValue = BottomProgressBehavior.ALWAYS_HIDE
         )
     val playerControlVisibility by SettingsManager
         .getPlayerControlVisibilitySettings(context)

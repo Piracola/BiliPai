@@ -1,5 +1,7 @@
 package com.android.purebilibili.feature.video.ui.overlay
 
+import com.android.purebilibili.core.store.PlayerProgressPlacement
+
 data class BottomControlBarLayoutPolicy(
     val bottomPaddingDp: Int,
     val progressSpacingDp: Int,
@@ -26,6 +28,17 @@ data class BottomControlBarLayoutPolicy(
     val actionTextFontSp: Int,
     val fullscreenIconSizeDp: Int
 )
+
+internal fun resolveBottomControlBarBottomPaddingDp(
+    defaultBottomPaddingDp: Int,
+    progressPlacement: PlayerProgressPlacement
+): Int {
+    return if (progressPlacement == PlayerProgressPlacement.BOTTOM_EDGE) {
+        0
+    } else {
+        defaultBottomPaddingDp
+    }
+}
 
 fun resolveBottomControlBarLayoutPolicy(
     widthDp: Int

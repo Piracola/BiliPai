@@ -1,11 +1,36 @@
 package com.android.purebilibili.core.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import com.android.purebilibili.core.store.ThemeModeRoleOverrides
 import com.android.purebilibili.core.store.ThemeRoleOverrides
+
+internal val LocalBaseThemeRoleOverrides = staticCompositionLocalOf {
+    ThemeRoleOverrides()
+}
+
+internal fun themeRoleOverridesFromSchemes(
+    lightScheme: ColorScheme,
+    darkScheme: ColorScheme
+): ThemeRoleOverrides {
+    fun ColorScheme.toRoles(): ThemeModeRoleOverrides {
+        return ThemeModeRoleOverrides(
+            backgroundHex = formatMd3CustomColorHex(background),
+            primaryTextHex = formatMd3CustomColorHex(onBackground),
+            secondaryTextHex = formatMd3CustomColorHex(onSurfaceVariant),
+            controlAccentHex = formatMd3CustomColorHex(primary)
+        )
+    }
+
+    return ThemeRoleOverrides(
+        enabled = false,
+        light = lightScheme.toRoles(),
+        dark = darkScheme.toRoles()
+    )
+}
 
 internal fun applyThemeRoleOverrides(
     scheme: ColorScheme,

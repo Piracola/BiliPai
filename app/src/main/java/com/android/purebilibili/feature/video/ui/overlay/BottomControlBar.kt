@@ -548,6 +548,12 @@ fun BottomControlBar(
     }
 
     val displayedPositionMs = seekPositionMs.coerceAtLeast(0L)
+    val resolvedBottomPaddingDp = remember(layoutPolicy.bottomPaddingDp, progressPlacement) {
+        resolveBottomControlBarBottomPaddingDp(
+            defaultBottomPaddingDp = layoutPolicy.bottomPaddingDp,
+            progressPlacement = progressPlacement
+        )
+    }
     val progressBarContent: @Composable () -> Unit = {
         VideoProgressBar(
             currentPosition = progress.current,
@@ -574,7 +580,7 @@ fun BottomControlBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = layoutPolicy.bottomPaddingDp.dp)
+            .padding(bottom = resolvedBottomPaddingDp.dp)
             .then(
                 if (shouldApplyNavigationBarPaddingToBottomControlBar(isFullscreen = isFullscreen)) {
                     Modifier.navigationBarsPadding()

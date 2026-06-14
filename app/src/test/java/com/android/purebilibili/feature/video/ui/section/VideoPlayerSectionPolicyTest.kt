@@ -11,6 +11,12 @@ import kotlin.test.assertTrue
 class VideoPlayerSectionPolicyTest {
 
     @Test
+    fun playerControls_areHiddenWhenEnteringVideo() {
+        assertFalse(INITIAL_PLAYER_CONTROLS_VISIBLE)
+        assertTrue(INITIAL_PLAYER_CHROME_AUTO_HIDE_HANDLED)
+    }
+
+    @Test
     fun dragStart_ignoresBottomControlZone() {
         assertTrue(
             shouldIgnoreVideoPlayerDragStart(
