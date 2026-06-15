@@ -930,14 +930,14 @@ internal fun resolveKernelSuBottomBarShellColor(
 ): Color {
     return when {
         liquidGlassEnabled -> resolveKernelSuBottomBarContainerColor(darkTheme = darkTheme)
-        blurEnabled -> containerColor.copy(alpha = 1f)
+        blurEnabled -> containerColor.copy(alpha = maxOf(containerColor.alpha, 0.82f))
         else -> containerColor
     }
 }
 
 internal fun shouldBlurKernelSuBottomBarShell(
-    liquidGlassEnabled: Boolean
-): Boolean = liquidGlassEnabled
+    blurEnabled: Boolean
+): Boolean = blurEnabled
 
 internal fun shouldUseAndroidNativeFloatingHazeBlur(
     blurEnabled: Boolean,
@@ -2945,7 +2945,7 @@ private fun KernelSuAlignedBottomBar(
         darkTheme = isDarkTheme
     )
     val shellBlurEnabled = shouldBlurKernelSuBottomBarShell(
-        liquidGlassEnabled = glassEnabled
+        blurEnabled = blurEnabled
     )
     val indicatorEffectsEnabled = resolveBottomBarIndicatorEffectsEnabled(
         liquidGlassEnabled = glassEnabled,

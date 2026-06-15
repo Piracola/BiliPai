@@ -484,7 +484,7 @@ class BottomBarSurfaceColorPolicyTest {
     }
 
     @Test
-    fun `ksu blur only shell keeps theme surface opaque`() {
+    fun `ksu blur only shell keeps theme surface dominant while allowing blur`() {
         val themeSurface = Color(0x66352F2A)
         val color = resolveKernelSuBottomBarShellColor(
             containerColor = themeSurface,
@@ -496,8 +496,9 @@ class BottomBarSurfaceColorPolicyTest {
         assertEquals(themeSurface.red, color.red, 0.001f)
         assertEquals(themeSurface.green, color.green, 0.001f)
         assertEquals(themeSurface.blue, color.blue, 0.001f)
-        assertEquals(1f, color.alpha, 0.001f)
-        assertFalse(shouldBlurKernelSuBottomBarShell(liquidGlassEnabled = false))
+        assertEquals(0.82f, color.alpha, 0.001f)
+        assertTrue(shouldBlurKernelSuBottomBarShell(blurEnabled = true))
+        assertFalse(shouldBlurKernelSuBottomBarShell(blurEnabled = false))
     }
 
     @Test
@@ -510,7 +511,7 @@ class BottomBarSurfaceColorPolicyTest {
         )
 
         assertEquals(resolveKernelSuBottomBarContainerColor(darkTheme = true), color)
-        assertTrue(shouldBlurKernelSuBottomBarShell(liquidGlassEnabled = true))
+        assertTrue(shouldBlurKernelSuBottomBarShell(blurEnabled = true))
     }
 
     @Test
