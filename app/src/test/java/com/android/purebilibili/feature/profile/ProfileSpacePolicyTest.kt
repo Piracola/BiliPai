@@ -21,6 +21,7 @@ import com.android.purebilibili.data.model.response.SpaceDynamicModules
 import com.android.purebilibili.data.model.response.SpaceDynamicOpus
 import com.android.purebilibili.data.model.response.SpaceDynamicRichText
 import com.android.purebilibili.data.model.response.SpaceVideoItem
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -148,6 +149,37 @@ class ProfileSpacePolicyTest {
         )
 
         assertEquals("https://i0.hdslb.com/bfs/archive/folder.jpg", state.favoriteFolders.first().cover)
+    }
+
+    @Test
+    fun `space favorite folders read cover alias from aggregate response`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val aggregate = json.decodeFromString<SpaceAggregateData>(
+            """
+            {
+              "favourite2": {
+                "count": 1,
+                "item": [
+                  {
+                    "media_id": 123,
+                    "title": "默认收藏夹",
+                    "pic": "https://i0.hdslb.com/bfs/archive/folder-alias.jpg",
+                    "media_count": 9
+                  }
+                ]
+              }
+            }
+            """.trimIndent()
+        )
+
+        val state = resolveProfileSpaceStateFromAggregate(
+            aggregate = aggregate,
+            favoriteFoldersFallback = emptyList(),
+            bangumiItems = emptyList(),
+            dynamicItems = emptyList()
+        )
+
+        assertEquals("https://i0.hdslb.com/bfs/archive/folder-alias.jpg", state.favoriteFolders.first().cover)
     }
 
     @Test
