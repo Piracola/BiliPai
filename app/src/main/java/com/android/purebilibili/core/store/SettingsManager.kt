@@ -426,7 +426,7 @@ data class HomeSettings(
     val liquidGlassMode: LiquidGlassMode = LiquidGlassMode.BALANCED,
     val liquidGlassStrength: Float = 0.52f,
     val liquidGlassProgress: Float = 0.5f,
-    val homeHeaderCollapseMode: HomeHeaderCollapseMode = HomeHeaderCollapseMode.SEARCH_ONLY,
+    val homeHeaderCollapseMode: HomeHeaderCollapseMode = HomeHeaderCollapseMode.BOTH,
     val isHeaderCollapseEnabled: Boolean = true,
     val gridColumnCount: Int = 0, // [New] 网格列数 (0=自动, 1-6=固定)
     val homeFeedCardWidthPreset: HomeFeedCardWidthPreset = HomeFeedCardWidthPreset.AUTO,
@@ -580,10 +580,22 @@ enum class HomeHeaderCollapseMode(
 
     companion object {
         fun fromValue(value: Int): HomeHeaderCollapseMode =
-            entries.find { it.value == value } ?: SEARCH_ONLY
+            entries.find { it.value == value } ?: BOTH
 
         fun fromLegacyBoolean(value: Boolean): HomeHeaderCollapseMode =
-            if (value) SEARCH_ONLY else OFF
+            if (value) BOTH else OFF
+    }
+}
+
+internal fun resolveHomeHeaderCollapseModeForTopTabs(
+    currentMode: HomeHeaderCollapseMode,
+    collapseTabs: Boolean
+): HomeHeaderCollapseMode {
+    return when {
+        currentMode.collapseSearch && collapseTabs -> HomeHeaderCollapseMode.BOTH
+        currentMode.collapseSearch -> HomeHeaderCollapseMode.SEARCH_ONLY
+        collapseTabs -> HomeHeaderCollapseMode.TABS_ONLY
+        else -> HomeHeaderCollapseMode.OFF
     }
 }
 

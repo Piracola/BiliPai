@@ -54,6 +54,7 @@ import com.android.purebilibili.core.store.HomeHeaderCollapseMode
 import com.android.purebilibili.core.store.HomeTopLayoutOrder
 import com.android.purebilibili.core.store.HomeTopRightAction
 import com.android.purebilibili.core.store.SettingsManager
+import com.android.purebilibili.core.store.resolveHomeHeaderCollapseModeForTopTabs
 import com.android.purebilibili.core.theme.BottomBarColors  //  统一底栏颜色配置
 import com.android.purebilibili.core.theme.BottomBarColorPalette  //  调色板
 import com.android.purebilibili.core.theme.BottomBarColorNames  //  颜色名称
@@ -264,7 +265,7 @@ fun BottomBarSettingsContent(
     val homeTopLayoutOrder by SettingsManager.getHomeTopLayoutOrder(context)
         .collectAsStateWithLifecycle(initialValue = HomeTopLayoutOrder.SEARCH_THEN_TABS)
     val homeHeaderCollapseMode by SettingsManager.getHomeHeaderCollapseMode(context)
-        .collectAsStateWithLifecycle(initialValue = HomeHeaderCollapseMode.SEARCH_ONLY)
+        .collectAsStateWithLifecycle(initialValue = HomeHeaderCollapseMode.BOTH)
     val homeTopRightAction by SettingsManager.getHomeTopRightAction(context)
         .collectAsStateWithLifecycle(initialValue = HomeTopRightAction.SETTINGS)
     val tabletUseSidebar by SettingsManager.getTabletUseSidebar(context).collectAsStateWithLifecycle(initialValue = false)
@@ -855,67 +856,66 @@ fun BottomBarSettingsContent(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = "下滑折叠顶部栏",
+                                        text = "首页标签页",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = homeHeaderCollapseMode.description,
+                                        text = if (homeHeaderCollapseMode.collapseTabs) {
+                                            "列表下滑时折叠标签页"
+                                        } else {
+                                            "标签页固定在顶部"
+                                        },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(
-                                    HomeHeaderCollapseMode.SEARCH_ONLY,
-                                    HomeHeaderCollapseMode.TABS_ONLY,
-                                    HomeHeaderCollapseMode.BOTH,
-                                    HomeHeaderCollapseMode.OFF
-                                ).chunked(2).forEach { rowModes ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        rowModes.forEach { mode ->
-                                            val isSelected = homeHeaderCollapseMode == mode
-                                            Column(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .clickable {
-                                                        scope.launch {
-                                                            SettingsManager.setHomeHeaderCollapseMode(context, mode)
-                                                        }
-                                                    }
-                                                    .background(
-                                                        if (isSelected) {
-                                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                                        } else {
-                                                            Color.Transparent
-                                                        }
-                                                    )
-                                                    .heightIn(min = 48.dp)
-                                                    .padding(horizontal = 12.dp, vertical = 9.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally
-                                            ) {
-                                                Text(
-                                                    text = mode.label,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color = if (isSelected) {
-                                                        MaterialTheme.colorScheme.primary
-                                                    } else {
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                    },
-                                                    fontWeight = if (isSelected) {
-                                                        FontWeight.SemiBold
-                                                    } else {
-                                                        FontWeight.Medium
-                                                    }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(true to "下滑折叠", false to "不折叠").forEach { (collapseTabs, label) ->
+                                    val isSelected = homeHeaderCollapseMode.collapseTabs == collapseTabs
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                val nextMode = resolveHomeHeaderCollapseModeForTopTabs(
+                                                    currentMode = homeHeaderCollapseMode,
+                                                    collapseTabs = collapseTabs
                                                 )
+                                                scope.launch {
+                                                    SettingsManager.setHomeHeaderCollapseMode(context, nextMode)
+                                                }
                                             }
-                                        }
+                                            .background(
+                                                if (isSelected) {
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                                } else {
+                                                    Color.Transparent
+                                                }
+                                            )
+                                            .heightIn(min = 48.dp)
+                                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
+                                            fontWeight = if (isSelected) {
+                                                FontWeight.SemiBold
+                                            } else {
+                                                FontWeight.Medium
+                                            }
+                                        )
                                     }
                                 }
                             }
