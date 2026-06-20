@@ -57,6 +57,19 @@ class VideoDetailScreenMethodSizeStructureTest {
     }
 
     @Test
+    fun routeSheetOverlaysRemainInsideBoxScopeContent() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
+        val routeSheetContent = source
+            .substringAfter("fun BoxScope.VideoDetailRouteSheetOverlayContent()")
+            .substringBefore("VideoDetailRouteSheetHost(")
+
+        assertTrue(routeSheetContent.contains("VideoActionFeedbackHost("))
+        assertTrue(routeSheetContent.contains(".align(feedbackAnchorAlignment)"))
+        assertTrue(source.contains("fun BoxScope.VideoDetailRouteSheetMainContent()"))
+        assertTrue(source.contains("overlayContent = { VideoDetailRouteSheetOverlayContent() }"))
+    }
+
+    @Test
     fun videoDetailPlayerContainerUsesHomeSharedTransitionPolicy() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
         val playerContainerSource = source
