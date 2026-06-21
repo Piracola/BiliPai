@@ -2,6 +2,7 @@ package com.android.purebilibili.navigation
 
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,22 +45,24 @@ internal class MainBottomPagerState(
         selectedPage = targetIndex
         isNavigating = true
 
+        val layoutInfo = pagerState.layoutInfo
+        val pageSize = layoutInfo.pageSize + layoutInfo.pageSpacing
+        val scrollPixels =
+            (targetIndex - pagerState.currentPage - pagerState.currentPageOffsetFraction) * pageSize
         val duration = resolveBottomPagerNavigationDurationMillis()
 
         navJob = coroutineScope.launch {
             val myJob = coroutineContext.job
             try {
-                // 等旧滚动取消和当前帧测量结束后，再触发 Pager 内部的强制重测。
                 previousJob?.join()
-                awaitScrollIdle()
-                awaitNextFrame()
-
-                pagerState.animateScrollToPage(
-                    page = targetIndex,
-                    animationSpec = tween(easing = EaseInOut, durationMillis = duration)
-                )
+                if (pageSize > 0) {
+                    pagerState.animateScrollBy(
+                        value = scrollPixels,
+                        animationSpec = tween(easing = EaseInOut, durationMillis = duration)
+                    )
+                }
             } catch (_: IllegalStateException) {
-                // Compose PagerState 仍可能在内部测量未空闲时抛错，避免底栏快速滑动直接闪退。
+                // Pager 在测量竞争期间可能拒绝强制滚动，避免底栏快速切换直接闪退。
             } finally {
                 if (navJob == myJob) {
                     isNavigating = false

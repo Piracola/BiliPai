@@ -27,35 +27,26 @@ class BottomPagerStatePersistenceStructureTest {
     }
 
     @Test
-    fun `main bottom pager delegates distant jumps to pager pre jump animation`() {
+    fun `main bottom pager avoids pager pre jump animation`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/navigation/MainBottomPagerState.kt")
         val animatedNavigationSource = source
             .substringAfter("fun animateToPage(")
             .substringBefore("fun syncPage(")
 
         assertTrue(source.contains("navigationStartPage"))
-        assertTrue(source.contains("pagerState.animateScrollToPage("))
-        assertFalse(source.contains("pagerState.animateScrollBy("))
+        assertTrue(source.contains("pagerState.animateScrollBy("))
+        assertFalse(source.contains("pagerState.animateScrollToPage("))
         assertFalse(source.contains("shouldUseDirectBottomPagerJump("))
         assertFalse(animatedNavigationSource.contains("pagerState.scrollToPage("))
     }
 
     @Test
-    fun `main bottom pager defers pager scroll until next frame after idle`() {
+    fun `main bottom pager defers silent snap until next frame after idle`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/navigation/MainBottomPagerState.kt")
-        val animatedNavigationSource = source
-            .substringAfter("fun animateToPage(")
-            .substringBefore("fun syncPage(")
         val snapNavigationSource = source
             .substringAfter("fun snapToPage(")
             .substringBefore("private suspend fun")
 
-        assertCallsInOrder(
-            animatedNavigationSource,
-            "awaitScrollIdle()",
-            "awaitNextFrame()",
-            "pagerState.animateScrollToPage("
-        )
         assertCallsInOrder(
             snapNavigationSource,
             "awaitScrollIdle()",
