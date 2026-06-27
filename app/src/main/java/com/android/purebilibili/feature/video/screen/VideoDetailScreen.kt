@@ -81,8 +81,6 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.ui.layout.ContentScale
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.android.purebilibili.EXTRA_PENDING_NAVIGATION_ROUTE
-import com.android.purebilibili.resolveMainActivityVideoRoute
 import com.android.purebilibili.data.model.response.BgmInfo
 import com.android.purebilibili.data.model.CommentFraudStatus
 import com.android.purebilibili.data.repository.resolveCommentFraudLightMessage
@@ -1523,6 +1521,10 @@ fun VideoDetailScreen(
     // 使用 rememberSaveable 确保状态在横竖屏切换时保持
     var userRequestedFullscreen by rememberSaveable { mutableStateOf(false) }
     var manualPortraitHoldActive by rememberSaveable { mutableStateOf(false) }
+    val activity = remember { context.findActivity() }
+    val isActivityInMultiWindowMode = activity?.let { host ->
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && host.isInMultiWindowMode
+    } ?: false
 
     // 📐 全屏模式逻辑：
     // - 手机：横屏时自动进入全屏
@@ -1541,7 +1543,12 @@ fun VideoDetailScreen(
         shouldUseOrientationDrivenFullscreen(
         isCompactDevice = windowSizeClass.isCompactDevice
     )
-    val isFullscreenMode = if (isOrientationDrivenFullscreen) isLandscape else userRequestedFullscreen
+    val isFullscreenMode = resolveVideoDetailFullscreenMode(
+        isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
+        isLandscape = isLandscape,
+        userRequestedFullscreen = userRequestedFullscreen,
+        isInMultiWindowMode = isActivityInMultiWindowMode
+    )
     ManualFullscreenRequestLifecycleEffect(
         manualFullscreenRequested = userRequestedFullscreen,
         isFullscreenMode = isFullscreenMode,
@@ -1655,6 +1662,9 @@ fun VideoDetailScreen(
                             isInMultiWindowMode = isInMultiWindowMode
                         )
                     ) {
+                        if (isInMultiWindowMode) {
+                            userRequestedFullscreen = true
+                        }
                         return@let
                     }
                     activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -1667,11 +1677,7 @@ fun VideoDetailScreen(
     var isScreenActive by rememberSaveable(currentBvid) { mutableStateOf(true) }
 
     //  [关键] 保存进入前的状态栏配置（在 DisposableEffect 外部定义以便复用）
-    val activity = remember { context.findActivity() }
     val window = remember { activity?.window }
-    val isActivityInMultiWindowMode = activity?.let { host ->
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && host.isInMultiWindowMode
-    } ?: false
     var entryRequestedOrientation by rememberSaveable {
         mutableIntStateOf(
             activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -2876,13 +2882,8 @@ fun VideoDetailScreen(
     // 辅助函数：切换全屏状态
     val toggleFullscreen = {
         val activity = context.findActivity()
-        val currentSuccess = viewModel.uiState.value as? PlayerUiState.Success
-        val currentCid = currentSuccess?.info?.cid ?: cid
         toggleVideoDetailFullscreen(
-            context = context,
             activity = activity,
-            currentBvid = currentBvid,
-            currentCid = currentCid,
             isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
             isLandscape = isLandscape,
             isFullscreenMode = isFullscreenMode,
@@ -5137,34 +5138,8 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
-private fun restoreMainWindowForFullscreenPlayback(
-    context: Context,
-    bvid: String,
-    cid: Long
-) {
-    val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        ?: return
-    launchIntent.putExtra(
-        EXTRA_PENDING_NAVIGATION_ROUTE,
-        resolveMainActivityVideoRoute(
-            bvid = bvid,
-            cid = cid,
-            startFullscreen = true
-        )
-    )
-    launchIntent.addFlags(
-        Intent.FLAG_ACTIVITY_NEW_TASK or
-            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-            Intent.FLAG_ACTIVITY_SINGLE_TOP
-    )
-    context.startActivity(launchIntent)
-}
-
 private fun toggleVideoDetailFullscreen(
-    context: Context,
     activity: Activity?,
-    currentBvid: String,
-    currentCid: Long,
     isOrientationDrivenFullscreen: Boolean,
     isLandscape: Boolean,
     isFullscreenMode: Boolean,
@@ -5178,19 +5153,24 @@ private fun toggleVideoDetailFullscreen(
 ) {
     if (activity == null) return
 
-    val shouldRestoreMainWindow = shouldRestoreMainWindowBeforeEnteringFullscreen(
-        isInMultiWindowMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity.isInMultiWindowMode,
-        isInPictureInPictureMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            activity.isInPictureInPictureMode,
-        isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
-        isFullscreenMode = isFullscreenMode
-    )
-    if (shouldRestoreMainWindow) {
-        restoreMainWindowForFullscreenPlayback(
-            context = context,
-            bvid = currentBvid,
-            cid = currentCid
+    val isInMultiWindowMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity.isInMultiWindowMode
+    val isInPictureInPictureMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+        activity.isInPictureInPictureMode
+    if (shouldUseInWindowFullscreenForSystemMultiWindow(
+            isInMultiWindowMode = isInMultiWindowMode,
+            isInPictureInPictureMode = isInPictureInPictureMode,
+            isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
+            isFullscreenMode = isFullscreenMode
         )
+    ) {
+        onUserRequestedFullscreenChange(true)
+        onManualPortraitHoldActiveChange(false)
+        return
+    }
+
+    if (isOrientationDrivenFullscreen && isInMultiWindowMode && isFullscreenMode) {
+        onUserRequestedFullscreenChange(false)
+        onManualPortraitHoldActiveChange(false)
         return
     }
 
@@ -5314,6 +5294,16 @@ internal fun shouldApplyPhoneAutoRotatePolicy(
     isCompactDevice: Boolean
 ): Boolean {
     return isCompactDevice
+}
+
+internal fun resolveVideoDetailFullscreenMode(
+    isOrientationDrivenFullscreen: Boolean,
+    isLandscape: Boolean,
+    userRequestedFullscreen: Boolean,
+    isInMultiWindowMode: Boolean
+): Boolean {
+    if (!isOrientationDrivenFullscreen) return userRequestedFullscreen
+    return isLandscape || (isInMultiWindowMode && userRequestedFullscreen)
 }
 
 internal fun shouldApplyStartFullscreenOrientationRequest(
@@ -5554,7 +5544,7 @@ internal fun shouldEnterPortraitFullscreenOnFullscreenToggle(
     return portraitExperienceEnabled && targetOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 }
 
-internal fun shouldRestoreMainWindowBeforeEnteringFullscreen(
+internal fun shouldUseInWindowFullscreenForSystemMultiWindow(
     isInMultiWindowMode: Boolean,
     isInPictureInPictureMode: Boolean,
     isOrientationDrivenFullscreen: Boolean,

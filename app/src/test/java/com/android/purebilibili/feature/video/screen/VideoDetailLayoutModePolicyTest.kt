@@ -188,9 +188,9 @@ class VideoDetailLayoutModePolicyTest {
     }
 
     @Test
-    fun systemMultiWindowFullscreenPolicy_restoresMainWindowBeforeEnteringFullscreen() {
+    fun systemMultiWindowFullscreenPolicy_usesInWindowFullscreenInsteadOfRelaunchingTask() {
         assertTrue(
-            shouldRestoreMainWindowBeforeEnteringFullscreen(
+            shouldUseInWindowFullscreenForSystemMultiWindow(
                 isInMultiWindowMode = true,
                 isInPictureInPictureMode = false,
                 isOrientationDrivenFullscreen = true,
@@ -198,7 +198,7 @@ class VideoDetailLayoutModePolicyTest {
             )
         )
         assertFalse(
-            shouldRestoreMainWindowBeforeEnteringFullscreen(
+            shouldUseInWindowFullscreenForSystemMultiWindow(
                 isInMultiWindowMode = false,
                 isInPictureInPictureMode = false,
                 isOrientationDrivenFullscreen = true,
@@ -206,7 +206,7 @@ class VideoDetailLayoutModePolicyTest {
             )
         )
         assertFalse(
-            shouldRestoreMainWindowBeforeEnteringFullscreen(
+            shouldUseInWindowFullscreenForSystemMultiWindow(
                 isInMultiWindowMode = true,
                 isInPictureInPictureMode = true,
                 isOrientationDrivenFullscreen = true,
@@ -214,11 +214,31 @@ class VideoDetailLayoutModePolicyTest {
             )
         )
         assertFalse(
-            shouldRestoreMainWindowBeforeEnteringFullscreen(
+            shouldUseInWindowFullscreenForSystemMultiWindow(
                 isInMultiWindowMode = true,
                 isInPictureInPictureMode = false,
                 isOrientationDrivenFullscreen = true,
                 isFullscreenMode = true
+            )
+        )
+    }
+
+    @Test
+    fun fullscreenModePolicy_allowsManualInWindowFullscreenInsideSystemSmallWindow() {
+        assertTrue(
+            resolveVideoDetailFullscreenMode(
+                isOrientationDrivenFullscreen = true,
+                isLandscape = false,
+                userRequestedFullscreen = true,
+                isInMultiWindowMode = true
+            )
+        )
+        assertFalse(
+            resolveVideoDetailFullscreenMode(
+                isOrientationDrivenFullscreen = true,
+                isLandscape = false,
+                userRequestedFullscreen = true,
+                isInMultiWindowMode = false
             )
         )
     }
