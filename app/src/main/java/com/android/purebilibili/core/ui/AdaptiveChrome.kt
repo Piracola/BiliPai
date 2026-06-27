@@ -23,6 +23,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalAndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalUiPreset
@@ -60,6 +61,15 @@ data class AdaptiveTopAppBarChromeSpec(
 
 val LocalGlobalWallpaperBackdropVisible = compositionLocalOf { false }
 
+fun resolveGlobalWallpaperProtectiveColor(
+    baseColor: Color,
+    lightAlpha: Float = 0.74f,
+    darkAlpha: Float = 0.80f
+): Color {
+    val alpha = if (baseColor.luminance() > 0.5f) lightAlpha else darkAlpha
+    return baseColor.copy(alpha = alpha.coerceIn(0f, 1f))
+}
+
 fun resolveAdaptiveTopAppBarChromeSpec(
     uiPreset: UiPreset,
     androidNativeVariant: AndroidNativeVariant = AndroidNativeVariant.MATERIAL3
@@ -93,7 +103,11 @@ fun resolveAdaptiveScaffoldContainerColor(
     globalWallpaperVisible: Boolean
 ): Color {
     return if (globalWallpaperVisible && requestedContainerColor == defaultBackgroundColor) {
-        Color.Transparent
+        resolveGlobalWallpaperProtectiveColor(
+            baseColor = requestedContainerColor,
+            lightAlpha = 0.66f,
+            darkAlpha = 0.72f
+        )
     } else {
         requestedContainerColor
     }
@@ -111,7 +125,11 @@ fun resolveGlobalWallpaperChromeColor(
         requestedOpaque == defaultBackgroundColor.copy(alpha = 1f) ||
         requestedOpaque == defaultSurfaceColor.copy(alpha = 1f)
     ) {
-        Color.Transparent
+        resolveGlobalWallpaperProtectiveColor(
+            baseColor = requestedOpaque,
+            lightAlpha = 0.74f,
+            darkAlpha = 0.80f
+        )
     } else {
         requestedColor
     }
@@ -132,7 +150,13 @@ fun Modifier.globalWallpaperAwareBackground(
     color: Color = MaterialTheme.colorScheme.background
 ): Modifier {
     return if (LocalGlobalWallpaperBackdropVisible.current) {
-        this
+        background(
+            resolveAdaptiveScaffoldContainerColor(
+                requestedContainerColor = color,
+                defaultBackgroundColor = MaterialTheme.colorScheme.background,
+                globalWallpaperVisible = true
+            )
+        )
     } else {
         background(color)
     }

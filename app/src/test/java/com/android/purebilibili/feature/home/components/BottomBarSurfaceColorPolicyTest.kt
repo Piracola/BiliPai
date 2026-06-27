@@ -91,6 +91,24 @@ class BottomBarSurfaceColorPolicyTest {
     }
 
     @Test
+    fun `global wallpaper raises floating shell alpha floor`() {
+        val tuning = resolveAndroidNativeBottomBarTuning(
+            blurEnabled = true,
+            darkTheme = false
+        )
+        val color = resolveAndroidNativeFloatingBottomBarContainerColor(
+            surfaceColor = Color.White,
+            tuning = tuning,
+            glassEnabled = false,
+            blurEnabled = true,
+            blurIntensity = BlurIntensity.THIN,
+            globalWallpaperVisible = true
+        )
+
+        assertTrue(color.alpha >= 0.67f)
+    }
+
+    @Test
     fun `android native glass stays enabled when liquid glass is on even if blur toggle is off`() {
         assertTrue(
             resolveAndroidNativeBottomBarGlassEnabled(

@@ -5,6 +5,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import com.android.purebilibili.core.store.HomeWallpaperEffectMode
 import com.android.purebilibili.core.ui.AppSurfaceTokens
+import kotlin.math.max
+import kotlin.math.min
 
 data class HomeGlassChromeStyle(
     val containerAlpha: Float,
@@ -136,7 +138,8 @@ internal fun resolveHomeWallpaperBackdropAppearance(
     hasWallpaper: Boolean,
     effectMode: HomeWallpaperEffectMode = HomeWallpaperEffectMode.SOFT_BLUR,
     isDarkTheme: Boolean,
-    isDataSaverActive: Boolean
+    isDataSaverActive: Boolean,
+    globalWallpaper: Boolean = false
 ): HomeWallpaperBackdropAppearance {
     if (!hasWallpaper || effectMode == HomeWallpaperEffectMode.OFF) {
         return HomeWallpaperBackdropAppearance(
@@ -147,6 +150,47 @@ internal fun resolveHomeWallpaperBackdropAppearance(
             bottomScrimAlpha = 0f,
             blurRadiusDp = 0f
         )
+    }
+
+    if (globalWallpaper) {
+        if (isDataSaverActive) {
+            return HomeWallpaperBackdropAppearance(
+                visible = true,
+                baseBackgroundAlpha = if (isDarkTheme) 0.70f else 0.58f,
+                detailAlpha = 0.08f,
+                scrimAlpha = if (isDarkTheme) 0.28f else 0.14f,
+                bottomScrimAlpha = if (isDarkTheme) 0.38f else 0.26f,
+                blurRadiusDp = 8f
+            )
+        }
+
+        return when (effectMode) {
+            HomeWallpaperEffectMode.ORIGINAL -> HomeWallpaperBackdropAppearance(
+                visible = true,
+                baseBackgroundAlpha = if (isDarkTheme) 0.58f else 0.46f,
+                detailAlpha = 0f,
+                scrimAlpha = if (isDarkTheme) 0.22f else 0.10f,
+                bottomScrimAlpha = if (isDarkTheme) 0.30f else 0.22f,
+                blurRadiusDp = 0f
+            )
+            HomeWallpaperEffectMode.STRONG_BLUR -> HomeWallpaperBackdropAppearance(
+                visible = true,
+                baseBackgroundAlpha = if (isDarkTheme) 0.66f else 0.52f,
+                detailAlpha = 0.04f,
+                scrimAlpha = if (isDarkTheme) 0.30f else 0.14f,
+                bottomScrimAlpha = if (isDarkTheme) 0.40f else 0.28f,
+                blurRadiusDp = 32f
+            )
+            HomeWallpaperEffectMode.SOFT_BLUR,
+            HomeWallpaperEffectMode.OFF -> HomeWallpaperBackdropAppearance(
+                visible = true,
+                baseBackgroundAlpha = if (isDarkTheme) 0.56f else 0.44f,
+                detailAlpha = 0.12f,
+                scrimAlpha = if (isDarkTheme) 0.26f else 0.12f,
+                bottomScrimAlpha = if (isDarkTheme) 0.34f else 0.24f,
+                blurRadiusDp = 14f
+            )
+        }
     }
 
     return when {
@@ -204,6 +248,22 @@ internal fun resolveHomeWallpaperUri(
     val dedicatedHomeUri = homeWallpaperUri?.trim().orEmpty()
     if (dedicatedHomeUri.isNotEmpty()) return dedicatedHomeUri
     return splashWallpaperUri?.trim().orEmpty()
+}
+
+internal fun resolveHomeWallpaperDecodeSizePx(
+    screenWidthDp: Int,
+    screenHeightDp: Int,
+    density: Float,
+    isDataSaverActive: Boolean
+): Pair<Int, Int> {
+    val safeDensity = density.takeIf { it.isFinite() && it > 0f } ?: 1f
+    val widthPx = (screenWidthDp.coerceAtLeast(320) * safeDensity).toInt().coerceAtLeast(720)
+    val heightPx = (screenHeightDp.coerceAtLeast(568) * safeDensity).toInt().coerceAtLeast(1280)
+    val shortSide = min(widthPx, heightPx)
+    val longSide = max(widthPx, heightPx)
+    val maxShortSide = if (isDataSaverActive) 720 else 1080
+    val maxLongSide = if (isDataSaverActive) 1280 else 1920
+    return min(shortSide, maxShortSide) to min(longSide, maxLongSide)
 }
 
 internal fun resolveHomeCardInfoSurfaceAppearance(

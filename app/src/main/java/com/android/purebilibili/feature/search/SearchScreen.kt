@@ -83,6 +83,7 @@ import com.android.purebilibili.core.ui.LoadingAnimation
 import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
 import com.android.purebilibili.core.ui.OfficialVerifyBadge
 import com.android.purebilibili.core.ui.globalWallpaperAwareBackground
+import com.android.purebilibili.core.ui.resolveGlobalWallpaperProtectiveColor
 import com.android.purebilibili.core.ui.resolveBottomSafeAreaPadding
 import com.android.purebilibili.core.ui.resolveCompactCapsuleChromeSpec
 import com.android.purebilibili.core.ui.rememberAppBackIcon
@@ -162,7 +163,10 @@ internal fun resolveSearchTopBarHeaderColor(
     globalWallpaperVisible: Boolean,
     useHeaderBlur: Boolean
 ): Color {
-    return if (globalWallpaperVisible || useHeaderBlur) {
+    return if (globalWallpaperVisible) {
+        val protectiveColor = resolveGlobalWallpaperProtectiveColor(surfaceColor)
+        protectiveColor.copy(alpha = maxOf(protectiveColor.alpha, backgroundAlpha))
+    } else if (useHeaderBlur) {
         Color.Transparent
     } else {
         surfaceColor.copy(alpha = backgroundAlpha)

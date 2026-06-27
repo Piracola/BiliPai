@@ -212,6 +212,72 @@ class HomeGlassVisualPolicyTest {
     }
 
     @Test
+    fun globalHomeWallpaperBackdropUsesWeakPresenceProtection() {
+        val homeOnly = resolveHomeWallpaperBackdropAppearance(
+            hasWallpaper = true,
+            effectMode = HomeWallpaperEffectMode.SOFT_BLUR,
+            isDarkTheme = false,
+            isDataSaverActive = false
+        )
+        val global = resolveHomeWallpaperBackdropAppearance(
+            hasWallpaper = true,
+            effectMode = HomeWallpaperEffectMode.SOFT_BLUR,
+            isDarkTheme = false,
+            isDataSaverActive = false,
+            globalWallpaper = true
+        )
+
+        assertTrue(global.baseBackgroundAlpha > homeOnly.baseBackgroundAlpha)
+        assertTrue(global.scrimAlpha > homeOnly.scrimAlpha)
+        assertTrue(global.blurRadiusDp < homeOnly.blurRadiusDp)
+        assertTrue(global.blurRadiusDp <= 14f)
+    }
+
+    @Test
+    fun globalHomeWallpaperBackdropGetsMoreConservativeInDataSaver() {
+        val normal = resolveHomeWallpaperBackdropAppearance(
+            hasWallpaper = true,
+            effectMode = HomeWallpaperEffectMode.SOFT_BLUR,
+            isDarkTheme = false,
+            isDataSaverActive = false,
+            globalWallpaper = true
+        )
+        val dataSaver = resolveHomeWallpaperBackdropAppearance(
+            hasWallpaper = true,
+            effectMode = HomeWallpaperEffectMode.SOFT_BLUR,
+            isDarkTheme = false,
+            isDataSaverActive = true,
+            globalWallpaper = true
+        )
+
+        assertTrue(dataSaver.baseBackgroundAlpha > normal.baseBackgroundAlpha)
+        assertTrue(dataSaver.detailAlpha < normal.detailAlpha)
+        assertTrue(dataSaver.blurRadiusDp <= 8f)
+    }
+
+    @Test
+    fun homeWallpaperDecodeSizeCapsLargeScreensAndDataSaver() {
+        assertEquals(
+            1080 to 1920,
+            resolveHomeWallpaperDecodeSizePx(
+                screenWidthDp = 1200,
+                screenHeightDp = 900,
+                density = 3f,
+                isDataSaverActive = false
+            )
+        )
+        assertEquals(
+            720 to 1280,
+            resolveHomeWallpaperDecodeSizePx(
+                screenWidthDp = 1200,
+                screenHeightDp = 900,
+                density = 3f,
+                isDataSaverActive = true
+            )
+        )
+    }
+
+    @Test
     fun cardInfoSurfaceLetsWallpaperTintThroughWhenEnabled() {
         val appearance = resolveHomeCardInfoSurfaceAppearance(
             wallpaperTintEnabled = true,

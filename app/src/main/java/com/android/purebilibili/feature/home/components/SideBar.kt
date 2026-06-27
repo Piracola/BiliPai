@@ -27,7 +27,9 @@ import dev.chrisbanes.haze.HazeState
 import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ContainerLevel
+import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
 import com.android.purebilibili.core.ui.blur.unifiedBlur
+import com.android.purebilibili.core.ui.resolveGlobalWallpaperProtectiveColor
 import com.android.purebilibili.core.util.HapticType
 import com.android.purebilibili.core.util.rememberHapticFeedback
 import com.android.purebilibili.core.theme.BottomBarColors
@@ -66,6 +68,23 @@ fun FrostedSideBar(
     // 读取模糊设置
     val blurIntensity = com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity()
     val backgroundAlpha = com.android.purebilibili.core.ui.blur.BlurStyles.getBackgroundAlpha(blurIntensity)
+    val chromeBackground = AppSurfaceTokens.chromeBackground()
+    val globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
+    val sideBarContainerColor = if (hazeState != null) {
+        val rawColor = chromeBackground.copy(alpha = backgroundAlpha)
+        if (globalWallpaperVisible) {
+            val protectiveColor = resolveGlobalWallpaperProtectiveColor(
+                baseColor = chromeBackground,
+                lightAlpha = 0.70f,
+                darkAlpha = 0.76f
+            )
+            rawColor.copy(alpha = maxOf(rawColor.alpha, protectiveColor.alpha))
+        } else {
+            rawColor
+        }
+    } else {
+        chromeBackground.copy(alpha = 0.95f)
+    }
 
     val sideBarWidth = 80.dp
     // 垂直胶囊的高度
@@ -79,15 +98,11 @@ fun FrostedSideBar(
                 if (hazeState != null) {
                     Modifier.unifiedBlur(hazeState, shape = androidx.compose.ui.graphics.RectangleShape)
                 } else {
-                    Modifier.background(AppSurfaceTokens.chromeBackground())
+                    Modifier.background(chromeBackground)
                 }
             ),
         shape = androidx.compose.ui.graphics.RectangleShape,
-        color = if (hazeState != null) {
-            AppSurfaceTokens.chromeBackground().copy(alpha = backgroundAlpha)
-        } else {
-            AppSurfaceTokens.chromeBackground().copy(alpha = 0.95f)
-        },
+        color = sideBarContainerColor,
         border = if (hazeState != null) {
              androidx.compose.foundation.BorderStroke(
                 width = 0.5.dp,

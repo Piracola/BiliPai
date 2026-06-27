@@ -403,6 +403,9 @@ fun AppNavigation(
         }
         val backgroundColor = MaterialTheme.colorScheme.background
         val isLightBackground = remember(backgroundColor) { backgroundColor.luminance() > 0.5f }
+        val isDataSaverActiveForGlobalWallpaper = remember(context) {
+            SettingsManager.isDataSaverActive(context)
+        }
         val shouldRenderGlobalHomeWallpaper = currentRoute != null &&
             effectiveHomeSettings.homeWallpaperEffectScope == HomeWallpaperEffectScope.GLOBAL &&
             currentRoute != ScreenRoutes.Home.route
@@ -410,13 +413,15 @@ fun AppNavigation(
             globalHomeWallpaperUri,
             effectiveHomeSettings.homeWallpaperEffectMode,
             shouldRenderGlobalHomeWallpaper,
-            isLightBackground
+            isLightBackground,
+            isDataSaverActiveForGlobalWallpaper
         ) {
             resolveHomeWallpaperBackdropAppearance(
                 hasWallpaper = shouldRenderGlobalHomeWallpaper && globalHomeWallpaperUri.isNotBlank(),
                 effectMode = effectiveHomeSettings.homeWallpaperEffectMode,
                 isDarkTheme = !isLightBackground,
-                isDataSaverActive = false
+                isDataSaverActive = isDataSaverActiveForGlobalWallpaper,
+                globalWallpaper = true
             )
         }
         var previousRouteForStopPolicy by remember { mutableStateOf<String?>(null) }
@@ -1124,7 +1129,8 @@ fun AppNavigation(
                     HomeWallpaperBackdrop(
                         wallpaperUri = globalHomeWallpaperUri,
                         appearance = globalHomeWallpaperAppearance,
-                        baseColor = backgroundColor
+                        baseColor = backgroundColor,
+                        isDataSaverActive = isDataSaverActiveForGlobalWallpaper
                     )
                 fun bottomPagerNavKeyForItem(item: BottomNavItem): BiliPaiNavKey {
                     return when (item) {

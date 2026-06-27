@@ -55,9 +55,9 @@ class SearchChromePolicyTest {
     }
 
     @Test
-    fun `global wallpaper makes search top bar transparent`() {
+    fun `global wallpaper makes search top bar protected but translucent`() {
         assertEquals(
-            Color.Transparent,
+            Color.White.copy(alpha = 0.96f),
             resolveSearchTopBarHeaderColor(
                 surfaceColor = Color.White,
                 backgroundAlpha = 0.96f,

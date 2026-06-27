@@ -1397,7 +1397,8 @@ fun HomeScreen(
                     HomeWallpaperBackdrop(
                         wallpaperUri = homeWallpaperUri,
                         appearance = homeWallpaperBackdropAppearance,
-                        baseColor = AppSurfaceTokens.chromeBackground()
+                        baseColor = AppSurfaceTokens.chromeBackground(),
+                        isDataSaverActive = isDataSaverActive
                     )
                     // [Fix] Re-enabled default overscroll for better feedback
                         HorizontalPager(

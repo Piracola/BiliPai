@@ -15,11 +15,11 @@ class DynamicTopBarThemePolicyTest {
     }
 
     @Test
-    fun `global wallpaper makes dynamic top bar header transparent`() {
+    fun `global wallpaper makes dynamic top bar header protected but translucent`() {
         val surfaceColor = Color(0xFFFFFFFF)
 
         assertEquals(
-            Color.Transparent,
+            surfaceColor.copy(alpha = 0.74f),
             resolveDynamicTopBarHeaderColor(
                 surfaceColor = surfaceColor,
                 backgroundAlpha = 0.4f,

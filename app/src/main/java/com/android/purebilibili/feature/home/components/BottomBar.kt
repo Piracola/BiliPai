@@ -99,6 +99,8 @@ import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
 import com.android.purebilibili.core.ui.blur.BlurStyles
 import com.android.purebilibili.core.ui.blur.BlurSurfaceType
 import com.android.purebilibili.core.ui.adaptive.MotionTier
+import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
+import com.android.purebilibili.core.ui.resolveGlobalWallpaperProtectiveColor
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -933,9 +935,10 @@ internal fun resolveAndroidNativeFloatingBottomBarContainerColor(
     glassEnabled: Boolean,
     blurEnabled: Boolean,
     blurIntensity: com.android.purebilibili.core.ui.blur.BlurIntensity,
-    liquidGlassPreset: BottomBarLiquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED
+    liquidGlassPreset: BottomBarLiquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+    globalWallpaperVisible: Boolean = false
 ): Color {
-    return if (glassEnabled) {
+    val resolvedColor = if (glassEnabled) {
         resolveAndroidNativeBottomBarContainerColor(
             surfaceColor = surfaceColor,
             tuning = tuning,
@@ -949,6 +952,13 @@ internal fun resolveAndroidNativeFloatingBottomBarContainerColor(
             blurIntensity = blurIntensity
         )
     }
+    if (!globalWallpaperVisible || resolvedColor.alpha == 0f) return resolvedColor
+    val protectiveColor = resolveGlobalWallpaperProtectiveColor(
+        baseColor = surfaceColor,
+        lightAlpha = 0.68f,
+        darkAlpha = 0.74f
+    )
+    return resolvedColor.copy(alpha = maxOf(resolvedColor.alpha, protectiveColor.alpha))
 }
 
 internal fun resolveAndroidNativeBottomBarGlassEnabled(
@@ -2323,6 +2333,7 @@ fun FrostedBottomBar(
     }
     val windowSizeClass = com.android.purebilibili.core.util.LocalWindowSizeClass.current
     val isTablet = windowSizeClass.isTablet
+    val globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
     if (isFloating) {
         val glassEnabled = homeSettings.isBottomBarLiquidGlassEnabled
         val tuning = resolveAndroidNativeBottomBarTuning(
@@ -2335,7 +2346,8 @@ fun FrostedBottomBar(
             glassEnabled = glassEnabled,
             blurEnabled = hazeState != null,
             blurIntensity = currentUnifiedBlurIntensity(),
-            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
+            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
+            globalWallpaperVisible = globalWallpaperVisible
         )
         KernelSuAlignedBottomBar(
             currentItem = currentItem,
@@ -2458,6 +2470,7 @@ private fun MaterialBottomBar(
     } else {
         AppSurfaceTokens.cardContainer()
     }
+    val globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
     val containerColor = if (isFloating) {
         resolveAndroidNativeFloatingBottomBarContainerColor(
             surfaceColor = baseSurfaceColor,
@@ -2465,7 +2478,8 @@ private fun MaterialBottomBar(
             glassEnabled = glassEnabled,
             blurEnabled = blurEnabled,
             blurIntensity = blurIntensity,
-            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
+            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
+            globalWallpaperVisible = globalWallpaperVisible
         )
     } else {
         resolveBottomBarSurfaceColor(
@@ -2712,6 +2726,7 @@ private fun MiuixBottomBar(
     } else {
         MiuixTheme.colorScheme.surface
     }
+    val globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
     val containerColor = if (isFloating) {
         resolveAndroidNativeFloatingBottomBarContainerColor(
             surfaceColor = baseSurfaceColor,
@@ -2719,7 +2734,8 @@ private fun MiuixBottomBar(
             glassEnabled = glassEnabled,
             blurEnabled = blurEnabled,
             blurIntensity = blurIntensity,
-            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
+            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
+            globalWallpaperVisible = globalWallpaperVisible
         )
     } else {
         resolveBottomBarSurfaceColor(

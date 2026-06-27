@@ -23,6 +23,7 @@ import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
 import io.github.alexzhirkevich.cupertino.icons.filled.*
 import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
+import com.android.purebilibili.core.ui.resolveGlobalWallpaperProtectiveColor
 import com.android.purebilibili.core.ui.blur.unifiedBlur
 import com.android.purebilibili.feature.dynamic.resolveDynamicTopBarHorizontalPadding
 import com.android.purebilibili.feature.dynamic.resolveDynamicTopBarLiquidTabSpec
@@ -173,7 +174,8 @@ internal fun resolveDynamicTopBarHeaderColor(
     globalWallpaperVisible: Boolean
 ): Color {
     return if (globalWallpaperVisible) {
-        Color.Transparent
+        val protectiveColor = resolveGlobalWallpaperProtectiveColor(surfaceColor)
+        protectiveColor.copy(alpha = maxOf(protectiveColor.alpha, backgroundAlpha))
     } else {
         surfaceColor.copy(alpha = backgroundAlpha)
     }
