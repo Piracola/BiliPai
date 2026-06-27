@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-9.3.2-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.3.2" />
+  <img src="https://img.shields.io/badge/Version-9.6.0-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.6.0" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
@@ -182,11 +182,11 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `9.3.2 / versionCode 231`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.3.2`：
+当前仓库版本号已更新到 `9.6.0 / versionCode 241`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.6.0`：
 
-- 首页刷新提示在关闭任一玻璃效果时回退普通 Material 浮层。
-- 首页头像侧栏适配底部栏遮挡和 `safeDrawing` 安全区域。
-- 个人主页背景装扮收纳到底部菜单，个人资料信息改为可展开抽屉。
+- 竖屏视频可直连 Story、滑动中预取 playurl 并提前绑流，显著缩短切换等待。
+- 楼中楼分页与竖屏评论交互全面修复，拖拽关闭评论不再引起视频回弹。
+- 长按 2x 进度条冻结、弹幕 seek/倍速同步、横屏内联发弹幕等问题已修复。
 
 ## 路线图
 
