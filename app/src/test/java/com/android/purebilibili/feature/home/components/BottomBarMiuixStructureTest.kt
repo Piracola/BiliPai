@@ -63,15 +63,14 @@ class BottomBarMiuixStructureTest {
         assertTrue(kernelSuRendererSource.contains("resolveKernelSuBottomBarShellColor("))
         assertTrue(kernelSuRendererSource.contains("containerColor = containerColor"))
         assertTrue(kernelSuRendererSource.contains("blurEnabled = shellBlurEnabled"))
-        assertTrue(source.contains("shellBlurRadiusPx"))
-        assertTrue(source.contains("materialSpec.shellRefractionHeightDp"))
-        assertTrue(source.contains("materialSpec.shellRefractionAmountDp"))
+        assertTrue(source.contains("miuixBlur(4.dp.toPx(), 4.dp.toPx())"))
+        assertTrue(source.contains("refractionHeight = 24.dp.toPx()"))
+        assertTrue(source.contains("refractionAmount = 24.dp.toPx()"))
         assertFalse(source.contains("BottomBarShellEffectSpec"))
         assertFalse(source.contains("resolveBottomBarIOS26SurfaceTint("))
         assertFalse(kernelSuRendererSource.contains("bottomBarIOS26ScrollGlassProgress"))
         assertFalse(kernelSuRendererSource.contains("scrollGlassProgress = scrollGlassProgress"))
-        assertTrue(source.contains("resolveBottomBarGlassMaterialSpec("))
-        assertTrue(source.contains("miuixInnerShadow(shape = shape)"))
+        assertTrue(source.contains("liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset"))
         assertTrue(kernelSuRendererSource.contains("miuixDrawBackdrop("))
         assertTrue(kernelSuRendererSource.contains("miuixVibrancy()"))
         assertTrue(kernelSuRendererSource.contains("miuixLens("))
@@ -179,6 +178,7 @@ class BottomBarMiuixStructureTest {
                 "val backdropPresetProgress = resolveBottomBarEffectiveBackdropPresetProgress("
             )
         )
+        assertTrue(kernelSuRendererSource.contains("preset = liquidGlassPreset"))
         assertTrue(kernelSuRendererSource.contains("motionProgress = motionProgress"))
         assertTrue(kernelSuRendererSource.contains("pressProgress = effectivePressProgress"))
         assertTrue(kernelSuRendererSource.contains("val indicatorLayerScaleProgress = maxOf(indicatorDragScaleProgress, effectivePressProgress)"))
@@ -203,6 +203,7 @@ class BottomBarMiuixStructureTest {
         assertTrue(kernelSuRendererSource.contains("resolveBottomBarGlassExportContentColor("))
         assertTrue(kernelSuRendererSource.contains("indicatorProgress = effectiveIndicatorEffectProgress"))
         assertTrue(kernelSuRendererSource.contains("resolveBottomBarIdleIndicatorSurfaceColor("))
+        assertTrue(kernelSuRendererSource.contains("preset = liquidGlassPreset"))
         assertFalse(kernelSuRendererSource.contains("resolveAndroidNativeIndicatorColor("))
         assertTrue(kernelSuRendererSource.contains("selected = coverage >= 0.5f,"))
         assertTrue(kernelSuRendererSource.contains("contentColorOverride = contentColor,"))
@@ -613,19 +614,6 @@ class BottomBarMiuixStructureTest {
         assertTrue(miuixRendererSource.contains("Modifier.height(resolveBottomBarSkinDockHeight())"))
         assertTrue(miuixDockedItemSource.contains("height(resolveMiuixDockedBottomBarItemHeight(skinIconPath != null))"))
         assertFalse(miuixDockedItemSource.contains("height(64.dp)"))
-    }
-
-    @Test
-    fun `miuix docked bottom bar routes standard items to official navigation bar item`() {
-        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
-        val miuixDockedItemSource = source
-            .substringAfter("private fun RowScope.MiuixDockedBottomBarItem(")
-            .substringBefore("@Composable\nprivate fun KernelSuAlignedBottomBar(")
-
-        assertTrue(miuixDockedItemSource.contains("shouldUseMiuixOfficialNavigationBarItem("))
-        assertTrue(miuixDockedItemSource.contains("MiuixNavigationBarItem("))
-        assertTrue(miuixDockedItemSource.contains("resolveMiuixNavigationBarItemTintColor("))
-        assertFalse(miuixDockedItemSource.contains("detectTapGestures("))
     }
 
     private fun loadSource(path: String): String {

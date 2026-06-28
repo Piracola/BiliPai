@@ -7,7 +7,6 @@ internal data class HomePerformanceConfig(
     val headerBlurEnabled: Boolean,
     val bottomBarBlurEnabled: Boolean,
     val topBarLiquidGlassEnabled: Boolean,
-    val homeSearchLiquidGlassEnabled: Boolean,
     val bottomBarLiquidGlassEnabled: Boolean,
     val cardAnimationEnabled: Boolean,
     val cardTransitionEnabled: Boolean,
@@ -15,7 +14,7 @@ internal data class HomePerformanceConfig(
     val preloadAheadCount: Int
 ) {
     val isAnyLiquidGlassEnabled: Boolean
-        get() = topBarLiquidGlassEnabled || homeSearchLiquidGlassEnabled || bottomBarLiquidGlassEnabled
+        get() = bottomBarLiquidGlassEnabled
 }
 
 internal fun resolveHomePreloadAheadCount(
@@ -53,7 +52,6 @@ internal fun resolveHomePerformanceConfig(
     headerBlurEnabled: Boolean,
     bottomBarBlurEnabled: Boolean,
     topBarLiquidGlassEnabled: Boolean,
-    homeSearchLiquidGlassEnabled: Boolean = false,
     bottomBarLiquidGlassEnabled: Boolean,
     androidNativeLiquidGlassEnabled: Boolean = false,
     cardAnimationEnabled: Boolean,
@@ -82,7 +80,6 @@ internal fun resolveHomePerformanceConfig(
         headerBlurEnabled = headerBlurEnabled,
         bottomBarBlurEnabled = bottomBarBlurEnabled,
         topBarLiquidGlassEnabled = topBarLiquidGlassEnabled,
-        homeSearchLiquidGlassEnabled = homeSearchLiquidGlassEnabled,
         bottomBarLiquidGlassEnabled = effectiveBottomBarLiquidGlass,
         cardAnimationEnabled = cardAnimationEnabled,
         cardTransitionEnabled = cardTransitionEnabled,

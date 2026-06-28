@@ -3953,7 +3953,7 @@ private fun KernelSuBottomBarShell(
 }
 
 @Composable
-internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
+private fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     visible: Boolean,
     dockContentAlpha: Float,
     indicatorTranslationXPx: Float,
@@ -3963,7 +3963,7 @@ internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     indicatorWidth: Dp,
     indicatorHeight: Dp = 56.dp,
     shellShape: androidx.compose.ui.graphics.Shape,
-    liquidGlassPreset: BottomBarLiquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+    liquidGlassPreset: BottomBarLiquidGlassPreset,
     contentBackdrop: MiuixBackdrop?,
     backdrop: MiuixBackdrop?,
     indicatorLensSpec: BottomBarBackdropPresetLensSpec,

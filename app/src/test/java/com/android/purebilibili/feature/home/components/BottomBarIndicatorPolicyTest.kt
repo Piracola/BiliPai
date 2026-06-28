@@ -2,7 +2,7 @@ package com.android.purebilibili.feature.home.components
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-
+import com.android.purebilibili.core.store.BottomBarLiquidGlassPreset
 import com.android.purebilibili.core.store.LiquidGlassMode
 import com.android.purebilibili.core.ui.motion.BottomBarMotionProfile
 import com.android.purebilibili.core.ui.motion.resolveBottomBarMotionSpec
@@ -420,20 +420,24 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
-    fun `refraction motion profile preserves horizontal panel offsets`() {
+    fun `bilipai tuned preset keeps original horizontal refraction motion`() {
         val profile = resolveBottomBarRefractionMotionProfile(
             position = 1.32f,
             velocity = 860f,
             isDragging = true
         )
+        val effectiveProfile = resolveBottomBarEffectiveRefractionMotionProfile(
+            preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+            profile = profile
+        )
 
-        assertTrue(profile.progress > 0f)
-        assertTrue(profile.exportPanelOffsetFraction != 0f)
-        assertTrue(profile.indicatorPanelOffsetFraction != 0f)
-        assertTrue(profile.visiblePanelOffsetFraction != 0f)
-        assertTrue(profile.visibleSelectionEmphasis < 1f)
-        assertTrue(profile.exportSelectionEmphasis < 1f)
-        assertTrue(profile.exportCaptureWidthScale > 1f)
+        assertEquals(profile.progress, effectiveProfile.progress, 0.001f)
+        assertEquals(profile.exportPanelOffsetFraction, effectiveProfile.exportPanelOffsetFraction, 0.001f)
+        assertEquals(profile.indicatorPanelOffsetFraction, effectiveProfile.indicatorPanelOffsetFraction, 0.001f)
+        assertEquals(profile.visiblePanelOffsetFraction, effectiveProfile.visiblePanelOffsetFraction, 0.001f)
+        assertEquals(profile.visibleSelectionEmphasis, effectiveProfile.visibleSelectionEmphasis, 0.001f)
+        assertEquals(profile.exportSelectionEmphasis, effectiveProfile.exportSelectionEmphasis, 0.001f)
+        assertEquals(profile.exportCaptureWidthScale, effectiveProfile.exportCaptureWidthScale, 0.001f)
     }
 
     @Test

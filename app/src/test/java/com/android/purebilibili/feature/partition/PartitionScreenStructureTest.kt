@@ -19,7 +19,7 @@ class PartitionScreenStructureTest {
         assertTrue(source.contains("PartitionVideoRow("))
         assertTrue(source.contains("SettingsManager.getHomeSettings(context)"))
         assertTrue(source.contains("resolveEffectiveLiquidGlassEnabled("))
-        assertTrue(source.contains("KernelSuMiuixBottomBarIndicatorLayer("))
+        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
         assertTrue(source.contains("liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled"))
         assertFalse(source.contains("partitionSideRailSweepSelection("))
         assertTrue(source.contains("CardPositionManager.recordVideoCardPosition("))

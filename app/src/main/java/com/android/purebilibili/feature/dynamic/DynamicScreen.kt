@@ -96,8 +96,8 @@ import com.android.purebilibili.core.util.resolveScrollToTopPlan
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 val LocalDynamicScrollChannel = compositionLocalOf<Channel<Unit>?> { null }
@@ -239,7 +239,7 @@ fun DynamicScreen(
 
     //  [Haze] 模糊状态
     val hazeState = rememberRecoverableHazeState()
-    val dynamicChromeBackdrop = rememberMiuixLayerBackdrop()
+    val dynamicChromeBackdrop = rememberLayerBackdrop()
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(viewModel, isCurrentPage) {
@@ -635,7 +635,7 @@ fun DynamicScreen(
                                         },
                                         likedDynamics = likedDynamics,
                                         modifier = Modifier
-                                            .miuixLayerBackdrop(dynamicChromeBackdrop)
+                                            .layerBackdrop(dynamicChromeBackdrop)
                                             .hazeSourceCompat(hazeState)
                                     )
                                 }
@@ -662,7 +662,7 @@ fun DynamicScreen(
                                     displayMode = displayMode,
                                     onDisplayModeChange = { viewModel.setDisplayMode(it) },
                                     hazeState = hazeState,
-                                    miuixBackdrop = dynamicChromeBackdrop
+                                    backdrop = dynamicChromeBackdrop
                                 )
                             }
 
@@ -764,7 +764,7 @@ fun DynamicScreen(
                                     },
                                     likedDynamics = likedDynamics,
                                     modifier = Modifier
-                                        .miuixLayerBackdrop(dynamicChromeBackdrop)
+                                        .layerBackdrop(dynamicChromeBackdrop)
                                         .hazeSourceCompat(hazeState)
                                 )
                             }

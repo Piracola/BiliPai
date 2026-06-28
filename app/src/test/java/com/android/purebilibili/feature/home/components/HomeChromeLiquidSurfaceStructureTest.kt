@@ -76,10 +76,13 @@ class HomeChromeLiquidSurfaceStructureTest {
                 topHeaderSource.contains("drawChromeSurface = drawTopTabDockChrome") &&
                 topHeaderSource.contains("useBottomBarMatchedSurface = useTopTabBottomBarMatchedDock") &&
                 topHeaderSource.contains("tabChromeRenderMode = if (useTopTabBottomBarMatchedDock)") &&
+                topHeaderSource.contains("val bottomBarLiquidGlassPreset = homeSettings?.bottomBarLiquidGlassPreset") &&
+                topHeaderSource.contains("liquidGlassPreset = bottomBarLiquidGlassPreset") &&
                 topHeaderSource.contains("topTabDockChromeRenderMode") &&
                 topHeaderSource.contains("tabShape = if (useUnifiedTopPanel)") &&
                 topHeaderSource.contains("resolveSharedBottomBarCapsuleShape()") &&
                 topTabChrome.readText().contains("useBottomBarMatchedSurface: Boolean = false") &&
+                topTabChrome.readText().contains("liquidGlassPreset: BottomBarLiquidGlassPreset") &&
                 topTabChrome.readText().contains(".homeTopBottomBarMatchedSurface(")
         )
         assertTrue(
@@ -160,22 +163,21 @@ class HomeChromeLiquidSurfaceStructureTest {
         )
         assertTrue(
             "matched top dock helper should still use the KSU floating dock renderer for header controls",
-            topBarSource.contains(".kernelSuFloatingDockSurface(")
+            topBarSource.contains(".kernelSuFloatingDockSurface(") &&
+                topBarSource.contains("liquidGlassPreset: BottomBarLiquidGlassPreset") &&
+                topBarSource.contains("liquidGlassPreset = liquidGlassPreset")
         )
         assertTrue(
             "top tab indicator should reuse the bottom bar KSU indicator layer when chrome exists",
             topBarSource.contains("val shouldRenderTopTabLiquidGlassIndicator = shouldUseLiquidGlassIndicator") &&
                 topBarSource.contains("!hasOuterChromeSurface") &&
                 topBarSource.contains("val shouldUseMd3DockBackedCapsule =") &&
-                topBarSource.contains("KernelSuMiuixBottomBarIndicatorLayer(") &&
+                topBarSource.contains("KernelSuBottomBarIndicatorLayer(") &&
                 topBarSource.contains("val shouldPrimeTopTabLiquidGlassCapture =") &&
-                topBarSource.contains("val topTabContentBackdrop = rememberMiuixLayerBackdrop()") &&
-                topBarSource.contains("rememberMiuixCombinedBackdrop(miuixBackdrop, topTabContentBackdrop)") &&
-                topBarSource.contains("backdrop = miuixBackdrop") &&
-                topBarSource.contains("indicatorZIndex = 0f") &&
-                topBarSource.contains("HomeTopTabLiquidSegmentedTabs(") &&
-                topBarSource.contains("BottomBarLiquidSegmentedControl(") &&
-                topBarSource.contains("drawContainerShell = drawContainerShell") &&
+                topBarSource.contains("val topTabContentBackdrop = rememberLayerBackdrop()") &&
+                topBarSource.contains("val topTabIndicatorContentBackdrop = topTabContentBackdrop") &&
+                !topBarSource.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)") &&
+                topBarSource.contains("layerBackdrop(topTabContentBackdrop)") &&
                 topBarSource.contains("shouldRenderBottomBarIndicatorBackdrop(") &&
                 topBarSource.contains("allowIdleGlassEffect = false") &&
                 topBarSource.contains("contentBackdrop = effectiveTopTabIndicatorContentBackdrop") &&

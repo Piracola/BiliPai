@@ -1,7 +1,6 @@
 package com.android.purebilibili.feature.home
 
 const val HOME_TOP_PARTITION_TAB_ID = "PARTITION"
-private val LEGACY_DEFAULT_HOME_TOP_TAB_IDS = setOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME")
 
 sealed interface HomeTopTabEntry {
     val id: String
@@ -24,7 +23,7 @@ private val DEFAULT_HOME_TOP_CATEGORIES = listOf(
 )
 
 private val DEFAULT_HOME_TOP_ENTRIES = DEFAULT_HOME_TOP_CATEGORIES
-    .map(HomeTopTabEntry::Category) + HomeTopTabEntry.Partition
+    .map(HomeTopTabEntry::Category)
 
 private val HOME_TOP_CUSTOMIZABLE_CATEGORIES = listOf(
     HomeCategory.RECOMMEND,
@@ -67,12 +66,7 @@ fun resolveHomeTopTabEntries(
         ?.map { it.trim().uppercase() }
         ?.filter { it.isNotBlank() }
         ?.toSet()
-    val migratedVisibleIds = if (normalizedVisibleIds == LEGACY_DEFAULT_HOME_TOP_TAB_IDS) {
-        normalizedVisibleIds + HOME_TOP_PARTITION_TAB_ID
-    } else {
-        normalizedVisibleIds
-    }
-    val resolvedVisible = migratedVisibleIds
+    val resolvedVisible = normalizedVisibleIds
         ?.mapNotNull(::resolveHomeTopEntryById)
         ?.toSet()
         .orEmpty()
@@ -81,13 +75,8 @@ fun resolveHomeTopTabEntries(
     val normalizedOrderIds = customOrderIds
         ?.map { it.trim().uppercase() }
         ?.filter { it.isNotBlank() }
-    val migratedOrderIds = if (normalizedOrderIds?.toSet() == LEGACY_DEFAULT_HOME_TOP_TAB_IDS) {
-        normalizedOrderIds + HOME_TOP_PARTITION_TAB_ID
-    } else {
-        normalizedOrderIds
-    }
 
-    val resolvedOrder = migratedOrderIds
+    val resolvedOrder = normalizedOrderIds
         ?.mapNotNull(::resolveHomeTopEntryById)
         .orEmpty()
 

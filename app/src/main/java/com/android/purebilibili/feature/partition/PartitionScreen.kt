@@ -68,6 +68,7 @@ import com.android.purebilibili.core.util.responsiveContentWidth
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.store.HomeSettings
+import com.android.purebilibili.core.store.BottomBarLiquidGlassPreset
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.resolveEffectiveLiquidGlassEnabled
 import com.android.purebilibili.core.theme.LocalUiPreset
@@ -85,8 +86,9 @@ import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
+import com.android.purebilibili.feature.home.components.BottomBarClickPulseTransform
 import com.android.purebilibili.feature.home.components.BottomBarIndicatorLayerTransform
-import com.android.purebilibili.feature.home.components.KernelSuMiuixBottomBarIndicatorLayer
+import com.android.purebilibili.feature.home.components.KernelSuBottomBarIndicatorLayer
 import com.android.purebilibili.feature.home.components.resolveAndroidNativeIdleIndicatorSurfaceColor
 import com.android.purebilibili.feature.home.components.resolveBottomBarBackdropPresetIndicatorLens
 import com.android.purebilibili.feature.home.components.resolveBottomBarBackdropPresetProgress
@@ -100,9 +102,8 @@ import com.android.purebilibili.feature.home.components.resolveSegmentedControlM
 import com.android.purebilibili.feature.home.components.resolveSegmentedControlMotionSpec
 import com.android.purebilibili.feature.home.components.shouldShowTopTabIcon
 import com.android.purebilibili.feature.home.components.shouldShowTopTabText
-import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
-import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import com.android.purebilibili.core.ui.blur.unifiedBlur
@@ -470,7 +471,7 @@ private fun PartitionSideRail(
                 itemSlotHeightPx = itemSlotHeightPx
             )
         }
-        val railBackdrop = rememberMiuixLayerBackdrop()
+        val railBackdrop = rememberLayerBackdrop()
 
         PartitionSideRailMovingIndicator(
             dragState = dragState,
@@ -487,7 +488,7 @@ private fun PartitionSideRail(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .miuixLayerBackdrop(railBackdrop)
+                .layerBackdrop(railBackdrop)
                 .partitionSideRailIndicatorLongPressDrag(
                     dragState = dragState,
                     itemHeightPx = itemHeightPx,
@@ -524,7 +525,7 @@ private fun PartitionSideRailMovingIndicator(
     itemSlotHeightPx: Float,
     indicatorOffsetPxProvider: () -> Float,
     liquidGlassIndicatorEnabled: Boolean,
-    backdrop: MiuixBackdrop,
+    backdrop: com.kyant.backdrop.Backdrop,
     maxVideoPushPx: Float,
     horizontalPadding: PartitionSideRailIndicatorHorizontalPadding,
     onVideoListPushChanged: (Float) -> Unit
@@ -583,15 +584,17 @@ private fun PartitionSideRailMovingIndicator(
         val density = LocalDensity.current
         val indicatorWidth = (maxWidth - horizontalPadding.start - horizontalPadding.end)
             .coerceAtLeast(0.dp)
-        KernelSuMiuixBottomBarIndicatorLayer(
+        KernelSuBottomBarIndicatorLayer(
             visible = true,
             dockContentAlpha = 1f,
             indicatorTranslationXPx = with(density) { horizontalPadding.start.toPx() },
             indicatorTranslationYPx = indicatorOffsetPxProvider(),
             indicatorPanelOffsetPx = 0f,
+            indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
             indicatorWidth = indicatorWidth,
             indicatorHeight = PartitionSideRailItemHeight,
             shellShape = shape,
+            liquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
             contentBackdrop = backdrop,
             backdrop = backdrop,
             indicatorLensSpec = indicatorLensSpec,

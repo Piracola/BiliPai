@@ -28,7 +28,7 @@ class HomePerformancePolicyTest {
         assertFalse(config.bottomBarBlurEnabled)
         assertTrue(config.topBarLiquidGlassEnabled)
         assertFalse(config.bottomBarLiquidGlassEnabled)
-        assertTrue(config.isAnyLiquidGlassEnabled)
+        assertFalse(config.isAnyLiquidGlassEnabled)
         assertFalse(config.cardAnimationEnabled)
         assertTrue(config.cardTransitionEnabled)
         assertFalse(config.isDataSaverActive)
@@ -170,38 +170,5 @@ class HomePerformancePolicyTest {
 
         assertTrue(config.topBarLiquidGlassEnabled)
         assertTrue(config.bottomBarLiquidGlassEnabled)
-    }
-
-    @Test
-    fun anyLiquidGlassIncludesSearchAndTopDockIndependentFromBottomBar() {
-        val topOnly = resolveHomePerformanceConfig(
-            uiPreset = UiPreset.MD3,
-            headerBlurEnabled = true,
-            bottomBarBlurEnabled = true,
-            topBarLiquidGlassEnabled = true,
-            homeSearchLiquidGlassEnabled = false,
-            bottomBarLiquidGlassEnabled = false,
-            androidNativeLiquidGlassEnabled = false,
-            cardAnimationEnabled = true,
-            cardTransitionEnabled = true,
-            isDataSaverActive = false,
-            smartVisualGuardEnabled = false
-        )
-        val searchOnly = resolveHomePerformanceConfig(
-            uiPreset = UiPreset.MD3,
-            headerBlurEnabled = true,
-            bottomBarBlurEnabled = true,
-            topBarLiquidGlassEnabled = false,
-            homeSearchLiquidGlassEnabled = true,
-            bottomBarLiquidGlassEnabled = false,
-            androidNativeLiquidGlassEnabled = false,
-            cardAnimationEnabled = true,
-            cardTransitionEnabled = true,
-            isDataSaverActive = false,
-            smartVisualGuardEnabled = false
-        )
-
-        assertTrue(topOnly.isAnyLiquidGlassEnabled)
-        assertTrue(searchOnly.isAnyLiquidGlassEnabled)
     }
 }

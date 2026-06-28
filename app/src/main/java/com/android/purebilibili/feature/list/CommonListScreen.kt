@@ -130,8 +130,8 @@ import com.android.purebilibili.core.ui.resolveBottomSafeAreaPadding
 import com.android.purebilibili.core.util.resolveScrollToTopPlan
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
-import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 internal enum class FavoriteContentMode {
     BASE_LIST,
@@ -518,7 +518,7 @@ fun CommonListScreen(
 
     // [Fix] 这里的模糊冲突核心：顶栏需要自己的独立 HazeState
     val localHazeState = com.android.purebilibili.core.ui.blur.rememberRecoverableHazeState()
-    val commonListChromeBackdrop = rememberMiuixLayerBackdrop()
+    val commonListChromeBackdrop = rememberLayerBackdrop()
 
     // 🔍 搜索状态
     var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
@@ -746,7 +746,7 @@ fun CommonListScreen(
             // [Haze Audit] 全局源已在 AppNavigation 根层提供，这里仅保留本地源
             val contentModifier = Modifier
                 .fillMaxSize()
-                .miuixLayerBackdrop(commonListChromeBackdrop)
+                .layerBackdrop(commonListChromeBackdrop)
                 .hazeSourceCompat(state = localHazeState)
 
             Box(modifier = contentModifier) {
@@ -1244,6 +1244,7 @@ fun CommonListScreen(
                             height = favoriteHeaderLayout.browseToggleHeightDp.dp,
                             indicatorHeight = favoriteHeaderLayout.browseToggleIndicatorHeightDp.dp,
                             labelFontSize = favoriteHeaderLayout.browseToggleLabelFontSizeSp.sp,
+                            backdrop = commonListChromeBackdrop,
                             tapPressRefractionEnabled = false,
                             onSelectionChange = { section ->
                                 favoriteBrowseSection = section

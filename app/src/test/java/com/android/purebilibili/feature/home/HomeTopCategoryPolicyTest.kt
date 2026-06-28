@@ -28,20 +28,19 @@ class HomeTopCategoryPolicyTest {
     }
 
     @Test
-    fun `top tab entries include partition as sixth default page`() {
+    fun `top tab entries keep five default categories`() {
         assertEquals(
             listOf(
                 HomeTopTabEntry.Category(HomeCategory.RECOMMEND),
                 HomeTopTabEntry.Category(HomeCategory.FOLLOW),
                 HomeTopTabEntry.Category(HomeCategory.POPULAR),
                 HomeTopTabEntry.Category(HomeCategory.LIVE),
-                HomeTopTabEntry.Category(HomeCategory.GAME),
-                HomeTopTabEntry.Partition
+                HomeTopTabEntry.Category(HomeCategory.GAME)
             ),
             resolveHomeTopTabEntries()
         )
         assertEquals(
-            listOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME", "PARTITION"),
+            listOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME"),
             resolveDefaultHomeTopTabIds()
         )
     }
@@ -62,10 +61,13 @@ class HomeTopCategoryPolicyTest {
 
     @Test
     fun `tab entry key and label should support partition`() {
-        val entries = resolveHomeTopTabEntries()
+        val entries = resolveHomeTopTabEntries(
+            customOrderIds = listOf("PARTITION"),
+            visibleIds = setOf("PARTITION")
+        )
 
-        assertEquals(HomeTopTabEntry.Partition, resolveHomeTopTabEntryOrNull(entries, 5))
-        assertEquals(HomeCategory.entries.size, resolveHomeTopTabEntryKey(entries, 5))
+        assertEquals(HomeTopTabEntry.Partition, resolveHomeTopTabEntryOrNull(entries, 0))
+        assertEquals(HomeCategory.entries.size, resolveHomeTopTabEntryKey(entries, 0))
         assertEquals("分区", resolveHomeTopTabEntryLabel(HomeTopTabEntry.Partition))
     }
 
@@ -103,7 +105,7 @@ class HomeTopCategoryPolicyTest {
     }
 
     @Test
-    fun `legacy default top tab settings should migrate to inline partition entry`() {
+    fun `legacy default top tab settings should keep five default categories`() {
         val entries = resolveHomeTopTabEntries(
             customOrderIds = listOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME"),
             visibleIds = setOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME")
@@ -115,8 +117,7 @@ class HomeTopCategoryPolicyTest {
                 HomeTopTabEntry.Category(HomeCategory.FOLLOW),
                 HomeTopTabEntry.Category(HomeCategory.POPULAR),
                 HomeTopTabEntry.Category(HomeCategory.LIVE),
-                HomeTopTabEntry.Category(HomeCategory.GAME),
-                HomeTopTabEntry.Partition
+                HomeTopTabEntry.Category(HomeCategory.GAME)
             ),
             entries
         )
