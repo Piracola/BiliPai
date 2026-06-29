@@ -90,6 +90,17 @@ class BiliPaiNavKeyMappingPolicyTest {
     }
 
     @Test
+    fun jsPluginRoutes_roundTripWithCompactIdentifiersOnly() {
+        val contentKey = BiliPaiNavKey.JsPluginContent(pluginId = "live.tv")
+        val mediaKey = BiliPaiNavKey.ExternalMedia(launchId = "launch-123")
+
+        assertEquals("js_plugin/live.tv", contentKey.toLegacyRoute())
+        assertEquals(contentKey, legacyRouteToBiliPaiNavKey(contentKey.toLegacyRoute()))
+        assertEquals("external_media/launch-123", mediaKey.toLegacyRoute())
+        assertEquals(mediaKey, legacyRouteToBiliPaiNavKey(mediaKey.toLegacyRoute()))
+    }
+
+    @Test
     fun liveSecondaryRoutes_mapToNavigation3Keys() {
         assertEquals(BiliPaiNavKey.LiveList, legacyRouteToBiliPaiNavKey(ScreenRoutes.LiveList.route))
         assertEquals(BiliPaiNavKey.LiveSearch, legacyRouteToBiliPaiNavKey(ScreenRoutes.LiveSearch.route))

@@ -72,7 +72,8 @@ private val capabilityOrder = listOf(
     PluginCapability.LOCAL_HISTORY_READ,
     PluginCapability.LOCAL_FEEDBACK_READ,
     PluginCapability.NETWORK,
-    PluginCapability.PLUGIN_STORAGE
+    PluginCapability.PLUGIN_STORAGE,
+    PluginCapability.EXTERNAL_MEDIA_PLAYBACK
 )
 
 private val explicitApprovalCapabilities = setOf(
@@ -82,7 +83,8 @@ private val explicitApprovalCapabilities = setOf(
     PluginCapability.LOCAL_HISTORY_READ,
     PluginCapability.LOCAL_FEEDBACK_READ,
     PluginCapability.NETWORK,
-    PluginCapability.PLUGIN_STORAGE
+    PluginCapability.PLUGIN_STORAGE,
+    PluginCapability.EXTERNAL_MEDIA_PLAYBACK
 )
 
 fun resolvePluginCapabilityUiModels(
@@ -281,6 +283,7 @@ private val PluginCapability.label: String
         PluginCapability.LOCAL_FEEDBACK_READ -> "本地反馈"
         PluginCapability.NETWORK -> "网络访问"
         PluginCapability.PLUGIN_STORAGE -> "插件存储"
+        PluginCapability.EXTERNAL_MEDIA_PLAYBACK -> "外部媒体播放"
     }
 
 private val PluginCapability.description: String
@@ -295,4 +298,5 @@ private val PluginCapability.description: String
         PluginCapability.LOCAL_FEEDBACK_READ -> "读取不感兴趣等本地反馈信号"
         PluginCapability.NETWORK -> "访问网络获取远程数据或服务"
         PluginCapability.PLUGIN_STORAGE -> "读写插件自己的本地配置或缓存"
+        PluginCapability.EXTERNAL_MEDIA_PLAYBACK -> "播放插件返回的外部媒体链接"
     }

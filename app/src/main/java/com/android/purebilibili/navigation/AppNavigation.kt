@@ -1828,9 +1828,29 @@ fun AppNavigation(
                                 val pluginsKey = key as BiliPaiNavKey.PluginsSettings
                                 com.android.purebilibili.feature.settings.PluginsScreen(
                                     onBack = { performSystemBackAction() },
-                                    initialImportUrl = pluginsKey.importUrl
+                                    initialImportUrl = pluginsKey.importUrl,
+                                    onOpenJsPlugin = { pluginId ->
+                                        pushNavigation3Key(BiliPaiNavKey.JsPluginContent(pluginId))
+                                    }
                                 )
                             }
+                        BiliPaiNavEntryContentRole.JS_PLUGIN_CONTENT -> {
+                            val jsPluginKey = key as BiliPaiNavKey.JsPluginContent
+                            com.android.purebilibili.feature.plugin.js.BiliPaiJsPluginContentScreen(
+                                pluginId = jsPluginKey.pluginId,
+                                onBack = { performSystemBackAction() },
+                                onPlayMedia = { launchId ->
+                                    pushNavigation3Key(BiliPaiNavKey.ExternalMedia(launchId))
+                                }
+                            )
+                        }
+                        BiliPaiNavEntryContentRole.EXTERNAL_MEDIA -> {
+                            val mediaKey = key as BiliPaiNavKey.ExternalMedia
+                            com.android.purebilibili.feature.plugin.js.ExternalMediaPlayerScreen(
+                                launchId = mediaKey.launchId,
+                                onBack = { performSystemBackAction() }
+                            )
+                        }
                         BiliPaiNavEntryContentRole.BOTTOM_BAR_SETTINGS ->
                             com.android.purebilibili.feature.settings.BottomBarSettingsScreen(
                                 onBack = { performSystemBackAction() }

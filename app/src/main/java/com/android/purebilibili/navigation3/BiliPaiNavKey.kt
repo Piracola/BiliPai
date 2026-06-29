@@ -82,6 +82,20 @@ internal sealed interface BiliPaiNavKey : NavKey {
     }
 
     @Serializable
+    data class JsPluginContent(
+        val pluginId: String
+    ) : BiliPaiNavKey {
+        override val routeBase: String = "js_plugin"
+    }
+
+    @Serializable
+    data class ExternalMedia(
+        val launchId: String
+    ) : BiliPaiNavKey {
+        override val routeBase: String = "external_media"
+    }
+
+    @Serializable
     data object BottomBarSettings : BiliPaiNavKey {
         override val routeBase: String = "bottom_bar_settings"
     }

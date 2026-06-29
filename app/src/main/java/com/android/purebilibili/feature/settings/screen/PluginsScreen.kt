@@ -32,6 +32,11 @@ import coil.compose.AsyncImage
 import com.android.purebilibili.R
 import com.android.purebilibili.core.plugin.ExternalPluginInstallDecision
 import com.android.purebilibili.core.plugin.evaluateExternalPluginInstall
+import com.android.purebilibili.core.plugin.js.BiliPaiJsPluginInstallStore
+import com.android.purebilibili.core.plugin.js.BiliPaiJsPluginManifest
+import com.android.purebilibili.core.plugin.js.BiliPaiJsRuntime
+import com.android.purebilibili.core.plugin.js.InstalledBiliPaiJsPlugin
+import com.android.purebilibili.core.plugin.js.resolveBiliPaiJsPluginCapabilities
 import com.android.purebilibili.core.plugin.kotlinpkg.ExternalKotlinPluginInstallStore
 import com.android.purebilibili.core.plugin.kotlinpkg.ExternalKotlinPluginPackagePreview
 import com.android.purebilibili.core.network.NetworkModule
@@ -107,6 +112,25 @@ internal fun resolveUiSkinImportErrorMessage(rawMessage: String?): String {
     return message
 }
 
+internal fun downloadJsRemotePlugin(url: String): String {
+    val request = Request.Builder()
+        .url(url)
+        .header("User-Agent", "BiliPai")
+        .build()
+    NetworkModule.okHttpClient.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+            throw IllegalArgumentException("JS 插件下载失败: HTTP ${response.code}")
+        }
+        return response.body.string()
+    }
+}
+
+private data class BiliPaiJsPluginPreview(
+    val manifest: BiliPaiJsPluginManifest,
+    val script: String,
+    val sourceUrl: String?
+)
+
 /**
  *  插件中心页面
  * 
@@ -116,7 +140,8 @@ internal fun resolveUiSkinImportErrorMessage(rawMessage: String?): String {
 @Composable
 fun PluginsScreen(
     onBack: () -> Unit,
-    initialImportUrl: String? = null
+    initialImportUrl: String? = null,
+    onOpenJsPlugin: (String) -> Unit = {}
 ) {
     // Top-level state for managing plugins and editing
     val plugins by PluginManager.pluginsFlow.collectAsStateWithLifecycle()
@@ -161,7 +186,8 @@ fun PluginsScreen(
             plugins = plugins,
             jsonPlugins = jsonPlugins,
             onEditJsonPlugin = { editingPlugin = it },
-            initialImportUrl = initialImportUrl
+            initialImportUrl = initialImportUrl,
+            onOpenJsPlugin = onOpenJsPlugin
         )
     }
 }
@@ -172,7 +198,8 @@ fun PluginsContent(
     plugins: List<com.android.purebilibili.core.plugin.PluginInfo>,
     jsonPlugins: List<com.android.purebilibili.core.plugin.json.LoadedJsonPlugin>,
     onEditJsonPlugin: (com.android.purebilibili.core.plugin.json.JsonRulePlugin) -> Unit,
-    initialImportUrl: String? = null
+    initialImportUrl: String? = null,
+    onOpenJsPlugin: (String) -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -218,8 +245,17 @@ fun PluginsContent(
     val kotlinPluginStore = remember(context) {
         ExternalKotlinPluginInstallStore.createDefault(context)
     }
+    val jsPluginStore = remember(context) {
+        BiliPaiJsPluginInstallStore.createDefault(context)
+    }
+    val jsRuntime = remember(context) {
+        BiliPaiJsRuntime(context)
+    }
     var installedKotlinPackages by remember {
         mutableStateOf(kotlinPluginStore.listInstalledPackages())
+    }
+    var installedJsPlugins by remember {
+        mutableStateOf(jsPluginStore.listInstalledPlugins())
     }
     var kotlinPreview by remember {
         mutableStateOf<Pair<ExternalKotlinPluginPackagePreview, ExternalPluginInstallDecision>?>(null)
@@ -227,6 +263,12 @@ fun PluginsContent(
     var kotlinPackageBytes by remember { mutableStateOf<ByteArray?>(null) }
     var kotlinImportError by remember { mutableStateOf<String?>(null) }
     var isKotlinPackageLoading by remember { mutableStateOf(false) }
+    var showJsImportDialog by remember { mutableStateOf(false) }
+    var jsImportUrl by remember { mutableStateOf("") }
+    var jsImportError by remember { mutableStateOf<String?>(null) }
+    var jsPreview by remember { mutableStateOf<BiliPaiJsPluginPreview?>(null) }
+    var isJsPreviewLoading by remember { mutableStateOf(false) }
+    var isJsInstalling by remember { mutableStateOf(false) }
     val uiSkinStore = remember(context) {
         UiSkinInstallStore.createDefault(context)
     }
@@ -308,6 +350,40 @@ fun PluginsContent(
             }
         }
     }
+    val jsPluginPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        isJsPreviewLoading = true
+        jsImportError = null
+        scope.launch {
+            val scriptResult = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.readBytes().decodeToString()
+                    } ?: throw IllegalArgumentException("无法读取 JS 插件")
+                }
+            }
+            val result = scriptResult.fold(
+                onSuccess = { script ->
+                    jsRuntime.previewManifest(script).map { manifest ->
+                        BiliPaiJsPluginPreview(
+                            manifest = manifest,
+                            script = script,
+                            sourceUrl = uri.toString()
+                        )
+                    }
+                },
+                onFailure = { error -> Result.failure<BiliPaiJsPluginPreview>(error) }
+            )
+            isJsPreviewLoading = false
+            result.onSuccess { preview ->
+                jsPreview = preview
+            }.onFailure { error ->
+                jsImportError = error.message ?: "JS 插件预览失败"
+            }
+        }
+    }
 
     fun validateImportUrlOrError(raw: String): String? {
         val normalized = raw.trim()
@@ -341,6 +417,43 @@ fun PluginsContent(
             } else {
                 importError = result.exceptionOrNull()?.message ?: "预览失败"
                 showImportDialog = true
+            }
+        }
+    }
+
+    fun requestJsPreview(rawUrl: String) {
+        val normalizedUrl = rawUrl.trim()
+        val validationError = validateImportUrlOrError(normalizedUrl)
+        if (validationError != null) {
+            jsImportError = validationError
+            return
+        }
+
+        jsImportError = null
+        isJsPreviewLoading = true
+        scope.launch {
+            val scriptResult = withContext(Dispatchers.IO) {
+                runCatching { downloadJsRemotePlugin(normalizedUrl) }
+            }
+            val result = scriptResult.fold(
+                onSuccess = { script ->
+                    jsRuntime.previewManifest(script).map { manifest ->
+                        BiliPaiJsPluginPreview(
+                            manifest = manifest,
+                            script = script,
+                            sourceUrl = normalizedUrl
+                        )
+                    }
+                },
+                onFailure = { error -> Result.failure<BiliPaiJsPluginPreview>(error) }
+            )
+            isJsPreviewLoading = false
+            result.onSuccess { preview ->
+                jsPreview = preview
+                showJsImportDialog = false
+            }.onFailure { error ->
+                jsImportError = error.message ?: "JS 插件预览失败"
+                showJsImportDialog = true
             }
         }
     }
@@ -489,6 +602,122 @@ fun PluginsContent(
                             tint = importTint,
                             modifier = Modifier.size(24.dp)
                         )
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+                    tonalElevation = 0.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(iOSTeal.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = CupertinoIcons.Default.Terminal,
+                                    contentDescription = null,
+                                    tint = iOSTeal,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "导入 JS 媒体插件",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isJsPreviewLoading) {
+                                        "正在预览 JS 插件..."
+                                    } else {
+                                        "支持链接或本地 .js，预览 manifest 和权限后安装"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { showJsImportDialog = true },
+                                enabled = !isJsPreviewLoading
+                            ) {
+                                Text("链接")
+                            }
+                            OutlinedButton(
+                                onClick = { jsPluginPicker.launch("*/*") },
+                                enabled = !isJsPreviewLoading
+                            ) {
+                                Text("本地文件")
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (jsImportError != null) {
+                item {
+                    Text(
+                        text = jsImportError ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                    )
+                }
+            }
+
+            if (installedJsPlugins.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 1.dp
+                    ) {
+                        Column {
+                            installedJsPlugins.forEachIndexed { index, installed ->
+                                InstalledJsPluginItem(
+                                    installed = installed,
+                                    onToggle = { enabled ->
+                                        jsPluginStore.setEnabled(installed.manifest.id, enabled)
+                                        installedJsPlugins = jsPluginStore.listInstalledPlugins()
+                                    },
+                                    onOpen = { onOpenJsPlugin(installed.manifest.id) },
+                                    onDelete = {
+                                        jsPluginStore.removePlugin(installed.manifest.id)
+                                        installedJsPlugins = jsPluginStore.listInstalledPlugins()
+                                    }
+                                )
+                                if (index < installedJsPlugins.lastIndex) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(0.5.dp)
+                                            .padding(start = 16.dp)
+                                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -867,6 +1096,171 @@ fun PluginsContent(
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     
+    if (showJsImportDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isJsPreviewLoading) {
+                    showJsImportDialog = false
+                    jsImportUrl = ""
+                    jsImportError = null
+                }
+            },
+            icon = { Icon(CupertinoIcons.Default.Terminal, contentDescription = null) },
+            title = { Text("导入 JS 媒体插件") },
+            text = {
+                Column {
+                    Text(
+                        text = "输入 JS 插件链接。安装前只展示插件信息、模块和权限，确认后默认保持禁用。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = jsImportUrl,
+                        onValueChange = {
+                            jsImportUrl = it
+                            jsImportError = null
+                        },
+                        label = { Text("JS 插件链接") },
+                        placeholder = { Text("例如：https://example.com/plugin.js") },
+                        singleLine = true,
+                        isError = jsImportError != null,
+                        supportingText = jsImportError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (isJsPreviewLoading) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("正在预览...")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { requestJsPreview(jsImportUrl) },
+                    enabled = !isJsPreviewLoading
+                ) {
+                    Text("预览")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showJsImportDialog = false
+                        jsImportUrl = ""
+                        jsImportError = null
+                    },
+                    enabled = !isJsPreviewLoading
+                ) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    jsPreview?.let { preview ->
+        AlertDialog(
+            onDismissRequest = {
+                if (!isJsInstalling) {
+                    jsPreview = null
+                }
+            },
+            icon = { Icon(CupertinoIcons.Filled.Shield, contentDescription = null) },
+            title = { Text("JS 插件预览") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = preview.manifest.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${preview.manifest.id} · v${preview.manifest.version} · ${preview.manifest.author.ifBlank { "未知作者" }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = preview.manifest.description.ifBlank { "无描述" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "模块：${preview.manifest.modules.joinToString("、") { it.title }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "来源：${preview.sourceUrl ?: "本地文件"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    PluginCapabilityDetailSection(
+                        capabilities = resolveBiliPaiJsPluginCapabilities(preview.manifest)
+                    )
+                    Text(
+                        text = "外部 JS 由用户信任源提供；不会暴露登录 Cookie、Token、本地文件路径或 Android 对象。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    if (isJsInstalling) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                            Text("正在安装...", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !isJsInstalling,
+                    onClick = {
+                        isJsInstalling = true
+                        val result = jsPluginStore.installPlugin(
+                            manifest = preview.manifest,
+                            script = preview.script,
+                            sourceUrl = preview.sourceUrl,
+                            grantedCapabilities = preview.manifest.permissions
+                        )
+                        isJsInstalling = false
+                        result.onSuccess {
+                            installedJsPlugins = jsPluginStore.listInstalledPlugins()
+                            jsPreview = null
+                            jsImportUrl = ""
+                            jsImportError = null
+                            android.widget.Toast.makeText(
+                                context,
+                                "JS 插件已安装，默认未启用",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }.onFailure { error ->
+                            jsImportError = error.message ?: "JS 插件安装失败"
+                        }
+                    }
+                ) {
+                    Text("确认安装")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isJsInstalling,
+                    onClick = { jsPreview = null }
+                ) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     //  导入插件对话框
     if (showImportDialog) {
         AlertDialog(
@@ -1672,6 +2066,64 @@ private fun PluginItem(
                         plugin.SettingsContent()
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InstalledJsPluginItem(
+    installed: InstalledBiliPaiJsPlugin,
+    onToggle: (Boolean) -> Unit,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = installed.manifest.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${installed.manifest.id} · v${installed.manifest.version} · ${if (installed.enabled) "已启用" else "未启用"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = installed.manifest.description.ifBlank { installed.sourceUrl ?: "本地 JS 插件" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+                PluginCapabilityChips(
+                    capabilities = installed.grantedCapabilities,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
+            AppAdaptiveSwitch(
+                checked = installed.enabled,
+                onCheckedChange = onToggle
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                onClick = onOpen,
+                enabled = installed.enabled
+            ) {
+                Text("打开内容")
+            }
+            TextButton(
+                onClick = onDelete,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("删除")
             }
         }
     }

@@ -21,6 +21,8 @@ internal fun BiliPaiNavKey.toLegacyRoute(): String {
         BiliPaiNavKey.PlaybackSettings -> ScreenRoutes.PlaybackSettings.route
         BiliPaiNavKey.PermissionSettings -> ScreenRoutes.PermissionSettings.route
         is BiliPaiNavKey.PluginsSettings -> ScreenRoutes.PluginsSettings.createRoute(importUrl)
+        is BiliPaiNavKey.JsPluginContent -> ScreenRoutes.JsPluginContent.createRoute(pluginId)
+        is BiliPaiNavKey.ExternalMedia -> ScreenRoutes.ExternalMedia.createRoute(launchId)
         BiliPaiNavKey.BottomBarSettings -> ScreenRoutes.BottomBarSettings.route
         BiliPaiNavKey.SettingsShare -> ScreenRoutes.SettingsShare.route
         BiliPaiNavKey.WebDavBackup -> ScreenRoutes.WebDavBackup.route
@@ -115,6 +117,12 @@ internal fun legacyRouteToBiliPaiNavKey(route: String?): BiliPaiNavKey {
         normalized == ScreenRoutes.PlaybackSettings.route -> BiliPaiNavKey.PlaybackSettings
         normalized == ScreenRoutes.PermissionSettings.route -> BiliPaiNavKey.PermissionSettings
         routeBase == "plugins_settings" -> BiliPaiNavKey.PluginsSettings(importUrl = query["importUrl"])
+        segments.firstOrNull() == "js_plugin" && segments.size >= 2 -> {
+            BiliPaiNavKey.JsPluginContent(pluginId = decodeRouteValue(segments[1]))
+        }
+        segments.firstOrNull() == "external_media" && segments.size >= 2 -> {
+            BiliPaiNavKey.ExternalMedia(launchId = decodeRouteValue(segments[1]))
+        }
         normalized == ScreenRoutes.BottomBarSettings.route -> BiliPaiNavKey.BottomBarSettings
         normalized == ScreenRoutes.SettingsShare.route -> BiliPaiNavKey.SettingsShare
         normalized == ScreenRoutes.WebDavBackup.route -> BiliPaiNavKey.WebDavBackup

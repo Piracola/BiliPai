@@ -36,6 +36,8 @@ private val SETTINGS_LIGHT_SIBLING_ROUTE_BASES = setOf(
     "playback_settings",
     "permission_settings",
     "plugins_settings",
+    "js_plugin",
+    "external_media",
     "bottom_bar_settings",
     "settings_share",
     "webdav_backup",
@@ -98,6 +100,8 @@ internal fun biliPaiNavEntryProvider(
         entry<BiliPaiNavKey.PlaybackSettings>(metadata = entryMetadata, content = content)
         entry<BiliPaiNavKey.PermissionSettings>(metadata = entryMetadata, content = content)
         entry<BiliPaiNavKey.PluginsSettings>(metadata = entryMetadata, content = content)
+        entry<BiliPaiNavKey.JsPluginContent>(metadata = entryMetadata, content = content)
+        entry<BiliPaiNavKey.ExternalMedia>(metadata = entryMetadata, content = content)
         entry<BiliPaiNavKey.BottomBarSettings>(metadata = entryMetadata, content = content)
         entry<BiliPaiNavKey.SettingsShare>(metadata = entryMetadata, content = content)
         entry<BiliPaiNavKey.WebDavBackup>(metadata = entryMetadata, content = content)

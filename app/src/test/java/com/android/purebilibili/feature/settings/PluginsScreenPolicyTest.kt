@@ -56,13 +56,15 @@ class PluginsScreenPolicyTest {
             setOf(
                 PluginCapability.RECOMMENDATION_CANDIDATES,
                 PluginCapability.NETWORK,
-                PluginCapability.PLUGIN_STORAGE
+                PluginCapability.PLUGIN_STORAGE,
+                PluginCapability.EXTERNAL_MEDIA_PLAYBACK
             )
         )
 
-        assertEquals(listOf("推荐候选", "网络访问", "插件存储"), models.map { it.label })
+        assertEquals(listOf("推荐候选", "网络访问", "插件存储", "外部媒体播放"), models.map { it.label })
         assertTrue(models.first { it.capability == PluginCapability.NETWORK }.requiresExplicitApproval)
         assertTrue(models.first { it.capability == PluginCapability.PLUGIN_STORAGE }.requiresExplicitApproval)
+        assertTrue(models.first { it.capability == PluginCapability.EXTERNAL_MEDIA_PLAYBACK }.requiresExplicitApproval)
     }
 
     @Test
