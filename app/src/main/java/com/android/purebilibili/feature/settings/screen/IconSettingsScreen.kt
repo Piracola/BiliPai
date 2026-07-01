@@ -18,8 +18,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import com.android.purebilibili.core.ui.AppShapes
+import com.android.purebilibili.core.ui.AppSurfaceTokens
+import com.android.purebilibili.core.ui.ContainerLevel
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -110,8 +112,8 @@ fun IconSettingsScreen(
             )
         },
         containerColor = resolveIconSettingsContainerColor(
-            background = MaterialTheme.colorScheme.background,
-            surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+            background = AppSurfaceTokens.groupedListContainer(),
+            surfaceVariant = AppSurfaceTokens.cardContainer()
         ),
         contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
@@ -174,8 +176,8 @@ fun IconSettingsContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surface)
+                        .clip(AppShapes.container(ContainerLevel.Card))
+                        .background(AppSurfaceTokens.cardContainer())
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -211,7 +213,7 @@ fun IconSettingsContent(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(AppShapes.container(ContainerLevel.Dialog))
                             .clickable {
                                 if (!isSelected) {
                                     Toast.makeText(context, "正在切换图标...", Toast.LENGTH_SHORT).show()
@@ -226,7 +228,7 @@ fun IconSettingsContent(
                         ) {
                             // 图标主体
                             // iOS App Icon 形状: 连续曲率圆角 (Squircle)
-                            // 这里用 RoundedCornerShape(22%) 模拟
+                            val iconShape = AppShapes.container(ContainerLevel.Dialog)
                             AsyncImage(
                                 model = option.iconRes,
                                 contentDescription = option.name,
@@ -234,15 +236,15 @@ fun IconSettingsContent(
                                     .size(64.dp)
                                     .shadow(
                                         elevation = 8.dp,
-                                        shape = RoundedCornerShape(14.dp),
+                                        shape = iconShape,
                                         spotColor = Color.Black.copy(alpha = 0.15f)
                                     )
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .clip(iconShape)
                                     .then(
                                         if (isSelected) Modifier.border(
                                             width = 2.dp,
                                             color = MaterialTheme.colorScheme.primary,
-                                            shape = RoundedCornerShape(14.dp)
+                                            shape = iconShape
                                         ) else Modifier
                                     )
                             )
@@ -262,8 +264,8 @@ fun IconSettingsContent(
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .background(MaterialTheme.colorScheme.surface, androidx.compose.foundation.shape.CircleShape)
-                                        .border(2.dp, MaterialTheme.colorScheme.surface, androidx.compose.foundation.shape.CircleShape)
+                                        .background(AppSurfaceTokens.cardContainer(), androidx.compose.foundation.shape.CircleShape)
+                                        .border(2.dp, AppSurfaceTokens.cardContainer(), androidx.compose.foundation.shape.CircleShape)
                                 )
                             }
                         }

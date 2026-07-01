@@ -28,6 +28,7 @@ class SettingsScreenTokenAdoptionTest {
         "src/main/java/com/android/purebilibili/feature/settings/IOSSlidingSegmentedControl.kt",
         "src/main/java/com/android/purebilibili/feature/settings/screen/AnimationSettingsScreen.kt",
         "src/main/java/com/android/purebilibili/feature/settings/screen/BlockedListScreen.kt",
+        "src/main/java/com/android/purebilibili/feature/settings/screen/IconSettingsScreen.kt",
         "src/main/java/com/android/purebilibili/feature/settings/screen/JsonPluginEditorScreen.kt",
         "src/main/java/com/android/purebilibili/feature/settings/screen/OpenSourceLicensesScreen.kt",
         "src/main/java/com/android/purebilibili/feature/settings/screen/PermissionSettingsScreen.kt",
