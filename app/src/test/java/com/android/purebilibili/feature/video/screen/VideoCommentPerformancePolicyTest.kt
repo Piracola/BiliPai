@@ -14,6 +14,12 @@ class VideoCommentPerformancePolicyTest {
     }
 
     @Test
+    fun `video detail should avoid preloading intro tab while comment tab is visible`() {
+        assertEquals(0, resolveVideoDetailBeyondViewportPageCount(isVideoPlaying = false, selectedTabIndex = 1))
+        assertEquals(1, resolveVideoDetailBeyondViewportPageCount(isVideoPlaying = false, selectedTabIndex = 0))
+    }
+
+    @Test
     fun `comment list should load more only when user scrolls near the end`() {
         assertFalse(
             shouldLoadMoreVideoComments(
@@ -71,6 +77,24 @@ class VideoCommentPerformancePolicyTest {
             shouldUseLightweightCommentRendering(
                 selectedTabIndex = 1,
                 isVideoPlaying = false
+            )
+        )
+    }
+
+    @Test
+    fun `lightweight comment rendering also applies while comment list is scrolling`() {
+        assertTrue(
+            shouldUseLightweightCommentRendering(
+                selectedTabIndex = 1,
+                isVideoPlaying = false,
+                isCommentListScrolling = true
+            )
+        )
+        assertFalse(
+            shouldUseLightweightCommentRendering(
+                selectedTabIndex = 1,
+                isVideoPlaying = false,
+                isCommentListScrolling = false
             )
         )
     }
