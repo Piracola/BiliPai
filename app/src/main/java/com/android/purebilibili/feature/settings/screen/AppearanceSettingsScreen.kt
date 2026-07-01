@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.*
+import com.android.purebilibili.core.ui.AppShapes
+import com.android.purebilibili.core.ui.AppSurfaceTokens
+import com.android.purebilibili.core.ui.ContainerLevel
 import androidx.compose.animation.core.*
 //  Cupertino Icons - iOS SF Symbols 风格图标
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
@@ -145,11 +147,11 @@ fun AppearanceSettingsScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = globalWallpaperAwareChromeColor(MaterialTheme.colorScheme.background)
+                        containerColor = globalWallpaperAwareChromeColor(AppSurfaceTokens.groupedListContainer())
                     )
                 )
             },
-            containerColor = globalWallpaperAwareChromeColor(MaterialTheme.colorScheme.background),
+            containerColor = globalWallpaperAwareChromeColor(AppSurfaceTokens.groupedListContainer()),
             contentWindowInsets = WindowInsets(0.dp)
         ) { padding ->
             CompositionLocalProvider(LocalSettingsLiquidGlassEnabled provides state.isLiquidGlassEnabled) {
@@ -178,10 +180,10 @@ fun AppearanceSettingsScreen(
                             Icon(rememberAppBackIcon(), contentDescription = backLabel)
                         }
                     },
-                    color = globalWallpaperAwareChromeColor(MaterialTheme.colorScheme.background)
+                    color = globalWallpaperAwareChromeColor(AppSurfaceTokens.groupedListContainer())
                 )
             },
-            containerColor = globalWallpaperAwareChromeColor(MaterialTheme.colorScheme.background),
+            containerColor = globalWallpaperAwareChromeColor(AppSurfaceTokens.groupedListContainer()),
             contentWindowInsets = WindowInsets(0.dp)
         ) { padding ->
             CompositionLocalProvider(LocalSettingsLiquidGlassEnabled provides state.isLiquidGlassEnabled) {
@@ -732,7 +734,7 @@ fun AppearanceSettingsContent(
                                         .fillMaxWidth()
                                         .padding(bottom = 24.dp)
                                         .height(140.dp)
-                                        .clip(RoundedCornerShape(20.dp))
+                                        .clip(AppShapes.container(ContainerLevel.Sheet))
                                         .background(
                                             brush = androidx.compose.ui.graphics.Brush.verticalGradient(
                                                 colors = listOf(
@@ -744,7 +746,7 @@ fun AppearanceSettingsContent(
                                         .border(
                                             width = 1.dp,
                                             color = selectedCustomThemeColor.copy(alpha = 0.3f),
-                                            shape = RoundedCornerShape(20.dp)
+                                            shape = AppShapes.container(ContainerLevel.Sheet)
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -761,7 +763,7 @@ fun AppearanceSettingsContent(
                                                             selectedCustomThemeColor.copy(alpha = 0.8f)
                                                         )
                                                     ),
-                                                    shape = RoundedCornerShape(16.dp)
+                                                    shape = AppShapes.container(ContainerLevel.Dialog)
                                                 ),
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -1106,7 +1108,7 @@ fun AppearanceSettingsContent(
                                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                             modifier = Modifier
                                                 .size(width = 42.dp, height = 72.dp)
-                                                .clip(RoundedCornerShape(8.dp))
+                                                .clip(AppShapes.container(ContainerLevel.Field))
                                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                         )
                                     }
@@ -1156,7 +1158,7 @@ fun AppearanceSettingsContent(
                                 Box(
                                     modifier = Modifier
                                         .size(60.dp)
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(AppShapes.container(ContainerLevel.Field))
                                         .background(MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
                                     if (hasSplashWallpaper) {
@@ -1335,7 +1337,7 @@ fun AppearanceSettingsContent(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(AppShapes.container(ContainerLevel.Field))
                                     .clickable { isExpanded = !isExpanded }
                                     .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -1382,7 +1384,7 @@ fun AppearanceSettingsContent(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clip(RoundedCornerShape(10.dp))
+                                                .clip(AppShapes.container(ContainerLevel.Field))
                                                 .background(
                                                     if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -1538,7 +1540,7 @@ fun AppearanceSettingsContent(
                             Box(
                                 modifier = Modifier
                                     .size(60.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(AppShapes.container(ContainerLevel.Field))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
                             ) {
                                 if (resolvedHomeWallpaperUri.isNotBlank()) {
@@ -1723,7 +1725,7 @@ fun AppearanceSettingsContent(
                                             Box(
                                                 modifier = Modifier
                                                     .height(36.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clip(AppShapes.container(ContainerLevel.Field))
                                                     .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                                     .clickable { viewModel.setGridColumnCount(0) }
                                                     .padding(horizontal = 16.dp),
@@ -1743,7 +1745,7 @@ fun AppearanceSettingsContent(
                                             Box(
                                                 modifier = Modifier
                                                     .size(36.dp) // Square for numbers
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clip(AppShapes.container(ContainerLevel.Field))
                                                     .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                                     .clickable { viewModel.setGridColumnCount(count) },
                                                 contentAlignment = Alignment.Center
@@ -1900,12 +1902,12 @@ internal fun ThemeRoleModeEditor(
                     modifier = Modifier
                         .weight(1f)
                         .height(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppShapes.container(ContainerLevel.Field))
                         .background(parseMd3CustomColorHex(hex))
                         .border(
                             1.dp,
                             MaterialTheme.colorScheme.outlineVariant,
-                            RoundedCornerShape(8.dp)
+                            AppShapes.container(ContainerLevel.Field)
                         )
                 )
             }
@@ -1991,7 +1993,7 @@ private fun Md3CustomColorPickerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(AppShapes.container(ContainerLevel.Dialog))
                         .background(pendingColor),
                     contentAlignment = Alignment.Center
                 ) {
@@ -2191,7 +2193,7 @@ private fun AppearanceUiPresetDescriptionCard(
     val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
 
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = AppShapes.container(ContainerLevel.Dialog),
         color = containerColor,
         contentColor = contentColor,
         tonalElevation = 0.dp,
@@ -2313,7 +2315,7 @@ fun ColorPreviewItem(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppShapes.container(ContainerLevel.Field))
                 .background(color)
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -2342,7 +2344,7 @@ private fun <T> ThemePresetDropdownSetting(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppShapes.container(ContainerLevel.Field))
                 .clickable { expanded = true }
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
