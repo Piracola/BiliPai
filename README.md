@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/Version-9.6.0-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.6.0" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
-  <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
+  <img src="https://img.shields.io/badge/License-Non--Commercial-FF3B30?style=flat-square" alt="Non-Commercial License" />
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=FF9500&labelColor=ffffff" alt="Stars" />
   <a href="https://github.com/jay3-yy/BiliPai/releases">
     <img src="https://img.shields.io/github/downloads/jay3-yy/BiliPai/total?style=flat-square&color=34C759&label=%E6%80%BB%E4%B8%8B%E8%BD%BD%E9%87%8F&labelColor=ffffff" alt="总下载量" />
@@ -250,9 +250,11 @@ BiliPai 依赖并参考了多个优秀开源项目：
 
 ## 许可证
 
-[GPL-3.0 License](LICENSE)
+[BiliPai 非商业授权协议 1.0](LICENSE)
 
-你可以自由使用、修改和分发本项目；修改后的版本必须同样开源，不得用于商业用途，不得移除原作者信息。
+你可以自由使用、复制、修改、编译和分发本项目或其修改版本；修改后的版本可以闭源分发，无需公开源代码，也无需在作品、文档、界面或发布说明中加入致谢。
+
+本项目及其修改版本不得用于盈利、付费分发、商业服务、广告变现或其他商业目的。如需商业使用，必须事先取得版权持有人的单独书面授权。
 
 ## Star History
 

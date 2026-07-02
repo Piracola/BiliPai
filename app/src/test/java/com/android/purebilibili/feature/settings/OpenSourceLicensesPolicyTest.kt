@@ -26,8 +26,7 @@ class OpenSourceLicensesPolicyTest {
             "Cling",
             "NanoHTTPD",
             "Turbine",
-            "KernelSU",
-            "NagramX"
+            "KernelSU"
         ).forEach { name ->
             assertTrue(name in names, "$name 应出现在开源致谢列表中")
         }
@@ -43,10 +42,6 @@ class OpenSourceLicensesPolicyTest {
         assertEquals(
             "https://github.com/tiann/KernelSU",
             openSourceLibraries.first { it.name == "KernelSU" }.url
-        )
-        assertEquals(
-            "https://github.com/risin42/NagramX",
-            openSourceLibraries.first { it.name == "NagramX" }.url
         )
     }
 

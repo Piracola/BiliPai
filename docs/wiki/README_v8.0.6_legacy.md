@@ -22,7 +22,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026)-brightgreen?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/APK-Varies-orange?style=flat-square" alt="Size">
-  <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/License-Non--Commercial-blue?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/Plugins-6%20Built--in-blueviolet?style=flat-square" alt="Plugins">
 </p>
 
@@ -713,14 +713,14 @@ cd BiliPai
 
 ## 📄 许可证
 
-本项目采用 [GPL-3.0 License](LICENSE) 开源协议
+当前项目采用 [BiliPai 非商业授权协议 1.0](../../LICENSE)。
 
 这意味着：
 
 - ✅ 可以自由使用、修改和分发
-- ✅ 修改后的代码必须同样开源
+- ✅ 修改后的版本可以闭源分发，无需公开源代码
+- ✅ 无需在作品、文档、界面或发布说明中加入致谢
 - ❌ 不得用于商业目的
-- ❌ 不得移除原作者信息
 
 ## ⭐ Star History
 

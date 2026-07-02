@@ -211,12 +211,6 @@ val openSourceLibraries = listOf(
         description = "液态玻璃交互与管理界面细节参考"
     ),
     OpenSourceLibrary(
-        name = "NagramX",
-        license = "GPL-3.0",
-        url = "https://github.com/risin42/NagramX",
-        description = "液态玻璃视觉层次与动画细节参考"
-    ),
-    OpenSourceLibrary(
         name = "DanmakuRenderEngine",
         license = "Apache 2.0",
         url = "https://github.com/bytedance/DanmakuRenderEngine",

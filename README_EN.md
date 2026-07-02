@@ -18,7 +18,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026)-brightgreen?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/APK-Varies-orange?style=flat-square" alt="Size">
-  <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/License-Non--Commercial-blue?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/Plugins-7%20Built--in-blueviolet?style=flat-square" alt="Plugins">
 </p>
 
@@ -494,7 +494,11 @@ Issues and Pull Requests are welcome!
 
 ## 📄 License
 
-[GPL-3.0 License](LICENSE)
+[BiliPai Non-Commercial License 1.0](LICENSE)
+
+You may use, copy, modify, build, and distribute this project or modified versions for non-commercial purposes. Modified versions may be distributed as closed-source works, and no source disclosure or acknowledgement is required.
+
+Commercial use, paid distribution, commercial services, ad monetization, or any other profit-oriented use requires separate prior written permission from the copyright holder.
 
 ---
 
