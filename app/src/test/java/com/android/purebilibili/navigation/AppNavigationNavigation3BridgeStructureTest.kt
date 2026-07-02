@@ -87,6 +87,23 @@ class AppNavigationNavigation3BridgeStructureTest {
     }
 
     @Test
+    fun homeVideoNativeTransitionOwnsDetailSharedElementAndPredictiveBackProgress() {
+        val source = appNavigationSource()
+        val videoDetailBranch = source
+            .substringAfter("BiliPaiNavEntryContentRole.VIDEO_DETAIL ->")
+            .substringBefore("BiliPaiNavEntryContentRole.ARTICLE_DETAIL ->")
+        val navHostCall = source
+            .substringAfter("BiliPaiNavDisplayHost(")
+            .substringBefore(") { key ->")
+
+        assertTrue(source.contains("fun shouldUseNativeVideoCardTransition("))
+        assertTrue(videoDetailBranch.contains("!shouldUseNativeVideoCardTransition(videoKey)"))
+        assertTrue(source.contains("previewNativeVideoBackProgress("))
+        assertTrue(navHostCall.contains("onNativeVideoBackProgress = ::previewNativeVideoBackProgress"))
+        assertTrue(navHostCall.contains("onNativeVideoBackCancelled = {"))
+    }
+
+    @Test
     fun inlinePartitionVideoClickKeepsPartitionAsVideoSourceRoute() {
         val source = appNavigationSource()
         val homeBranch = source
@@ -115,14 +132,14 @@ class AppNavigationNavigation3BridgeStructureTest {
     @Test
     fun videoReturnEntersMiniPlayerBeforePoppingDestination() {
         val source = appNavigationSource()
-        val videoDetailBranch = source
-            .substringAfter("BiliPaiNavEntryContentRole.VIDEO_DETAIL ->")
-            .substringBefore("BiliPaiNavEntryContentRole.ARTICLE_DETAIL ->")
-        val onBackBlock = videoDetailBranch
-            .substringAfter("onBack = {")
-            .substringBefore("onHomeClick = {")
-        val prepareMiniPlayerIndex = onBackBlock.indexOf("prepareVideoPlaybackForNavigationExit(videoKey)")
-        val popIndex = onBackBlock.indexOf("popBiliPaiNavKey(navigation3BackStack)")
+        val helperBlock = source
+            .substringAfter("fun popVideoDetailWithNativeTransition(")
+            .substringBefore("fun previewNativeVideoBackProgress(")
+        val commitPopBlock = helperBlock
+            .substringAfter("val commitPop = {")
+            .substringBefore("}")
+        val prepareMiniPlayerIndex = commitPopBlock.indexOf("prepareVideoPlaybackForNavigationExit(videoKey)")
+        val popIndex = commitPopBlock.indexOf("popAction()")
 
         assertTrue(prepareMiniPlayerIndex >= 0)
         assertTrue(prepareMiniPlayerIndex < popIndex)
@@ -135,9 +152,16 @@ class AppNavigationNavigation3BridgeStructureTest {
         val navigateUpBlock = source
             .substringAfter("AppSystemBackAction.NAVIGATE_UP ->")
             .substringBefore("AppSystemBackAction.FINISH_ACTIVITY ->")
-        val prepareIndex = navigateUpBlock.indexOf("prepareVideoPlaybackForNavigationExit")
-        val popIndex = navigateUpBlock.indexOf("popBiliPaiNavKey(navigation3BackStack)")
+        val helperBlock = source
+            .substringAfter("fun popVideoDetailWithNativeTransition(")
+            .substringBefore("fun previewNativeVideoBackProgress(")
+        val commitPopBlock = helperBlock
+            .substringAfter("val commitPop = {")
+            .substringBefore("}")
+        val prepareIndex = commitPopBlock.indexOf("prepareVideoPlaybackForNavigationExit")
+        val popIndex = commitPopBlock.indexOf("popAction()")
 
+        assertTrue(navigateUpBlock.contains("popVideoDetailWithNativeTransition("))
         assertTrue(prepareIndex >= 0)
         assertTrue(prepareIndex < popIndex)
     }
@@ -208,11 +232,19 @@ class AppNavigationNavigation3BridgeStructureTest {
 
         val markerIndex = source.indexOf("fun markNavigation3VideoReturnBeforeBackAction")
         val navigateUpIndex = source.indexOf("AppSystemBackAction.NAVIGATE_UP ->")
-        val markCallIndex = source.indexOf("markNavigation3VideoReturnBeforeBackAction(targetKey = previousKey)")
-        val popIndex = source.indexOf("navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)", navigateUpIndex)
+        val navigateUpBlock = source
+            .substringAfter("AppSystemBackAction.NAVIGATE_UP ->")
+            .substringBefore("AppSystemBackAction.FINISH_ACTIVITY ->")
+        val helperBlock = source
+            .substringAfter("fun popVideoDetailWithNativeTransition(")
+            .substringBefore("fun previewNativeVideoBackProgress(")
+        val markCallIndex = helperBlock.indexOf("markNavigation3VideoReturnBeforeBackAction(targetKey = targetKey)")
+        val commitIndex = helperBlock.indexOf("val commitPop = {")
 
         assertTrue(markerIndex >= 0)
-        assertTrue(markCallIndex in navigateUpIndex until popIndex)
+        assertTrue(navigateUpIndex >= 0)
+        assertTrue(navigateUpBlock.contains("popVideoDetailWithNativeTransition("))
+        assertTrue(markCallIndex in 0 until commitIndex)
         assertTrue(source.contains("isVideoDetailRoute(fromRoute)"))
         assertTrue(source.contains("isVideoCardReturnTargetRoute(targetRoute)"))
     }

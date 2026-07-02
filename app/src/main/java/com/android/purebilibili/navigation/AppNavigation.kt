@@ -541,6 +541,20 @@ fun AppNavigation(
             val density = CardPositionManager.lastScreenDensity.takeIf { it > 0f } ?: 1f
             return ((CardPositionManager.lastClickedVideoSourceCornerDp ?: 12).coerceAtLeast(0) * density)
         }
+        fun resolveNativeVideoCloseRequest(videoKey: BiliPaiNavKey.VideoDetail): NativeVideoCardTransitionCloseRequest? {
+            if (videoKey.sourceRoute != ScreenRoutes.Home.route) return null
+            val sourceRect = resolveLastClickedHomeVideoSourceRect(videoKey.bvid) ?: return null
+            return NativeVideoCardTransitionCloseRequest(
+                videoKey = videoKey.bvid,
+                coverUrl = videoKey.coverUrl,
+                sourceRect = sourceRect,
+                sourceCornerRadiusPx = resolveLastClickedVideoSourceCornerRadiusPx()
+            )
+        }
+        fun shouldUseNativeVideoCardTransition(videoKey: BiliPaiNavKey.VideoDetail): Boolean {
+            return nativeVideoCardTransitionController != null &&
+                resolveNativeVideoCloseRequest(videoKey) != null
+        }
         val isAtMainHostRoot = navigation3BackStack.lastOrNull() == BiliPaiNavKey.MainHost
         val systemBackAction = remember(
             isAtMainHostRoot,
@@ -1244,25 +1258,31 @@ fun AppNavigation(
                     prepareVideoPlaybackForNavigationExit(videoKey)
                     popAction()
                 }
-                val sourceRect = if (videoKey.sourceRoute == ScreenRoutes.Home.route) {
-                    resolveLastClickedHomeVideoSourceRect(videoKey.bvid)
-                } else {
-                    null
-                }
                 val controller = nativeVideoCardTransitionController
-                if (controller != null && sourceRect != null) {
+                val closeRequest = resolveNativeVideoCloseRequest(videoKey)
+                if (controller != null && closeRequest != null) {
                     controller.startClose(
-                        request = NativeVideoCardTransitionCloseRequest(
-                            videoKey = videoKey.bvid,
-                            coverUrl = videoKey.coverUrl,
-                            sourceRect = sourceRect,
-                            sourceCornerRadiusPx = resolveLastClickedVideoSourceCornerRadiusPx()
-                        ),
+                        request = closeRequest,
                         popAction = commitPop
                     )
                 } else {
                     commitPop()
                 }
+            }
+
+            fun previewNativeVideoBackProgress(
+                currentKey: BiliPaiNavKey?,
+                targetKey: BiliPaiNavKey?,
+                progress: Float
+            ) {
+                if (targetKey != BiliPaiNavKey.MainHost) return
+                val videoKey = currentKey as? BiliPaiNavKey.VideoDetail ?: return
+                val controller = nativeVideoCardTransitionController ?: return
+                val closeRequest = resolveNativeVideoCloseRequest(videoKey) ?: return
+                controller.previewClose(
+                    request = closeRequest,
+                    progress = progress
+                )
             }
 
             val performSystemBackAction = {
@@ -1780,7 +1800,7 @@ fun AppNavigation(
                                 },
                                 transitionEnabled = shouldEnableVideoDetailSharedTransition(
                                     cardTransitionEnabled = cardTransitionEnabled
-                                ),
+                                ) && !shouldUseNativeVideoCardTransition(videoKey),
                                 transitionEnterDurationMillis = navMotionSpec.slowFadeDurationMillis,
                                 onBack = {
                                     popVideoDetailWithNativeTransition(
@@ -2586,6 +2606,10 @@ fun AppNavigation(
                     predictiveBackExitDirectionOverride = predictiveBackExitDirection,
                     sourceMetadata = navigation3SourceMetadata,
                     onBack = { performSystemBackAction() },
+                    onNativeVideoBackProgress = ::previewNativeVideoBackProgress,
+                    onNativeVideoBackCancelled = { _, _ ->
+                        nativeVideoCardTransitionController?.cancelPreviewClose()
+                    },
                     modifier = Modifier.fillMaxSize(),
                     sharedTransitionScope = LocalSharedTransitionScope.current,
                     visibleBottomBarRoutes = visibleBottomBarRoutes,

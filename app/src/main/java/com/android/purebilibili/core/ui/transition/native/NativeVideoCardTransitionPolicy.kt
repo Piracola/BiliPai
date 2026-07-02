@@ -1,8 +1,6 @@
 package com.android.purebilibili.core.ui.transition.native
 
 import android.os.Build
-import kotlin.math.PI
-import kotlin.math.sin
 
 internal data class NativeVideoTransitionRect(
     val left: Float,
@@ -57,7 +55,7 @@ internal fun resolveNativeVideoCardTransitionFrame(
     sdkInt: Int = Build.VERSION.SDK_INT
 ): NativeVideoCardTransitionFrame {
     val clampedProgress = progress.coerceIn(0f, 1f)
-    val effectStrength = resolveNativeVideoCardTransitionEffectStrength(clampedProgress)
+    val effectStrength = resolveNativeVideoCardTransitionEffectStrength(clampedProgress, phase)
     val blurRadiusPx = if (sdkInt >= Build.VERSION_CODES.S) {
         spec.maxBlurRadiusPx.coerceAtLeast(0f) * effectStrength
     } else {
@@ -82,8 +80,24 @@ internal fun resolveNativeVideoCardTransitionFrame(
     )
 }
 
-private fun resolveNativeVideoCardTransitionEffectStrength(progress: Float): Float {
-    return sin(progress.coerceIn(0f, 1f) * PI).toFloat().coerceIn(0f, 1f)
+private fun resolveNativeVideoCardTransitionEffectStrength(
+    progress: Float,
+    phase: NativeVideoCardTransitionPhase
+): Float {
+    val easedProgress = smoothStep(progress.coerceIn(0f, 1f))
+    return when (phase) {
+        NativeVideoCardTransitionPhase.Opening -> easeOutQuart(progress)
+        NativeVideoCardTransitionPhase.Closing -> 1f - easedProgress
+    }
+}
+
+private fun smoothStep(progress: Float): Float {
+    return progress * progress * (3f - 2f * progress)
+}
+
+private fun easeOutQuart(progress: Float): Float {
+    val inverse = 1f - progress.coerceIn(0f, 1f)
+    return 1f - (inverse * inverse * inverse * inverse)
 }
 
 private fun lerp(start: NativeVideoTransitionRect, end: NativeVideoTransitionRect, fraction: Float): NativeVideoTransitionRect {

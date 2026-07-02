@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ import androidx.navigation3.scene.rememberSceneState
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.NavigationEventState
 import androidx.navigationevent.compose.rememberNavigationEventState
+import androidx.navigationevent.NavigationEventTransitionState
 import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
 import androidx.compose.runtime.remember
@@ -48,6 +50,8 @@ internal fun BiliPaiNavDisplayHost(
     predictiveBackExitDirectionOverride: String = "auto",
     sourceMetadata: BiliPaiNavSourceMetadata,
     onBack: () -> Unit,
+    onNativeVideoBackProgress: (currentKey: BiliPaiNavKey?, targetKey: BiliPaiNavKey?, progress: Float) -> Unit = { _, _, _ -> },
+    onNativeVideoBackCancelled: (currentKey: BiliPaiNavKey?, targetKey: BiliPaiNavKey?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     visibleBottomBarRoutes: Set<String> = emptySet(),
@@ -177,12 +181,25 @@ internal fun BiliPaiNavDisplayHost(
         currentInfo = currentInfo,
         backInfo = previousSceneInfos
     )
+    val currentBackKey = safeBackStack.lastOrNull()
+    val targetBackKey = safeBackStack.getOrNull(safeBackStack.lastIndex - 1)
+    val transitionState = navigationEventState.transitionState
+    val inProgressState = transitionState as? NavigationEventTransitionState.InProgress
+    val nativeVideoBackProgress = inProgressState?.latestEvent?.progress
+    SideEffect {
+        if (nativeVideoBackProgress != null) {
+            onNativeVideoBackProgress(currentBackKey, targetBackKey, nativeVideoBackProgress)
+        }
+    }
 
     NavigationBackHandler(
         state = navigationEventState,
         isBackEnabled = scene.previousEntries.isNotEmpty(),
         onBackCompleted = performBack,
-        onBackCancelled = { commitTransition -> commitTransition() },
+        onBackCancelled = { commitTransition ->
+            onNativeVideoBackCancelled(currentBackKey, targetBackKey)
+            commitTransition()
+        },
     )
 
     NavDisplay(

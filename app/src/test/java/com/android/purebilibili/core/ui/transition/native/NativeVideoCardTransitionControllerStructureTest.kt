@@ -22,6 +22,16 @@ class NativeVideoCardTransitionControllerStructureTest {
         assertTrue(validSourceBlock.contains("onEnd = {"))
     }
 
+    @Test
+    fun predictiveCloseCanPreviewFinishAndCancelWithoutStartingFromZero() {
+        val source = loadSource()
+
+        assertTrue(source.contains("fun previewClose("))
+        assertTrue(source.contains("fun finishPreviewClose("))
+        assertTrue(source.contains("fun cancelPreviewClose("))
+        assertTrue(source.contains("startProgress = previewCloseProgress"))
+    }
+
     private fun loadSource(): String {
         return listOf(
             File("app/src/main/java/com/android/purebilibili/core/ui/transition/native/NativeVideoCardTransitionController.kt"),

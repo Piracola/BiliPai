@@ -79,7 +79,7 @@ class NativeVideoCardTransitionPolicyTest {
     }
 
     @Test
-    fun api31BlurPeaksAtHalfProgressAndClearsAtEnd() {
+    fun api31OpeningBlurBuildsUpAndStaysForNavigationHandoff() {
         val start = resolveNativeVideoCardTransitionFrame(
             spec = spec,
             progress = 0f,
@@ -100,10 +100,36 @@ class NativeVideoCardTransitionPolicyTest {
         )
 
         assertEquals(0f, start.blurRadiusPx)
-        assertEquals(28f, middle.blurRadiusPx, 0.0001f)
-        assertEquals(0f, end.blurRadiusPx, 0.0001f)
+        assertTrue(middle.blurRadiusPx > start.blurRadiusPx)
+        assertEquals(28f, end.blurRadiusPx, 0.0001f)
         assertTrue(middle.scrimAlpha > start.scrimAlpha)
         assertTrue(middle.contentScale < start.contentScale)
+    }
+
+    @Test
+    fun api31ClosingBlurClearsAsCardReturnsToSource() {
+        val start = resolveNativeVideoCardTransitionFrame(
+            spec = spec,
+            progress = 0f,
+            phase = NativeVideoCardTransitionPhase.Closing,
+            sdkInt = 31
+        )
+        val middle = resolveNativeVideoCardTransitionFrame(
+            spec = spec,
+            progress = 0.5f,
+            phase = NativeVideoCardTransitionPhase.Closing,
+            sdkInt = 31
+        )
+        val end = resolveNativeVideoCardTransitionFrame(
+            spec = spec,
+            progress = 1f,
+            phase = NativeVideoCardTransitionPhase.Closing,
+            sdkInt = 31
+        )
+
+        assertEquals(28f, start.blurRadiusPx, 0.0001f)
+        assertTrue(middle.blurRadiusPx < start.blurRadiusPx)
+        assertEquals(0f, end.blurRadiusPx, 0.0001f)
     }
 
     @Test
