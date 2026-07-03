@@ -87,8 +87,11 @@ import com.android.purebilibili.core.ui.SharedTransitionProvider
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoCardTransitionBackgroundState
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeedSettings
+import com.android.purebilibili.core.ui.transition.shouldApplyVideoCardTransitionBackgroundToRoute
+import com.android.purebilibili.core.ui.transition.videoCardTransitionBackgroundEffect
 import com.android.purebilibili.data.model.response.BgmInfo
 
 import androidx.compose.ui.zIndex
@@ -1292,6 +1295,36 @@ fun AppNavigation(
                 }
 
                 @Composable
+                fun VideoCardTransitionBackgroundRouteContent(
+                    key: BiliPaiNavKey,
+                    content: @Composable () -> Unit
+                ) {
+                    val entryRoute = key.toLegacyRoute()
+                    val backgroundState = LocalVideoCardTransitionBackgroundState.current
+                    val shouldApplyBackground = cardTransitionEnabled &&
+                        shouldApplyVideoCardTransitionBackgroundToRoute(
+                            entryRoute = entryRoute,
+                            sourceRoute = navigation3SourceMetadata.sourceRoute,
+                            activeMainHostRoute = activeBottomTabRoute
+                        )
+                    val routeModifier = Modifier
+                        .fillMaxSize()
+                        .let { baseModifier ->
+                            if (shouldApplyBackground) {
+                                baseModifier.videoCardTransitionBackgroundEffect(
+                                    progressProvider = backgroundState.progressProvider,
+                                    phaseProvider = backgroundState.phaseProvider
+                                )
+                            } else {
+                                baseModifier
+                            }
+                        }
+                    Box(modifier = routeModifier) {
+                        content()
+                    }
+                }
+
+                @Composable
                 fun RenderNavigationContent(
                     key: BiliPaiNavKey,
                     isBottomPagerPageActive: Boolean = true
@@ -1324,10 +1357,12 @@ fun AppNavigation(
                                         CompositionLocalProvider(
                                             LocalVideoCardSharedElementSourceRoute provides pageKey.toLegacyRoute()
                                         ) {
-                                            RenderNavigationContent(
-                                                key = pageKey,
-                                                isBottomPagerPageActive = page == bottomPagerState.settledPage
-                                            )
+                                            VideoCardTransitionBackgroundRouteContent(pageKey) {
+                                                RenderNavigationContent(
+                                                    key = pageKey,
+                                                    isBottomPagerPageActive = page == bottomPagerState.settledPage
+                                                )
+                                            }
                                         }
                                     }
                                 } else {
@@ -2524,7 +2559,13 @@ fun AppNavigation(
                     visibleBottomBarRoutes = visibleBottomBarRoutes,
                     activeMainHostRoute = activeBottomTabRoute
                 ) { key ->
-                    RenderNavigationContent(key)
+                    if (resolveBiliPaiNavEntryContentRole(key) == BiliPaiNavEntryContentRole.MAIN_HOST) {
+                        RenderNavigationContent(key)
+                    } else {
+                        VideoCardTransitionBackgroundRouteContent(key) {
+                            RenderNavigationContent(key)
+                        }
+                    }
                 }
                 }
             } // End of Content Box

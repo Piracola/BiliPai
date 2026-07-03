@@ -3,6 +3,7 @@ package com.android.purebilibili.core.ui.transition
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
@@ -31,6 +32,17 @@ internal data class VideoCardTransitionBackgroundFrame(
     val scrimAlpha: Float,
     val contentScale: Float
 )
+
+internal data class VideoCardTransitionBackgroundState(
+    val progressProvider: () -> Float = { 0f },
+    val phaseProvider: () -> VideoCardTransitionBackgroundPhase = {
+        VideoCardTransitionBackgroundPhase.IDLE
+    }
+)
+
+internal val LocalVideoCardTransitionBackgroundState = compositionLocalOf {
+    VideoCardTransitionBackgroundState()
+}
 
 internal fun resolveVideoCardTransitionBackgroundFrame(
     progress: Float,

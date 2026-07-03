@@ -42,12 +42,12 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.navigationevent.NavigationEventTransitionState
 import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoCardTransitionBackgroundState
 import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS
 import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_FORWARD_DURATION_MS
 import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundPhase
-import com.android.purebilibili.core.ui.transition.shouldApplyVideoCardTransitionBackgroundToRoute
-import com.android.purebilibili.core.ui.transition.videoCardTransitionBackgroundEffect
+import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundState
 import com.android.purebilibili.navigation.isVideoCardReturnTargetRoute
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationHandler
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
@@ -197,23 +197,17 @@ internal fun BiliPaiNavDisplayHost(
     val scopedContent: @Composable (BiliPaiNavKey) -> Unit = remember(
         content,
         application,
-        cardTransitionEnabled,
-        sourceMetadata.sourceRoute,
-        activeMainHostRoute
+        videoCardTransitionBackgroundProgress,
     ) {
         { key ->
             val entryRoute = key.toLegacyRoute()
-            val shouldApplyBackground = cardTransitionEnabled &&
-                shouldApplyVideoCardTransitionBackgroundToRoute(
-                    entryRoute = entryRoute,
-                    sourceRoute = sourceMetadata.sourceRoute,
-                    activeMainHostRoute = activeMainHostRoute
-                )
-            val entryModifier = Modifier
-                .fillMaxSize()
-                .let { baseModifier ->
-                    if (shouldApplyBackground) {
-                        baseModifier.videoCardTransitionBackgroundEffect(
+            Box(modifier = Modifier.fillMaxSize()) {
+                ProvideAnimatedVisibilityScope(
+                    animatedVisibilityScope = LocalNavAnimatedContentScope.current
+                ) {
+                    CompositionLocalProvider(
+                        LocalVideoCardSharedElementSourceRoute provides entryRoute,
+                        LocalVideoCardTransitionBackgroundState provides VideoCardTransitionBackgroundState(
                             progressProvider = {
                                 videoCardTransitionBackgroundProgress.value
                             },
@@ -221,16 +215,6 @@ internal fun BiliPaiNavDisplayHost(
                                 videoCardTransitionBackgroundPhase
                             }
                         )
-                    } else {
-                        baseModifier
-                    }
-                }
-            Box(modifier = entryModifier) {
-                ProvideAnimatedVisibilityScope(
-                    animatedVisibilityScope = LocalNavAnimatedContentScope.current
-                ) {
-                    CompositionLocalProvider(
-                        LocalVideoCardSharedElementSourceRoute provides entryRoute
                     ) {
                         ProvideNavigation3ViewModelApplicationExtras(application) {
                             content(key)
