@@ -1,5 +1,31 @@
 # Changelog
 
+## v9.9.0 (2026-07-07)
+
+### 版本信息
+- 版本号从 `9.8.9` 升级到 `9.9.0`，`versionCode` 从 `248` 升级到 `249`。
+
+### 更新内容
+
+#### 预测性返回与视频卡片背景
+- **落位首帧清晰**：pop 前归零 HELD/OPENING 背景模糊，消除返回落位封面残留高斯模糊。
+- **OPENING 手势消退**：进入未完成时预测返回可随手势线性消退背景虚化，取消手势平滑回满。
+- **关闭共享元素对齐**：VideoDetail → 卡片来源页手势预览与按钮返回复用方向化横滑 spec。
+
+#### 全屏与播放器呈现
+- **全屏 morph 策略**：抽取 `VideoFullscreenTransitionPolicy` 与 morph host，统一横屏/竖屏全屏切换相位。
+- **Compose surface 呈现**：播放器 section 改用 TrackedSurface 与 presentation policy，接入 `media3-ui-compose`。
+
+#### 设置与 UI
+- **Miuix 设置子页简化**：统一 `SettingsPageScaffold` 与视觉规范，收敛各子页 Large Title 与分组布局。
+- **模糊强度视觉策略**：新增 `BlurIntensityVisualPolicy`，按预算档位映射 haze 材质与背景 alpha。
+
+#### 其他
+- **内置投屏默认可用**：DLNA 与 Google Cast 开箱启用。
+- **首页/直播/投屏**：滚动协调、前台恢复与 SSDP 发现等小修复。
+
+---
+
 ## v9.8.9 (2026-07-07)
 
 ### 版本信息
