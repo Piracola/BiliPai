@@ -123,13 +123,19 @@ class VideoDetailScreenPolicyTest {
     }
 
     @Test
-    fun frozenCommentBar_doesNotDependOnLiquidGlassToggle() {
+    fun frozenCommentBar_visibilityDoesNotDependOnLiquidGlassToggle() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailPhoneContent.kt")
             .readText()
 
         assertFalse(source.contains("val videoDetailLiquidGlassEnabled"))
         assertFalse(source.contains("isLiquidGlassEnabled = videoDetailLiquidGlassEnabled"))
         assertTrue(source.contains("val showFrozenCommentBar = shouldShowVideoDetailBottomInteractionBar("))
+        // Visibility stays independent; reuse only switches floating liquid chrome.
+        assertTrue(source.contains("shouldUseFloatingLiquidBottomInputBar("))
+        assertTrue(source.contains("resolveBottomInputBarContentBottomPadding("))
+        assertTrue(source.contains("val bottomInputBarBackdrop = rememberLayerBackdrop()"))
+        assertTrue(source.contains(".layerBackdrop(bottomInputBarBackdrop)"))
+        assertTrue(source.contains("backdrop = if (floatingLiquidBottomInputBar)"))
     }
 
     @Test

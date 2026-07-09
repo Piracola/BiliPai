@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.purebilibili.core.store.HomeSettings
+import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ContainerLevel
@@ -34,12 +38,16 @@ import com.android.purebilibili.feature.video.share.VideoSharePayload
 import com.android.purebilibili.feature.video.share.buildVideoSharePayload
 import com.android.purebilibili.feature.video.state.VideoPlayerState
 import com.android.purebilibili.feature.video.ui.components.BottomInputBar
+import com.android.purebilibili.feature.video.ui.components.resolveBottomInputBarContentBottomPadding
+import com.android.purebilibili.feature.video.ui.components.shouldUseFloatingLiquidBottomInputBar
 import com.android.purebilibili.feature.video.usecase.seekPlayerFromUserAction
 import com.android.purebilibili.feature.video.viewmodel.CommentUiState
 import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
 import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
 import com.android.purebilibili.feature.video.player.PlaylistItem
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
@@ -123,6 +131,15 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                     exit = detailContentExitFade
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        val homeSettings by SettingsManager
+                            .getHomeSettings(context)
+                            .collectAsStateWithLifecycle(initialValue = HomeSettings())
+                        val floatingLiquidBottomInputBar = shouldUseFloatingLiquidBottomInputBar(
+                            androidNativeLiquidGlassEnabled = homeSettings.androidNativeLiquidGlassEnabled
+                        )
+                        // Capture scrolling detail content only; BottomInputBar stays outside
+                        // so drawBackdrop does not self-sample (same contract as tab chrome).
+                        val bottomInputBarBackdrop = rememberLayerBackdrop()
                         val showExternalPlaylistQueueBarOnCurrentTab =
                             shouldShowExternalPlaylistQueueBarOnContentTab(
                                 queueAvailable = shouldShowExternalPlaylistQueueBar,
@@ -138,159 +155,167 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                             isFavoriteFolderDialogVisible = showFavoriteFolderDialog,
                             isExternalPlaylistQueueBarVisible = showExternalPlaylistQueueBarOnCurrentTab
                         )
-                        val videoContentBottomPadding = if (showFrozenCommentBar) {
-                            96.dp
-                        } else if (shouldShowVideoDetailActionButtons()) {
-                            84.dp
-                        } else {
-                            12.dp
-                        }
+                        val videoContentBottomPadding = resolveBottomInputBarContentBottomPadding(
+                            showBar = showFrozenCommentBar,
+                            floatingLiquidGlass = floatingLiquidBottomInputBar,
+                            showActionButtonsFallback = shouldShowVideoDetailActionButtons()
+                        )
                         val currentPageIndex = success.info.pages
                             .indexOfFirst { it.cid == success.info.cid }
                             .coerceAtLeast(0)
 
-                        VideoContentSection(
-                            info = success.info,
-                            relatedVideos = success.related,
-                            replies = commentState.replies,
-                            replyCount = commentState.replyCount,
-                            emoteMap = success.emoteMap,
-                            isRepliesLoading = commentState.isRepliesLoading,
-                            isRepliesEnd = commentState.isRepliesEnd,
-                            isLoggedIn = success.isLoggedIn,
-                            currentMid = commentState.currentMid,
-                            showUpFlag = commentState.showUpFlag,
-                            showIdentityDecorations = commentMemberDecorationsEnabled,
-                            dissolvingIds = commentState.dissolvingIds,
-                            onDeleteComment = { rpid -> commentViewModel.deleteComment(rpid) },
-                            onDissolveStart = { rpid -> commentViewModel.startDissolve(rpid) },
-                            onCommentLike = commentViewModel::likeComment,
-                            likedComments = commentState.likedComments,
-                            isFollowing = success.isFollowing,
-                            isFavorited = success.isFavorited,
-                            isLiked = success.isLiked,
-                            coinCount = success.coinCount,
-                            currentPageIndex = currentPageIndex,
-                            downloadProgress = downloadProgress,
-                            isInWatchLater = success.isInWatchLater,
-                            followingMids = success.followingMids,
-                            videoTags = success.videoTags,
-                            sortMode = commentState.sortMode,
-                            upOnlyFilter = commentState.upOnlyFilter,
-                            onSortModeChange = { mode ->
-                                commentViewModel.setSortMode(mode)
-                                sortPreferenceScope.launch {
-                                    com.android.purebilibili.core.store.SettingsManager
-                                        .setCommentDefaultSortMode(context, mode.apiMode)
-                                }
-                            },
-                            onUpOnlyToggle = { commentViewModel.toggleUpOnly() },
-                            onFollowClick = { viewModel.toggleFollow() },
-                            onFavoriteClick = {
-                                openFavoriteFolders(VideoFavoriteEntryPoint.DetailActionRow)
-                            },
-                            onLikeClick = { viewModel.toggleLike() },
-                            onCoinClick = { viewModel.openCoinDialog() },
-                            onTripleClick = { viewModel.doTripleAction() },
-                            onPageSelect = { viewModel.switchPage(it) },
-                            onUpClick = navigateToUserSpaceFromVideo,
-                            onRelatedVideoClick = navigateToRelatedVideo,
-                            onSubReplyClick = commentViewModel::openSubReply,
-                            onCommentReplyClick = { replyItem ->
-                                viewModel.setReplyingTo(replyItem)
-                                viewModel.showCommentInputDialog()
-                            },
-                            onLoadMoreReplies = { commentViewModel.loadComments() },
-                            onCommentUrlClick = openCommentUrl,
-                            onDescriptionUrlClick = onOpenBilibiliLink,
-                            onReportComment = commentViewModel::reportComment,
-                            onToggleTopComment = commentViewModel::toggleTopComment,
-                            onDownloadClick = { viewModel.openDownloadDialog() },
-                            onWatchLaterClick = { viewModel.toggleWatchLater() },
-                            onShareClick = {
-                                onShareVideo(
-                                    buildVideoSharePayload(
-                                        title = success.info.title,
-                                        bvid = success.info.bvid,
-                                        coverUrl = success.info.pic
-                                    )
-                                )
-                            },
-                            onTimestampClick = { positionMs ->
-                                seekPlayerFromUserAction(playerState.player, positionMs)
-                            },
-                            onDanmakuSendClick = {
-                                android.util.Log.d("VideoDetailScreen", "Danmaku send clicked")
-                                viewModel.showDanmakuSendDialog()
-                            },
-                            danmakuEnabled = danmakuEnabledForDetail,
-                            onDanmakuToggle = {
-                                val newValue = !danmakuEnabledForDetail
-                                sortPreferenceScope.launch {
-                                    com.android.purebilibili.core.store.SettingsManager
-                                        .setDanmakuEnabled(
-                                            context,
-                                            newValue,
-                                            com.android.purebilibili.core.store.DanmakuSettingsScope.PORTRAIT
+                        Box(
+                            modifier = if (floatingLiquidBottomInputBar) {
+                                Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(bottomInputBarBackdrop)
+                            } else {
+                                Modifier.fillMaxSize()
+                            }
+                        ) {
+                            VideoContentSection(
+                                info = success.info,
+                                relatedVideos = success.related,
+                                replies = commentState.replies,
+                                replyCount = commentState.replyCount,
+                                emoteMap = success.emoteMap,
+                                isRepliesLoading = commentState.isRepliesLoading,
+                                isRepliesEnd = commentState.isRepliesEnd,
+                                isLoggedIn = success.isLoggedIn,
+                                currentMid = commentState.currentMid,
+                                showUpFlag = commentState.showUpFlag,
+                                showIdentityDecorations = commentMemberDecorationsEnabled,
+                                dissolvingIds = commentState.dissolvingIds,
+                                onDeleteComment = { rpid -> commentViewModel.deleteComment(rpid) },
+                                onDissolveStart = { rpid -> commentViewModel.startDissolve(rpid) },
+                                onCommentLike = commentViewModel::likeComment,
+                                likedComments = commentState.likedComments,
+                                isFollowing = success.isFollowing,
+                                isFavorited = success.isFavorited,
+                                isLiked = success.isLiked,
+                                coinCount = success.coinCount,
+                                currentPageIndex = currentPageIndex,
+                                downloadProgress = downloadProgress,
+                                isInWatchLater = success.isInWatchLater,
+                                followingMids = success.followingMids,
+                                videoTags = success.videoTags,
+                                sortMode = commentState.sortMode,
+                                upOnlyFilter = commentState.upOnlyFilter,
+                                onSortModeChange = { mode ->
+                                    commentViewModel.setSortMode(mode)
+                                    sortPreferenceScope.launch {
+                                        com.android.purebilibili.core.store.SettingsManager
+                                            .setCommentDefaultSortMode(context, mode.apiMode)
+                                    }
+                                },
+                                onUpOnlyToggle = { commentViewModel.toggleUpOnly() },
+                                onFollowClick = { viewModel.toggleFollow() },
+                                onFavoriteClick = {
+                                    openFavoriteFolders(VideoFavoriteEntryPoint.DetailActionRow)
+                                },
+                                onLikeClick = { viewModel.toggleLike() },
+                                onCoinClick = { viewModel.openCoinDialog() },
+                                onTripleClick = { viewModel.doTripleAction() },
+                                onPageSelect = { viewModel.switchPage(it) },
+                                onUpClick = navigateToUserSpaceFromVideo,
+                                onRelatedVideoClick = navigateToRelatedVideo,
+                                onSubReplyClick = commentViewModel::openSubReply,
+                                onCommentReplyClick = { replyItem ->
+                                    viewModel.setReplyingTo(replyItem)
+                                    viewModel.showCommentInputDialog()
+                                },
+                                onLoadMoreReplies = { commentViewModel.loadComments() },
+                                onCommentUrlClick = openCommentUrl,
+                                onDescriptionUrlClick = onOpenBilibiliLink,
+                                onReportComment = commentViewModel::reportComment,
+                                onToggleTopComment = commentViewModel::toggleTopComment,
+                                onDownloadClick = { viewModel.openDownloadDialog() },
+                                onWatchLaterClick = { viewModel.toggleWatchLater() },
+                                onShareClick = {
+                                    onShareVideo(
+                                        buildVideoSharePayload(
+                                            title = success.info.title,
+                                            bvid = success.info.bvid,
+                                            coverUrl = success.info.pic
                                         )
-                                }
-                            },
-                            transitionEnabled = transitionEnabled,
-                            isQuickReturnLimitedForSharedElements = isQuickReturnLimitedForSharedElements,
-                            sourceRouteForSharedElement = sourceRouteForSharedElement,
-                            favoriteFolderDialogVisible = showFavoriteFolderDialog,
-                            favoriteFolders = favoriteFolders,
-                            isFavoriteFoldersLoading = isFavoriteFoldersLoading,
-                            onFavoriteLongClick = { viewModel.showFavoriteFolderDialog() },
-                            selectedFavoriteFolderIds = selectedFavoriteFolderIds,
-                            isSavingFavoriteFolders = isSavingFavoriteFolders,
-                            onFavoriteFolderToggle = { folder ->
-                                viewModel.toggleFavoriteFolderSelection(folder)
-                            },
-                            onSaveFavoriteFolders = { viewModel.saveFavoriteFolderSelection() },
-                            onDismissFavoriteFolderDialog = {
-                                viewModel.dismissFavoriteFolderDialog()
-                            },
-                            onCreateFavoriteFolder = { title, intro, isPrivate ->
-                                viewModel.createFavoriteFolder(title, intro, isPrivate)
-                            },
-                            isPlayerCollapsed = isPlayerCollapsed,
-                            onRestorePlayer = onRestorePlayer,
-                            aiSummary = success.aiSummary,
-                            aiSummaryPrompt = success.aiSummaryPrompt,
-                            onRetryAiSummary = { viewModel.retryAiSummary() },
-                            onCreateNoteDraftFromAiSummary = {
-                                viewModel.createVideoNoteDraftFromAiSummary()
-                            },
-                            videoNoteState = success.videoNoteState,
-                            onOpenVideoNoteEditor = { viewModel.openVideoNoteEditor() },
-                            onCloseVideoNoteEditor = { viewModel.closeVideoNoteEditor() },
-                            onVideoNoteDocumentChange = {
-                                viewModel.updateVideoNoteEditorDocument(it)
-                            },
-                            onInsertVideoNoteTimestamp = {
-                                viewModel.insertCurrentPlaybackTimestampIntoNote()
-                            },
-                            onVideoNoteTimestampClick = { positionMs -> viewModel.seekTo(positionMs) },
-                            onSaveVideoNote = { viewModel.saveVideoNote(it) },
-                            onDeleteVideoNote = { viewModel.deleteVideoNote() },
-                            onRetryVideoNote = { viewModel.retryVideoNote() },
-                            onPublicVideoNoteClick = { _, url ->
-                                if (url.isNotBlank()) onOpenBilibiliLink?.invoke(url)
-                            },
-                            bgmInfo = success.bgmInfo,
-                            bgmInfoList = success.bgmInfoList,
-                            onBgmClick = onBgmClick,
-                            onlineCount = success.onlineCount,
-                            ownerFollowerCount = success.ownerFollowerCount,
-                            ownerVideoCount = success.ownerVideoCount,
-                            showUpBadge = homeUpBadgesVisible,
-                            showInteractionActions = shouldShowVideoDetailActionButtons(),
-                            isVideoPlaying = isVideoPlaying,
-                            onSelectedTabChange = onSelectedTabChange,
-                            onIntroScrollThresholdChange = onIntroScrollThresholdChange,
-                            bottomContentPadding = videoContentBottomPadding
-                        )
+                                    )
+                                },
+                                onTimestampClick = { positionMs ->
+                                    seekPlayerFromUserAction(playerState.player, positionMs)
+                                },
+                                onDanmakuSendClick = {
+                                    android.util.Log.d("VideoDetailScreen", "Danmaku send clicked")
+                                    viewModel.showDanmakuSendDialog()
+                                },
+                                danmakuEnabled = danmakuEnabledForDetail,
+                                onDanmakuToggle = {
+                                    val newValue = !danmakuEnabledForDetail
+                                    sortPreferenceScope.launch {
+                                        com.android.purebilibili.core.store.SettingsManager
+                                            .setDanmakuEnabled(
+                                                context,
+                                                newValue,
+                                                com.android.purebilibili.core.store.DanmakuSettingsScope.PORTRAIT
+                                            )
+                                    }
+                                },
+                                transitionEnabled = transitionEnabled,
+                                isQuickReturnLimitedForSharedElements = isQuickReturnLimitedForSharedElements,
+                                sourceRouteForSharedElement = sourceRouteForSharedElement,
+                                favoriteFolderDialogVisible = showFavoriteFolderDialog,
+                                favoriteFolders = favoriteFolders,
+                                isFavoriteFoldersLoading = isFavoriteFoldersLoading,
+                                onFavoriteLongClick = { viewModel.showFavoriteFolderDialog() },
+                                selectedFavoriteFolderIds = selectedFavoriteFolderIds,
+                                isSavingFavoriteFolders = isSavingFavoriteFolders,
+                                onFavoriteFolderToggle = { folder ->
+                                    viewModel.toggleFavoriteFolderSelection(folder)
+                                },
+                                onSaveFavoriteFolders = { viewModel.saveFavoriteFolderSelection() },
+                                onDismissFavoriteFolderDialog = {
+                                    viewModel.dismissFavoriteFolderDialog()
+                                },
+                                onCreateFavoriteFolder = { title, intro, isPrivate ->
+                                    viewModel.createFavoriteFolder(title, intro, isPrivate)
+                                },
+                                isPlayerCollapsed = isPlayerCollapsed,
+                                onRestorePlayer = onRestorePlayer,
+                                aiSummary = success.aiSummary,
+                                aiSummaryPrompt = success.aiSummaryPrompt,
+                                onRetryAiSummary = { viewModel.retryAiSummary() },
+                                onCreateNoteDraftFromAiSummary = {
+                                    viewModel.createVideoNoteDraftFromAiSummary()
+                                },
+                                videoNoteState = success.videoNoteState,
+                                onOpenVideoNoteEditor = { viewModel.openVideoNoteEditor() },
+                                onCloseVideoNoteEditor = { viewModel.closeVideoNoteEditor() },
+                                onVideoNoteDocumentChange = {
+                                    viewModel.updateVideoNoteEditorDocument(it)
+                                },
+                                onInsertVideoNoteTimestamp = {
+                                    viewModel.insertCurrentPlaybackTimestampIntoNote()
+                                },
+                                onVideoNoteTimestampClick = { positionMs -> viewModel.seekTo(positionMs) },
+                                onSaveVideoNote = { viewModel.saveVideoNote(it) },
+                                onDeleteVideoNote = { viewModel.deleteVideoNote() },
+                                onRetryVideoNote = { viewModel.retryVideoNote() },
+                                onPublicVideoNoteClick = { _, url ->
+                                    if (url.isNotBlank()) onOpenBilibiliLink?.invoke(url)
+                                },
+                                bgmInfo = success.bgmInfo,
+                                bgmInfoList = success.bgmInfoList,
+                                onBgmClick = onBgmClick,
+                                onlineCount = success.onlineCount,
+                                ownerFollowerCount = success.ownerFollowerCount,
+                                ownerVideoCount = success.ownerVideoCount,
+                                showUpBadge = homeUpBadgesVisible,
+                                showInteractionActions = shouldShowVideoDetailActionButtons(),
+                                isVideoPlaying = isVideoPlaying,
+                                onSelectedTabChange = onSelectedTabChange,
+                                onIntroScrollThresholdChange = onIntroScrollThresholdChange,
+                                bottomContentPadding = videoContentBottomPadding
+                            )
+                        }
 
                         if (showFrozenCommentBar) {
                             BottomInputBar(
@@ -315,6 +340,11 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                                 onCommentClick = {
                                     android.util.Log.d("VideoDetailScreen", "Comment input clicked")
                                     viewModel.openRootCommentComposer()
+                                },
+                                backdrop = if (floatingLiquidBottomInputBar) {
+                                    bottomInputBarBackdrop
+                                } else {
+                                    null
                                 }
                             )
                         }
