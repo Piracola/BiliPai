@@ -24,6 +24,11 @@ class FavoriteManagementPolicyTest {
     }
 
     @Test
+    fun `favorite folder content page size requests more than default twenty items`() {
+        assertEquals(40, resolveFavoriteFolderContentPageSize())
+    }
+
+    @Test
     fun `favorite clean invalid only applies to owned folders`() {
         assertTrue(
             canCleanInvalidFavoriteResources(

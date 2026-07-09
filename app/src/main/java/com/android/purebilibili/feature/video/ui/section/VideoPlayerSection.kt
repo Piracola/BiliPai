@@ -445,6 +445,8 @@ fun VideoPlayerSection(
     onToggleFavorite: () -> Unit = {},
     onTriple: () -> Unit = {},  // [新增] 一键三连回调
     onPageSelect: (Int) -> Unit = {},
+    hasFavoritePlaylist: Boolean = false,
+    onFavoritePlaylistClick: () -> Unit = {},
     forceCoverOnly: Boolean = false,
     allowLivePlayerSharedElement: Boolean = true,
     sourceRouteForSharedElement: String? = null,
@@ -4388,6 +4390,8 @@ fun VideoPlayerSection(
                 pages = uiState.info.pages,
                 currentPageIndex = currentPageIndex,
                 onPageSelect = onPageSelect,
+                hasFavoritePlaylist = hasFavoritePlaylist,
+                onFavoritePlaylistClick = onFavoritePlaylistClick,
                 drawerHazeState = overlayDrawerHazeState
             )
             }

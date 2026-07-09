@@ -718,6 +718,7 @@ class FavoriteViewModel(application: Application) : BaseListViewModel(applicatio
                     com.android.purebilibili.data.repository.FavoriteRepository.getFavoriteList(
                         mediaId = mediaId,
                         pn = 1,
+                        ps = resolveFavoriteFolderContentPageSize(),
                         order = requestedOrder
                     ).mapCatching { data ->
                         resolveFavoriteFolderItems(
@@ -880,6 +881,7 @@ class FavoriteViewModel(application: Application) : BaseListViewModel(applicatio
                         com.android.purebilibili.data.repository.FavoriteRepository.getFavoriteList(
                             mediaId = mediaId,
                             pn = nextPage,
+                            ps = resolveFavoriteFolderContentPageSize(),
                             order = requestedOrder
                         )
                     }

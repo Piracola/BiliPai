@@ -27,6 +27,8 @@ internal fun resolveFavoriteCollectionSharedElementId(
     return "$normalizedType:$id"
 }
 
+internal fun resolveFavoriteFolderContentPageSize(): Int = 40
+
 internal fun resolveSubscribedFavoritePreviewCover(folder: FavFolder): String? {
     if (folder.source != FavFolderSource.SUBSCRIBED) return null
     return folder.cover.trim().takeIf { it.isNotEmpty() }

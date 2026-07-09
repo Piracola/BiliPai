@@ -114,12 +114,25 @@ class VideoPlayerOverlayPolicyTest {
     }
 
     @Test
-    fun episodeEntryShownWhenRelatedVideosExist() {
-        assertTrue(
+    fun episodeEntryHiddenWhenOnlyRelatedVideosExist() {
+        assertFalse(
             shouldShowEpisodeEntryFromVideoData(
                 relatedVideosCount = 1,
                 hasSeasonEpisodes = false,
-                pagesCount = 1
+                pagesCount = 1,
+                hasFavoritePlaylist = false
+            )
+        )
+    }
+
+    @Test
+    fun episodeEntryShownWhenFavoritePlaylistExists() {
+        assertTrue(
+            shouldShowEpisodeEntryFromVideoData(
+                relatedVideosCount = 0,
+                hasSeasonEpisodes = false,
+                pagesCount = 1,
+                hasFavoritePlaylist = true
             )
         )
     }

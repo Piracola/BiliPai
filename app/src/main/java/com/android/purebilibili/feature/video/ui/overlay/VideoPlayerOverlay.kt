@@ -123,9 +123,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 internal fun shouldShowEpisodeEntryFromVideoData(
     relatedVideosCount: Int,
     hasSeasonEpisodes: Boolean,
-    pagesCount: Int
+    pagesCount: Int,
+    hasFavoritePlaylist: Boolean = false
 ): Boolean {
-    return pagesCount > 1 || relatedVideosCount > 0 || hasSeasonEpisodes
+    return pagesCount > 1 || hasSeasonEpisodes || hasFavoritePlaylist
 }
 
 internal data class NextEpisodeTarget(
@@ -616,6 +617,8 @@ fun VideoPlayerOverlay(
     pages: List<com.android.purebilibili.data.model.response.Page> = emptyList(),
     currentPageIndex: Int = 0,
     onPageSelect: (Int) -> Unit = {},
+    hasFavoritePlaylist: Boolean = false,
+    onFavoritePlaylistClick: () -> Unit = {},
     drawerHazeState: HazeState? = null,
 ) {
     var showQualityMenu by remember { mutableStateOf(false) }
@@ -850,7 +853,8 @@ fun VideoPlayerOverlay(
             hasSeasonEpisodes = ugcSeason?.sections?.any { section ->
                 section.episodes.isNotEmpty()
             } == true,
-            pagesCount = pages.size
+            pagesCount = pages.size,
+            hasFavoritePlaylist = hasFavoritePlaylist
         )
     }
     val nextEpisodeTarget = remember(
@@ -1328,10 +1332,12 @@ fun VideoPlayerOverlay(
                     onEpisodeClick = {
                         if (pages.size > 1) {
                             showPageSelectorSheet = true
+                        } else if (ugcSeason?.sections?.any { it.episodes.isNotEmpty() } == true) {
+                            onShowEndDrawer(1)
+                        } else if (hasFavoritePlaylist) {
+                            onFavoritePlaylistClick()
                         } else {
-                            onShowEndDrawer(
-                                if (ugcSeason?.sections?.any { it.episodes.isNotEmpty() } == true) 1 else 0
-                            )
+                            onShowEndDrawer(0)
                         }
                     },
                     hasEpisodeEntry = hasEpisodeEntry,

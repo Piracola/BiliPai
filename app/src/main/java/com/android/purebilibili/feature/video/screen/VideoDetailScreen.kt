@@ -3182,6 +3182,12 @@ fun VideoDetailScreen(
                     onTriple = { viewModel.doTripleAction() },
                     onRelatedVideoClick = navigateToRelatedVideo,
                     onPageSelect = { viewModel.switchPage(it) },
+                    hasFavoritePlaylist = isExternalPlaylist &&
+                        externalPlaylistSource == ExternalPlaylistSource.FAVORITE &&
+                        playlistItems.size > 1,
+                    onFavoritePlaylistClick = {
+                        showExternalPlaylistQueueSheet = true
+                    },
                     forceCoverOnly = forceCoverOnlyForReturn,
                     allowLivePlayerSharedElement = true,
                     sourceRouteForSharedElement = sourceRouteForSharedElement,

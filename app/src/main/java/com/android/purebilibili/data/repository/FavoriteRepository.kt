@@ -114,6 +114,7 @@ object FavoriteRepository {
     suspend fun getFavoriteList(
         mediaId: Long,
         pn: Int,
+        ps: Int = 20,
         keyword: String? = null,
         order: String? = null,
         platform: String = "web"
@@ -124,6 +125,7 @@ object FavoriteRepository {
                 val response = api.getFavoriteList(
                     mediaId = mediaId,
                     pn = pn,
+                    ps = ps,
                     keyword = keyword,
                     order = order,
                     platform = platform
