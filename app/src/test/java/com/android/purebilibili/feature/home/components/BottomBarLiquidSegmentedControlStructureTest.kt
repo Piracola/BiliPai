@@ -309,11 +309,13 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertFalse(source.contains("containerWidthDp = maxWidth.value"))
         val indicatorIndex = source.indexOf("KernelSuBottomBarIndicatorLayer(")
         val visibleLabelsIndex = source.indexOf(
-            "selectionEmphasis = refractionMotionProfile.visibleSelectionEmphasis",
-            startIndex = indicatorIndex
+            "selectionEmphasis = refractionMotionProfile.visibleSelectionEmphasis"
         )
         assertTrue(indicatorIndex >= 0)
-        assertTrue(visibleLabelsIndex > indicatorIndex)
+        // Visible labels must be composed BEFORE the capsule so theme color shows through glass.
+        assertTrue(visibleLabelsIndex >= 0)
+        assertTrue(visibleLabelsIndex < indicatorIndex)
+        assertTrue(source.contains("contentBackdrop = tabsBackdrop"))
         assertFalse(source.contains("val indicatorPolicy = remember(itemCount)"))
         assertFalse(source.contains("resolveBottomBarIndicatorPolicy(itemCount = itemCount)"))
         assertTrue(source.contains("resolveSharedLiquidIndicatorPanelOffsetPx("))

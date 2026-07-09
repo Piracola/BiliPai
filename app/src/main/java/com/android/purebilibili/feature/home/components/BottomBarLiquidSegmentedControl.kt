@@ -612,7 +612,30 @@ fun BottomBarLiquidSegmentedControl(
                 )
         )
 
-        // Hidden export/capture layer: monochrome labels + theme tint, refracted into capsule.
+        // 1) Visible labels BEHIND the capsule (bottom-bar z-order).
+        //    While sliding they stay neutral; theme color is revealed only through glass.
+        BottomBarLiquidSegmentedLabels(
+            items = items,
+            selectedIndex = safeSelectedIndex,
+            indicatorPosition = indicatorPosition,
+            motionProgress = motionProgress,
+            selectionEmphasis = refractionMotionProfile.visibleSelectionEmphasis,
+            selectedTextColor = selectedTextColor,
+            unselectedTextColor = unselectedTextColor,
+            enabled = enabled,
+            labelFontSize = labelFontSize,
+            indicatorCorner = indicatorCorner,
+            onSelected = onSelected,
+            interactive = false,
+            applyItemScale = true,
+            forceUnselectedColor = useGlassColorPath,
+            modifier = Modifier
+                .matchParentSize()
+                .padding(horizontal = contentPadding, vertical = contentVerticalInset)
+                .graphicsLayer { translationX = panelOffsetPx }
+        )
+
+        // 2) Hidden export capture: monochrome glyphs, theme tint on content only (not backdrop).
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -648,7 +671,6 @@ fun BottomBarLiquidSegmentedControl(
                         this
                     }
                 }
-                .graphicsLayer(colorFilter = ColorFilter.tint(exportTintColor))
         ) {
             BottomBarLiquidSegmentedLabels(
                 items = items,
@@ -656,7 +678,7 @@ fun BottomBarLiquidSegmentedControl(
                 indicatorPosition = indicatorPosition,
                 motionProgress = motionProgress,
                 selectionEmphasis = refractionMotionProfile.exportSelectionEmphasis,
-                // Monochrome white glyphs → ColorFilter.tint(theme) = pure primary under glass.
+                // Match bottom bar export: neutral glyphs then SrcIn-tint to primary.
                 selectedTextColor = exportMonochromeColor,
                 unselectedTextColor = exportMonochromeColor,
                 enabled = enabled,
@@ -669,9 +691,11 @@ fun BottomBarLiquidSegmentedControl(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = contentPadding, vertical = contentVerticalInset)
+                    .graphicsLayer(colorFilter = ColorFilter.tint(exportTintColor))
             )
         }
 
+        // 3) Capsule on top — samples export theme glyphs through glass.
         KernelSuBottomBarIndicatorLayer(
             visible = true,
             dockContentAlpha = 1f,
@@ -682,8 +706,9 @@ fun BottomBarLiquidSegmentedControl(
             indicatorHeight = resolvedIndicatorHeight,
             shellShape = indicatorShape,
             liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
-            contentBackdrop = contentBackdrop,
-            backdrop = backdrop,
+            // Prefer tabs export so capsule shows theme glyphs, not page feed colors.
+            contentBackdrop = tabsBackdrop,
+            backdrop = contentBackdrop,
             indicatorLensSpec = indicatorLensSpec,
             effectivePressProgress = lensProgress,
             indicatorIdleSurfaceColor = indicatorIdleSurfaceColor,
@@ -692,34 +717,12 @@ fun BottomBarLiquidSegmentedControl(
             velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
             isDragging = dragState.isDragging,
             indicatorLayerScaleProgress = indicatorLayerScaleProgress,
-            // null => same scale path as home bottom bar (88/56 drag-scale + velocity items)
             indicatorLayerScaleTransform = null,
             bottomBarMotionSpec = motionSpec,
             isDarkTheme = isDarkTheme
         )
 
-        // Visible labels: while glass is sliding, stay neutral so color moves through glass.
-        BottomBarLiquidSegmentedLabels(
-            items = items,
-            selectedIndex = safeSelectedIndex,
-            indicatorPosition = indicatorPosition,
-            motionProgress = motionProgress,
-            selectionEmphasis = refractionMotionProfile.visibleSelectionEmphasis,
-            selectedTextColor = selectedTextColor,
-            unselectedTextColor = unselectedTextColor,
-            enabled = enabled,
-            labelFontSize = labelFontSize,
-            indicatorCorner = indicatorCorner,
-            onSelected = onSelected,
-            interactive = false,
-            applyItemScale = true,
-            forceUnselectedColor = useGlassColorPath,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = contentPadding, vertical = contentVerticalInset)
-                .graphicsLayer { translationX = panelOffsetPx }
-        )
-
+        // 4) Invisible hit / drag layer above everything.
         BottomBarLiquidSegmentedLabels(
             items = items,
             selectedIndex = safeSelectedIndex,
@@ -737,7 +740,7 @@ fun BottomBarLiquidSegmentedControl(
             applyItemScale = false,
             forceUnselectedColor = false,
             modifier = Modifier
-                .fillMaxSize()
+                .matchParentSize()
                 .padding(horizontal = contentPadding, vertical = contentVerticalInset)
                 .alpha(0f)
                 .graphicsLayer { translationX = panelOffsetPx }

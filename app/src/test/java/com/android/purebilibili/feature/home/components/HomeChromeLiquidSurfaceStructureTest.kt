@@ -187,8 +187,8 @@ class HomeChromeLiquidSurfaceStructureTest {
                 topBarSource.contains("val glassLayersAlwaysOn = shouldUseLiquidGlassIndicator") &&
                 topBarSource.contains("resolveTopTabIndicatorBackdropPolicy(") &&
                 topBarSource.contains("allowIdleGlassEffect = false") &&
-                topBarSource.contains("contentBackdrop = effectiveTopTabIndicatorContentBackdrop") &&
-                topBarSource.contains("backdrop = backdrop") &&
+                topBarSource.contains("contentBackdrop = topTabContentBackdrop") &&
+                topBarSource.contains("Capsule above labels so theme glyphs show through glass") &&
                 topBarSource.contains("!shouldUseMd3DockBackedCapsule && !shouldUseMd3LiquidCapsule")
         )
         assertFalse(
