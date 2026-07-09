@@ -12,6 +12,7 @@ import com.android.purebilibili.core.store.TokenManager
 import com.android.purebilibili.data.model.response.FavFolder
 import com.android.purebilibili.data.model.response.NavData
 import com.android.purebilibili.data.model.response.SpaceUserInfo
+import com.android.purebilibili.data.model.response.SpaceVideoItem
 import com.android.purebilibili.data.model.response.WbiImg
 import com.android.purebilibili.data.repository.FavoriteRepository
 import com.android.purebilibili.data.repository.BangumiRepository
@@ -193,7 +194,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     launch { loadProfileStats(generation, mid) },
                     launch { loadProfileAccount(generation, mid) },
                     launch { loadProfileSpaceInfo(generation, mid, wbiImg) },
-                    launch { loadProfileAggregate(generation, mid) },
+                    launch { loadProfileAggregate(generation, mid, wbiImg) },
                     launch { loadProfileFavoriteFolders(generation, mid) },
                     launch { loadProfileBangumi(generation, mid) },
                     launch { loadProfileDynamics(generation, mid) }
@@ -249,7 +250,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private suspend fun loadProfileAggregate(generation: Long, mid: Long) {
+    private suspend fun loadProfileAggregate(generation: Long, mid: Long, wbiImg: WbiImg?) {
         val aggregate = profileRequestOrNull {
             NetworkModule.spaceApi.getSpaceAggregate(mid).data
         } ?: return
@@ -265,6 +266,63 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 )
             )
         }
+        hydrateProfileContributionVideos(generation, mid, wbiImg)
+    }
+
+    private suspend fun hydrateProfileContributionVideos(
+        generation: Long,
+        mid: Long,
+        wbiImg: WbiImg?
+    ) {
+        val current = _uiState.value as? ProfileUiState.Success ?: return
+        if (!shouldApplyProfileLoadResult(generation, profileLoadGeneration, mid, current.user.mid)) {
+            return
+        }
+        if (
+            !shouldHydrateProfileContributionVideos(
+                contributionVideoCount = current.space.contributionVideoCount,
+                seededVideoCount = current.space.contributionVideos.size
+            )
+        ) {
+            return
+        }
+        val videos = profileRequestOrNull {
+            fetchProfileContributionVideos(mid, wbiImg)
+        } ?: return
+        updateProfileSuccess(generation, mid) { latest ->
+            latest.copy(
+                space = mergeProfileContributionVideoState(
+                    current = latest.space,
+                    videos = videos.first,
+                    totalCount = videos.second
+                )
+            )
+        }
+    }
+
+    private suspend fun fetchProfileContributionVideos(
+        mid: Long,
+        wbiImg: WbiImg?
+    ): Pair<List<SpaceVideoItem>, Int>? {
+        val imgUrl = wbiImg?.img_url.orEmpty()
+        val subUrl = wbiImg?.sub_url.orEmpty()
+        val imgKey = imgUrl.substringAfterLast("/").substringBefore(".")
+        val subKey = subUrl.substringAfterLast("/").substringBefore(".")
+        if (imgKey.isBlank() || subKey.isBlank()) return null
+        val params = WbiUtils.sign(
+            mapOf(
+                "mid" to mid.toString(),
+                "pn" to "1",
+                "ps" to PROFILE_CONTRIBUTION_PAGE_SIZE.toString(),
+                "order" to "pubdate"
+            ),
+            imgKey,
+            subKey
+        )
+        val response = NetworkModule.spaceApi.getSpaceVideos(params)
+        val data = response.data ?: return null
+        if (response.code != 0) return null
+        return data.list.vlist to data.page.count
     }
 
     private suspend fun loadProfileFavoriteFolders(generation: Long, mid: Long) {

@@ -541,6 +541,17 @@ class SpaceLoadPolicyTest {
                 currentKeyword = ""
             )
         )
+        assertTrue(
+            shouldHydrateSpaceContributionVideos(
+                totalVideos = 133,
+                seededVideoCount = 0,
+                pageSize = 30,
+                selectedSubTab = SpaceSubTab.CHARGING_VIDEO,
+                selectedTid = 0,
+                currentOrder = VideoSortOrder.PUBDATE,
+                currentKeyword = ""
+            )
+        )
         assertFalse(
             shouldHydrateSpaceContributionVideos(
                 totalVideos = 0,

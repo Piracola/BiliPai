@@ -53,8 +53,10 @@ import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.data.repository.resolveVideoPlaybackAuthState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
 import com.android.purebilibili.feature.video.VideoActivity
@@ -173,6 +175,52 @@ internal fun shouldContinuePlaybackDuringPause(
     )
 }
 
+internal const val SHORT_BACKGROUND_LIGHT_MODE_MS = 15_000L
+
+internal fun shouldApplyHeavyBackgroundVideoOptimization(
+    backgroundElapsedMs: Long,
+    shortBackgroundLightModeMs: Long = SHORT_BACKGROUND_LIGHT_MODE_MS
+): Boolean {
+    return backgroundElapsedMs >= shortBackgroundLightModeMs
+}
+
+internal fun shouldForceHeavyBackgroundVideoOptimizationOnTrimLevel(level: Int): Boolean {
+    return level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+        level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+        level == android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND ||
+        level == android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE ||
+        level == android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+}
+
+internal fun shouldRunHeavyBackgroundVideoOptimization(
+    shouldDisableVideoTrack: Boolean,
+    stillInBackground: Boolean,
+    backgroundElapsedMs: Long,
+    shortBackgroundLightModeMs: Long = SHORT_BACKGROUND_LIGHT_MODE_MS,
+    forceDueToMemoryPressure: Boolean = false
+): Boolean {
+    if (!shouldDisableVideoTrack || !stillInBackground) return false
+    if (forceDueToMemoryPressure) return true
+    return shouldApplyHeavyBackgroundVideoOptimization(
+        backgroundElapsedMs = backgroundElapsedMs,
+        shortBackgroundLightModeMs = shortBackgroundLightModeMs
+    )
+}
+
+internal fun shouldApplyPendingHeavyBackgroundVideoOptimizationOnMemoryPressure(
+    isLowMemoryMode: Boolean,
+    stillInBackground: Boolean,
+    alreadyAppliedHeavyOptimization: Boolean,
+    shouldDisableVideoTrack: Boolean,
+    forceDueToMemoryPressure: Boolean
+): Boolean {
+    return isLowMemoryMode &&
+        stillInBackground &&
+        !alreadyAppliedHeavyOptimization &&
+        shouldDisableVideoTrack &&
+        forceDueToMemoryPressure
+}
+
 internal fun shouldDisableVideoTrackOnEnterBackground(
     shouldPauseBuffering: Boolean,
     shouldContinueBackgroundAudio: Boolean
@@ -180,12 +228,48 @@ internal fun shouldDisableVideoTrackOnEnterBackground(
     return shouldPauseBuffering || shouldContinueBackgroundAudio
 }
 
-internal fun shouldClearVideoSurfaceOnEnterBackground(
-    shouldDisableVideoTrack: Boolean,
+internal fun shouldRetainBackgroundAudioSession(
     shouldContinueBackgroundAudio: Boolean,
     wasPlaybackActive: Boolean
 ): Boolean {
-    return shouldDisableVideoTrack && shouldContinueBackgroundAudio && wasPlaybackActive
+    return shouldContinueBackgroundAudio && wasPlaybackActive
+}
+
+internal fun shouldClearVideoSurfaceOnEnterBackground(
+    shouldDisableVideoTrack: Boolean
+): Boolean {
+    // 关视频轨后一律清 surface：活跃仅音频与暂停态闲置释放都需要。
+    return shouldDisableVideoTrack
+}
+
+internal fun shouldStopIdlePlaybackForBackgroundOptimization(
+    shouldContinueBackgroundAudio: Boolean,
+    wasPlaybackActive: Boolean
+): Boolean {
+    return !shouldRetainBackgroundAudioSession(
+        shouldContinueBackgroundAudio = shouldContinueBackgroundAudio,
+        wasPlaybackActive = wasPlaybackActive
+    )
+}
+
+internal fun shouldUpgradeHeavyBackgroundOptimizationToIdleRelease(
+    isLowMemoryMode: Boolean,
+    stillInBackground: Boolean,
+    alreadyAppliedHeavyOptimization: Boolean,
+    alreadyAppliedIdleRelease: Boolean,
+    shouldContinueBackgroundAudio: Boolean,
+    wasPlaybackActive: Boolean,
+    requestIdlePlaybackRelease: Boolean
+): Boolean {
+    return isLowMemoryMode &&
+        stillInBackground &&
+        alreadyAppliedHeavyOptimization &&
+        !alreadyAppliedIdleRelease &&
+        shouldStopIdlePlaybackForBackgroundOptimization(
+            shouldContinueBackgroundAudio = shouldContinueBackgroundAudio,
+            wasPlaybackActive = wasPlaybackActive
+        ) &&
+        requestIdlePlaybackRelease
 }
 
 internal fun shouldTrimDanmakuCachesOnEnterBackground(
@@ -634,6 +718,8 @@ class MiniPlayerManager private constructor(private val context: Context) :
                 }
             }
         }
+
+        fun getInstanceOrNull(): MiniPlayerManager? = INSTANCE
         
         //  [新增] 媒体控制常量
         const val ACTION_MEDIA_CONTROL = "com.android.purebilibili.MEDIA_CONTROL"
@@ -653,6 +739,33 @@ class MiniPlayerManager private constructor(private val context: Context) :
     // 🔋 [后台优化] 低内存模式状态
     private var isLowMemoryMode = false
     private var savedTrackParams: androidx.media3.common.TrackSelectionParameters? = null
+    private var backgroundHeavyOptimizationJob: Job? = null
+    private var enteredBackgroundAtMs: Long = 0L
+    @Volatile
+    private var didApplyHeavyBackgroundVideoOptimization = false
+    @Volatile
+    private var didApplyIdlePlaybackRelease = false
+    @Volatile
+    private var pendingHeavyBackgroundVideoOptimization = false
+    /**
+     * 供 UI 在 Activity ON_RESUME 读取。
+     * ProcessLifecycle 前台回调早于 Activity resume，因此不能在 onEnterForeground 里立刻清掉。
+     */
+    @Volatile
+    private var pendingForegroundSurfaceRecovery = false
+
+    /**
+     * 前台恢复时是否需要强制重绑 surface。
+     * 短后台轻量模式未拆视频链路时为 false，避免固定顿一下。
+     */
+    val needsForegroundSurfaceRecovery: Boolean
+        get() = pendingForegroundSurfaceRecovery
+
+    fun consumeForegroundSurfaceRecoveryNeed(): Boolean {
+        val need = pendingForegroundSurfaceRecovery
+        pendingForegroundSurfaceRecovery = false
+        return need
+    }
     
     //  [新增] 媒体控制广播接收器
     private val mediaControlReceiver = object : android.content.BroadcastReceiver() {
@@ -694,6 +807,12 @@ class MiniPlayerManager private constructor(private val context: Context) :
         if (!isActive) return
         
         isLowMemoryMode = true
+        enteredBackgroundAtMs = SystemClock.elapsedRealtime()
+        didApplyHeavyBackgroundVideoOptimization = false
+        didApplyIdlePlaybackRelease = false
+        pendingHeavyBackgroundVideoOptimization = false
+        pendingForegroundSurfaceRecovery = false
+        backgroundHeavyOptimizationJob?.cancel()
         val currentPlayer = player ?: return
         foregroundResumeIntent = isPlaybackActiveForLifecycle(
             isPlaying = currentPlayer.isPlaying,
@@ -716,35 +835,94 @@ class MiniPlayerManager private constructor(private val context: Context) :
             shouldPauseBuffering = shouldPauseOnBackground,
             shouldContinueBackgroundAudio = shouldKeepBackgroundAudio
         )
-        if (shouldDisableVideoTrack) {
-            if (savedTrackParams == null) {
-                savedTrackParams = currentPlayer.trackSelectionParameters
-            }
-            currentPlayer.trackSelectionParameters = resolveTrackSelectionParametersForBackground(
-                currentTrackSelectionParameters = currentPlayer.trackSelectionParameters,
-                shouldDisableVideoTrack = true
-            )
-        }
-        if (shouldClearVideoSurfaceOnEnterBackground(
-                shouldDisableVideoTrack = shouldDisableVideoTrack,
-                shouldContinueBackgroundAudio = shouldKeepBackgroundAudio,
-                wasPlaybackActive = foregroundResumeIntent
-            )
-        ) {
-            currentPlayer.clearVideoSurface()
-        }
-        if (shouldTrimDanmakuCachesOnEnterBackground(shouldDisableVideoTrack)) {
-            DanmakuManager.trimCachesForBackgroundIfPresent()
-        }
         if (shouldPauseOnBackground) {
             currentPlayer.pause()
-            Logger.d(TAG, "🔋 后台模式：未播放，暂停缓冲并禁用视频轨道")
+            Logger.d(TAG, "🔋 后台轻量模式：未播放，先暂停缓冲，延迟拆视频链路")
+        } else if (shouldKeepBackgroundAudio) {
+            Logger.d(TAG, "🔋 后台轻量模式：先保留视频链路，延迟切到仅音频")
+        }
+
+        if (!shouldDisableVideoTrack) {
             return
         }
-        
-        // 判断是否需要后台音频
-        if (shouldKeepBackgroundAudio) {
-            Logger.d(TAG, "🔋 后台模式：禁用视频轨道，仅保留音频")
+
+        pendingHeavyBackgroundVideoOptimization = true
+        // 短后台不立刻关视频轨/清 surface/清弹幕，降低回前台固定顿一下的概率。
+        backgroundHeavyOptimizationJob = scope.launch {
+            delay(SHORT_BACKGROUND_LIGHT_MODE_MS)
+            val elapsedMs = (SystemClock.elapsedRealtime() - enteredBackgroundAtMs).coerceAtLeast(0L)
+            val activePlayer = player ?: return@launch
+            if (
+                !shouldRunHeavyBackgroundVideoOptimization(
+                    shouldDisableVideoTrack = pendingHeavyBackgroundVideoOptimization,
+                    stillInBackground = isLowMemoryMode && BackgroundManager.isInBackground,
+                    backgroundElapsedMs = elapsedMs
+                )
+            ) {
+                return@launch
+            }
+            applyHeavyBackgroundVideoOptimization(
+                currentPlayer = activePlayer,
+                shouldKeepBackgroundAudio = shouldContinueBackgroundAudio(),
+                wasPlaybackActive = foregroundResumeIntent,
+                // 超时后的无后台音频会话直接 stop，丢掉解码器侧缓冲。
+                requestIdlePlaybackRelease = true
+            )
+        }
+    }
+
+    /**
+     * 系统内存压力回调：短后台轻量窗口内提前拆视频链路；
+     * 更高压力时可对无后台音频意图的会话执行闲置 stop 释放。
+     * 由 Application.onTrimMemory 转发。
+     */
+    fun onMemoryPressureTrim(
+        level: Int,
+        requestIdlePlaybackRelease: Boolean =
+            com.android.purebilibili.app.PureApplicationRuntimeConfig
+                .shouldRequestIdlePlaybackReleaseOnTrimLevel(level)
+    ) {
+        val forceDueToMemoryPressure = shouldForceHeavyBackgroundVideoOptimizationOnTrimLevel(level)
+        val shouldKeepBackgroundAudio = shouldContinueBackgroundAudio()
+        val activePlayer = player
+
+        if (
+            shouldApplyPendingHeavyBackgroundVideoOptimizationOnMemoryPressure(
+                isLowMemoryMode = isLowMemoryMode,
+                stillInBackground = BackgroundManager.isInBackground,
+                alreadyAppliedHeavyOptimization = didApplyHeavyBackgroundVideoOptimization,
+                shouldDisableVideoTrack = pendingHeavyBackgroundVideoOptimization,
+                forceDueToMemoryPressure = forceDueToMemoryPressure
+            )
+        ) {
+            if (activePlayer != null) {
+                backgroundHeavyOptimizationJob?.cancel()
+                backgroundHeavyOptimizationJob = null
+                Logger.d(TAG, "🔋 内存压力(level=$level)：提前进入后台重度模式")
+                applyHeavyBackgroundVideoOptimization(
+                    currentPlayer = activePlayer,
+                    shouldKeepBackgroundAudio = shouldKeepBackgroundAudio,
+                    wasPlaybackActive = foregroundResumeIntent,
+                    requestIdlePlaybackRelease = requestIdlePlaybackRelease
+                )
+            }
+            return
+        }
+
+        if (
+            activePlayer != null &&
+            shouldUpgradeHeavyBackgroundOptimizationToIdleRelease(
+                isLowMemoryMode = isLowMemoryMode,
+                stillInBackground = BackgroundManager.isInBackground,
+                alreadyAppliedHeavyOptimization = didApplyHeavyBackgroundVideoOptimization,
+                alreadyAppliedIdleRelease = didApplyIdlePlaybackRelease,
+                shouldContinueBackgroundAudio = shouldKeepBackgroundAudio,
+                wasPlaybackActive = foregroundResumeIntent,
+                requestIdlePlaybackRelease = requestIdlePlaybackRelease
+            )
+        ) {
+            Logger.d(TAG, "🔋 内存压力(level=$level)：升级为闲置 stop 释放")
+            applyIdlePlaybackRelease(activePlayer)
         }
     }
     
@@ -752,8 +930,13 @@ class MiniPlayerManager private constructor(private val context: Context) :
         if (!isLowMemoryMode) return
         
         isLowMemoryMode = false
+        pendingHeavyBackgroundVideoOptimization = false
+        backgroundHeavyOptimizationJob?.cancel()
+        backgroundHeavyOptimizationJob = null
         val currentPlayer = player ?: return
         val hadSavedTrackParams = savedTrackParams != null
+        val appliedHeavyOptimization = didApplyHeavyBackgroundVideoOptimization
+        val appliedIdleRelease = didApplyIdlePlaybackRelease
         
         // 恢复视频轨道
         savedTrackParams?.let { originalParams ->
@@ -761,6 +944,8 @@ class MiniPlayerManager private constructor(private val context: Context) :
             savedTrackParams = null
             Logger.d(TAG, "🌅 前台模式：恢复视频轨道")
         }
+        didApplyHeavyBackgroundVideoOptimization = false
+        didApplyIdlePlaybackRelease = false
 
         if (shouldRefreshVideoFrameOnEnterForeground(
                 hadSavedTrackParams = hadSavedTrackParams,
@@ -779,7 +964,11 @@ class MiniPlayerManager private constructor(private val context: Context) :
             playbackState = currentPlayer.playbackState,
             isLeavingByNavigation = isLeavingByNavigation
         )
-        if (shouldPrepareForegroundPlayback) {
+        val shouldPrepareAfterIdleRelease = appliedIdleRelease &&
+            !isLeavingByNavigation &&
+            currentPlayer.mediaItemCount > 0 &&
+            currentPlayer.playbackState == Player.STATE_IDLE
+        if (shouldPrepareForegroundPlayback || shouldPrepareAfterIdleRelease) {
             currentPlayer.prepare()
         }
         if (shouldKickPlaybackAfterForegroundTrackRestore(
@@ -809,6 +998,64 @@ class MiniPlayerManager private constructor(private val context: Context) :
         if (isLeavingByNavigation) {
             foregroundResumeIntent = false
         }
+        if (!appliedHeavyOptimization && !hadSavedTrackParams) {
+            Logger.d(TAG, "🌅 前台模式：短后台轻量恢复，跳过视频轨重建")
+        }
+    }
+
+    private fun applyHeavyBackgroundVideoOptimization(
+        currentPlayer: Player,
+        shouldKeepBackgroundAudio: Boolean,
+        wasPlaybackActive: Boolean,
+        requestIdlePlaybackRelease: Boolean = false
+    ) {
+        if (savedTrackParams == null) {
+            savedTrackParams = currentPlayer.trackSelectionParameters
+        }
+        currentPlayer.trackSelectionParameters = resolveTrackSelectionParametersForBackground(
+            currentTrackSelectionParameters = currentPlayer.trackSelectionParameters,
+            shouldDisableVideoTrack = true
+        )
+        if (shouldClearVideoSurfaceOnEnterBackground(shouldDisableVideoTrack = true)) {
+            currentPlayer.clearVideoSurface()
+        }
+        if (shouldTrimDanmakuCachesOnEnterBackground(shouldDisableVideoTrack = true)) {
+            DanmakuManager.trimCachesForBackgroundIfPresent()
+        }
+        pendingHeavyBackgroundVideoOptimization = false
+        didApplyHeavyBackgroundVideoOptimization = true
+        pendingForegroundSurfaceRecovery = true
+        if (
+            requestIdlePlaybackRelease &&
+            shouldStopIdlePlaybackForBackgroundOptimization(
+                shouldContinueBackgroundAudio = shouldKeepBackgroundAudio,
+                wasPlaybackActive = wasPlaybackActive
+            )
+        ) {
+            applyIdlePlaybackRelease(currentPlayer)
+        } else if (
+            shouldRetainBackgroundAudioSession(
+                shouldContinueBackgroundAudio = shouldKeepBackgroundAudio,
+                wasPlaybackActive = wasPlaybackActive
+            )
+        ) {
+            Logger.d(TAG, "🔋 后台重度模式：禁用视频轨道，仅保留音频")
+        } else {
+            Logger.d(TAG, "🔋 后台重度模式：暂停缓冲并禁用视频轨道")
+        }
+    }
+
+    private fun applyIdlePlaybackRelease(currentPlayer: Player) {
+        if (didApplyIdlePlaybackRelease) return
+        runCatching {
+            currentPlayer.clearVideoSurface()
+            currentPlayer.stop()
+        }.onFailure { error ->
+            Logger.w(TAG, "闲置 stop 释放失败: ${error.message}")
+        }
+        didApplyIdlePlaybackRelease = true
+        pendingForegroundSurfaceRecovery = true
+        Logger.d(TAG, "🔋 后台闲置释放：stop 播放器并保留 media item")
     }
 
 

@@ -317,6 +317,36 @@ internal fun mergeProfileAggregateState(
     )
 }
 
+/**
+ * 聚合接口常只给 count、不带 item（本人空间更常见）。
+ * count 大于已有列表时，需要再走 arc/search 补齐投稿。
+ */
+internal fun shouldHydrateProfileContributionVideos(
+    contributionVideoCount: Int,
+    seededVideoCount: Int,
+    pageSize: Int = PROFILE_CONTRIBUTION_PAGE_SIZE
+): Boolean {
+    if (contributionVideoCount <= 0) return false
+    val expectedVisibleCount = minOf(contributionVideoCount, pageSize.coerceAtLeast(1))
+    return seededVideoCount < expectedVisibleCount
+}
+
+internal fun mergeProfileContributionVideoState(
+    current: ProfileSpaceUiState,
+    videos: List<SpaceVideoItem>,
+    totalCount: Int
+): ProfileSpaceUiState {
+    if (videos.isEmpty() && totalCount <= current.contributionVideoCount) {
+        return current
+    }
+    return current.copy(
+        contributionVideos = videos.ifEmpty { current.contributionVideos },
+        contributionVideoCount = maxOf(current.contributionVideoCount, totalCount, videos.size)
+    )
+}
+
+internal const val PROFILE_CONTRIBUTION_PAGE_SIZE = 30
+
 internal fun mergeProfileFavoriteFolderState(
     current: ProfileSpaceUiState,
     folders: List<FavFolder>

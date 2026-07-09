@@ -1109,17 +1109,25 @@ internal fun shouldRebindPlayerSurfaceOnForeground(
     hasPlayerView: Boolean,
     isInPipMode: Boolean,
     videoWidth: Int,
-    videoHeight: Int
+    videoHeight: Int,
+    needsSurfaceRecovery: Boolean = true
 ): Boolean {
-    return hasPlayerView && !isInPipMode
+    if (!hasPlayerView || isInPipMode) return false
+    if (needsSurfaceRecovery) return true
+    return videoWidth <= 0 || videoHeight <= 0
 }
 
 internal fun shouldStartForegroundSurfaceRecovery(
     hasPlayerView: Boolean,
     shouldBindInlinePlayerView: Boolean,
-    isInPipMode: Boolean
+    isInPipMode: Boolean,
+    needsSurfaceRecovery: Boolean = true,
+    videoWidth: Int = 0,
+    videoHeight: Int = 0
 ): Boolean {
-    return hasPlayerView && shouldBindInlinePlayerView && !isInPipMode
+    if (!hasPlayerView || !shouldBindInlinePlayerView || isInPipMode) return false
+    if (needsSurfaceRecovery) return true
+    return videoWidth <= 0 || videoHeight <= 0
 }
 
 internal fun shouldKickPlaybackAfterSurfaceRecovery(

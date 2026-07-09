@@ -264,19 +264,17 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
         }
     }
     
-    // � [后台内存优化] 响应系统内存警告
+    // [后台内存优化] 响应系统内存警告
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        val imageCacheTrimLevel = PureApplicationRuntimeConfig.resolveImageMemoryCacheTrimLevel(level)
-        if (imageCacheTrimLevel != null) {
-            _imageLoader?.memoryCache?.trimMemory(imageCacheTrimLevel)
-            if (level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN ||
-                PureApplicationRuntimeConfig.shouldClearImageMemoryCacheOnTrimLevel(level)
-            ) {
+        val plan = PureApplicationRuntimeConfig.resolveBackgroundMemoryTrimPlan(level)
+        if (plan.imageCacheTrimLevel != null) {
+            _imageLoader?.memoryCache?.trimMemory(plan.imageCacheTrimLevel)
+            if (plan.requestGcHint) {
                 System.gc()
             }
             when {
-                PureApplicationRuntimeConfig.shouldClearImageMemoryCacheOnTrimLevel(level) -> {
+                plan.clearImageMemoryCache -> {
                     Logger.d(PureApplicationRuntimeConfig.TAG, "🚨 trim(level=$level), released image memory cache")
                 }
                 level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
@@ -287,11 +285,30 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
                 }
             }
         }
+        if (plan.notifyPlayerHeavyOptimization) {
+            com.android.purebilibili.feature.video.player.MiniPlayerManager
+                .getInstanceOrNull()
+                ?.onMemoryPressureTrim(
+                    level = level,
+                    requestIdlePlaybackRelease = plan.requestIdlePlaybackRelease
+                )
+        }
     }
     
     override fun onLowMemory() {
         super.onLowMemory()
+        val plan = PureApplicationRuntimeConfig.resolveBackgroundMemoryTrimPlan(
+            ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+        )
         _imageLoader?.memoryCache?.clear()
+        if (plan.notifyPlayerHeavyOptimization) {
+            com.android.purebilibili.feature.video.player.MiniPlayerManager
+                .getInstanceOrNull()
+                ?.onMemoryPressureTrim(
+                    level = ComponentCallbacks2.TRIM_MEMORY_COMPLETE,
+                    requestIdlePlaybackRelease = plan.requestIdlePlaybackRelease
+                )
+        }
         Logger.d(PureApplicationRuntimeConfig.TAG, "🚨 onLowMemory, cleared all caches")
     }
 

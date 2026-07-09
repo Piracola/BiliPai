@@ -461,25 +461,45 @@ class VideoPlayerSectionPolicyTest {
     }
 
     @Test
-    fun playerSurfaceRebind_onlyWhenForegroundVideoSurfaceCanRender() {
+    fun playerSurfaceRebind_onlyWhenForegroundVideoSurfaceNeedsRecovery() {
+        assertTrue(
+            shouldRebindPlayerSurfaceOnForeground(
+                hasPlayerView = true,
+                isInPipMode = false,
+                videoWidth = 0,
+                videoHeight = 0,
+                needsSurfaceRecovery = true
+            )
+        )
+        assertFalse(
+            shouldRebindPlayerSurfaceOnForeground(
+                hasPlayerView = true,
+                isInPipMode = false,
+                videoWidth = 1920,
+                videoHeight = 1080,
+                needsSurfaceRecovery = false
+            )
+        )
         assertTrue(
             shouldRebindPlayerSurfaceOnForeground(
                 hasPlayerView = true,
                 isInPipMode = false,
                 videoWidth = 1920,
-                videoHeight = 1080
+                videoHeight = 1080,
+                needsSurfaceRecovery = true
             )
         )
     }
 
     @Test
-    fun playerSurfaceRebind_skipsOnlyWhenPipOrPlayerViewMissing() {
+    fun playerSurfaceRebind_skipsOnlyWhenPipOrPlayerViewMissingOrSurfaceHealthy() {
         assertFalse(
             shouldRebindPlayerSurfaceOnForeground(
                 hasPlayerView = true,
                 isInPipMode = true,
                 videoWidth = 1920,
-                videoHeight = 1080
+                videoHeight = 1080,
+                needsSurfaceRecovery = true
             )
         )
         assertTrue(
@@ -487,7 +507,8 @@ class VideoPlayerSectionPolicyTest {
                 hasPlayerView = true,
                 isInPipMode = false,
                 videoWidth = 0,
-                videoHeight = 1080
+                videoHeight = 1080,
+                needsSurfaceRecovery = false
             )
         )
         assertFalse(
@@ -495,7 +516,32 @@ class VideoPlayerSectionPolicyTest {
                 hasPlayerView = false,
                 isInPipMode = false,
                 videoWidth = 1920,
+                videoHeight = 1080,
+                needsSurfaceRecovery = true
+            )
+        )
+    }
+
+    @Test
+    fun foregroundSurfaceRecovery_skipsRetryWhenSurfaceAlreadyHealthy() {
+        assertFalse(
+            shouldStartForegroundSurfaceRecovery(
+                hasPlayerView = true,
+                shouldBindInlinePlayerView = true,
+                isInPipMode = false,
+                needsSurfaceRecovery = false,
+                videoWidth = 1920,
                 videoHeight = 1080
+            )
+        )
+        assertTrue(
+            shouldStartForegroundSurfaceRecovery(
+                hasPlayerView = true,
+                shouldBindInlinePlayerView = true,
+                isInPipMode = false,
+                needsSurfaceRecovery = true,
+                videoWidth = 0,
+                videoHeight = 0
             )
         )
     }

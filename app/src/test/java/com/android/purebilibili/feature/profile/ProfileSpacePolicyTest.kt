@@ -211,6 +211,52 @@ class ProfileSpacePolicyTest {
     }
 
     @Test
+    fun `profile contribution hydrates when aggregate only has count`() {
+        assertTrue(
+            shouldHydrateProfileContributionVideos(
+                contributionVideoCount = 5,
+                seededVideoCount = 0
+            )
+        )
+        assertTrue(
+            shouldHydrateProfileContributionVideos(
+                contributionVideoCount = 40,
+                seededVideoCount = 10
+            )
+        )
+        assertFalse(
+            shouldHydrateProfileContributionVideos(
+                contributionVideoCount = 5,
+                seededVideoCount = 5
+            )
+        )
+        assertFalse(
+            shouldHydrateProfileContributionVideos(
+                contributionVideoCount = 0,
+                seededVideoCount = 0
+            )
+        )
+    }
+
+    @Test
+    fun `profile contribution merge prefers hydrated videos`() {
+        val current = ProfileSpaceUiState(
+            contributionVideos = emptyList(),
+            contributionVideoCount = 3
+        )
+        val hydrated = listOf(
+            SpaceVideoItem(aid = 1, bvid = "BV1", title = "自己的投稿")
+        )
+        val merged = mergeProfileContributionVideoState(
+            current = current,
+            videos = hydrated,
+            totalCount = 3
+        )
+        assertEquals(hydrated, merged.contributionVideos)
+        assertEquals(3, merged.contributionVideoCount)
+    }
+
+    @Test
     fun `favorite merge keeps aggregate cover without requesting folder content`() {
         val current = ProfileSpaceUiState(
             favoriteFolders = listOf(

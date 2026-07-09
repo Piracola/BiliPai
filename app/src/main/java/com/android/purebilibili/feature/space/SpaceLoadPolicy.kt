@@ -489,7 +489,10 @@ internal fun shouldHydrateSpaceContributionVideos(
     currentOrder: VideoSortOrder,
     currentKeyword: String
 ): Boolean {
-    if (selectedSubTab != SpaceSubTab.VIDEO) return false
+    // VIDEO / CHARGING_VIDEO 共用 videos 列表，充电专属默认 Tab 也需要首屏补齐。
+    if (selectedSubTab != SpaceSubTab.VIDEO && selectedSubTab != SpaceSubTab.CHARGING_VIDEO) {
+        return false
+    }
     if (totalVideos <= 0) return false
     val expectedVisibleCount = minOf(totalVideos, pageSize.coerceAtLeast(1))
     if (seededVideoCount >= expectedVisibleCount) return false

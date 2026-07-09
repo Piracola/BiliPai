@@ -10,6 +10,7 @@ import com.android.purebilibili.feature.video.danmaku.resolveDanmakuCloudSyncSta
 import com.android.purebilibili.feature.video.danmaku.shouldRunDanmakuManualCloudSync
 import com.android.purebilibili.feature.video.danmaku.filterVisibleCommandDanmakuItems
 import com.android.purebilibili.feature.video.danmaku.configureAsPassiveDanmakuOverlay
+import com.android.purebilibili.feature.video.player.MiniPlayerManager
 import com.android.purebilibili.feature.video.state.VideoPlayerState
 import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
 import com.android.purebilibili.feature.video.ui.overlay.FullscreenDoubleTapAction
@@ -623,6 +624,7 @@ fun VideoPlayerSection(
     var foregroundRecoveryGeneration by remember { mutableIntStateOf(0) }
     var foregroundRecoveryStartedAtMs by remember { mutableLongStateOf(0L) }
     var foregroundRecoveryStartPositionMs by remember { mutableLongStateOf(0L) }
+    var foregroundRecoveryNeedsSurface by remember { mutableStateOf(false) }
     var hasRenderedFirstFrameSinceForegroundRecovery by remember { mutableStateOf(true) }
     var observedPlaybackSpeed by remember(playerState.player) {
         mutableFloatStateOf(playerState.player.playbackParameters.speed)
@@ -2056,11 +2058,13 @@ fun VideoPlayerSection(
                 playerViewRef?.player = null
                 return@LaunchedEffect
             }
+            // 横竖屏/小窗切换始终重绑；短后台跳过只作用于 ON_RESUME 恢复路径。
             val shouldRebindSurface = shouldRebindPlayerSurfaceOnForeground(
                 hasPlayerView = playerViewRef != null,
                 isInPipMode = isInPipMode,
                 videoWidth = player.videoSize.width,
-                videoHeight = player.videoSize.height
+                videoHeight = player.videoSize.height,
+                needsSurfaceRecovery = true
             )
             if (shouldRebindSurface) {
                 playerViewRef?.let { playerView ->
@@ -2082,7 +2086,10 @@ fun VideoPlayerSection(
             if (!shouldStartForegroundSurfaceRecovery(
                     hasPlayerView = playerViewRef != null,
                     shouldBindInlinePlayerView = shouldBindInlinePlayerView,
-                    isInPipMode = isInPipMode
+                    isInPipMode = isInPipMode,
+                    needsSurfaceRecovery = foregroundRecoveryNeedsSurface,
+                    videoWidth = playerState.player.videoSize.width,
+                    videoHeight = playerState.player.videoSize.height
                 )
             ) {
                 return@LaunchedEffect
@@ -2285,6 +2292,9 @@ fun VideoPlayerSection(
                         ) {
                             return@LifecycleEventObserver
                         }
+                        val needsSurfaceRecovery = MiniPlayerManager.getInstance(context)
+                            .consumeForegroundSurfaceRecoveryNeed()
+                        foregroundRecoveryNeedsSurface = needsSurfaceRecovery
                         foregroundRecoveryGeneration += 1
                         foregroundRecoveryStartedAtMs = android.os.SystemClock.elapsedRealtime()
                         foregroundRecoveryStartPositionMs = player.currentPosition.coerceAtLeast(0L)
@@ -2292,13 +2302,15 @@ fun VideoPlayerSection(
                         Logger.d("VideoPlayerSection") {
                             "🌅 ON_RESUME recovery start: pos=${player.currentPosition}, buffered=${player.bufferedPosition}, " +
                                 "state=${player.playbackState}, playing=${player.isPlaying}, playWhenReady=${player.playWhenReady}, " +
+                                "needsSurfaceRecovery=$needsSurfaceRecovery, " +
                                 "surface=${playerViewRef?.videoSurfaceView?.javaClass?.simpleName}"
                         }
                         val shouldRebindSurface = shouldRebindPlayerSurfaceOnForeground(
                             hasPlayerView = playerViewRef != null,
                             isInPipMode = isInPipMode,
                             videoWidth = player.videoSize.width,
-                            videoHeight = player.videoSize.height
+                            videoHeight = player.videoSize.height,
+                            needsSurfaceRecovery = needsSurfaceRecovery
                         )
                         if (shouldRebindSurface) {
                             playerViewRef?.let { playerView ->
@@ -2306,6 +2318,10 @@ fun VideoPlayerSection(
                                 Logger.d("VideoPlayerSection") {
                                     "🎬 ON_RESUME surface rebind applied"
                                 }
+                            }
+                        } else {
+                            Logger.d("VideoPlayerSection") {
+                                "🌅 ON_RESUME skipped surface rebind (short-background light mode)"
                             }
                         }
                         if (shouldKickPlaybackAfterSurfaceRecovery(
