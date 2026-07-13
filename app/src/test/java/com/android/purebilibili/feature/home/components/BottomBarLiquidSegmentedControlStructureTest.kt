@@ -11,6 +11,26 @@ import kotlin.test.assertTrue
 class BottomBarLiquidSegmentedControlStructureTest {
 
     @Test
+    fun `liquid segmented labels keep bottom bar foreground opacity`() {
+        val onSurface = Color(0xFFF1F1F1)
+
+        assertEquals(
+            onSurface,
+            resolveLiquidSegmentedControlUnselectedTextColor(
+                onSurface = onSurface,
+                enabled = true
+            )
+        )
+        assertEquals(
+            onSurface.copy(alpha = 0.42f),
+            resolveLiquidSegmentedControlUnselectedTextColor(
+                onSurface = onSurface,
+                enabled = false
+            )
+        )
+    }
+
+    @Test
     fun `segmented labels reuse bottom bar glass content colors while moving`() {
         val unselected = Color(0xFF666666)
         val selected = Color(0xFFFF6699)

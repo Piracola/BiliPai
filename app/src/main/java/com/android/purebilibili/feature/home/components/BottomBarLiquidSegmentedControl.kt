@@ -114,6 +114,11 @@ internal fun resolveSegmentedControlChromeStyle(
     }
 }
 
+internal fun resolveLiquidSegmentedControlUnselectedTextColor(
+    onSurface: Color,
+    enabled: Boolean
+): Color = if (enabled) onSurface else onSurface.copy(alpha = 0.42f)
+
 internal fun resolveSegmentedControlIndicatorWidthDp(
     slotWidthDp: Float,
     indicatorHeightDp: Float,
@@ -449,7 +454,10 @@ fun BottomBarLiquidSegmentedControl(
     val themeColor = MaterialTheme.colorScheme.primary
     val selectedTextColor = selectedTextColorOverride ?: themeColor
     val unselectedTextColor = unselectedTextColorOverride
-        ?: MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.42f)
+        ?: resolveLiquidSegmentedControlUnselectedTextColor(
+            onSurface = MaterialTheme.colorScheme.onSurface,
+            enabled = enabled
+        )
     // Bottom-bar path: export is monochrome so SrcIn tint becomes pure theme color under glass.
     val exportTintColor = resolveAndroidNativeExportTintColor(
         themeColor = themeColor,
