@@ -9,6 +9,38 @@ import java.io.File
 class VideoDetailReturnCoverPolicyTest {
 
     @Test
+    fun `detail shell morph keeps an opaque surface while returning to the source card`() {
+        assertEquals(
+            1f,
+            resolveVideoDetailShellBackgroundAlphaTarget(
+                useReturningVisualState = true,
+                detailShellSharedBoundsEnabled = true,
+                coverSharedBoundsActive = false
+            )
+        )
+    }
+
+    @Test
+    fun `cover-only fallback can reveal the destination behind the detail shell`() {
+        assertEquals(
+            0f,
+            resolveVideoDetailShellBackgroundAlphaTarget(
+                useReturningVisualState = true,
+                detailShellSharedBoundsEnabled = false,
+                coverSharedBoundsActive = true
+            )
+        )
+        assertEquals(
+            1f,
+            resolveVideoDetailShellBackgroundAlphaTarget(
+                useReturningVisualState = false,
+                detailShellSharedBoundsEnabled = false,
+                coverSharedBoundsActive = true
+            )
+        )
+    }
+
+    @Test
     fun `force cover becomes active when explicit return flag is true`() {
         assertTrue(
             resolveForceCoverOnlyForReturn(

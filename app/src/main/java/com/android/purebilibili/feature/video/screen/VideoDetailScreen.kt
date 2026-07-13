@@ -308,6 +308,17 @@ internal fun shouldUseReturningVideoDetailVisualState(
     return forceCoverOnlyForReturn || isReturningFromDetail
 }
 
+internal fun resolveVideoDetailShellBackgroundAlphaTarget(
+    useReturningVisualState: Boolean,
+    detailShellSharedBoundsEnabled: Boolean,
+    coverSharedBoundsActive: Boolean
+): Float {
+    val coverOnlyReturn = useReturningVisualState &&
+        coverSharedBoundsActive &&
+        !detailShellSharedBoundsEnabled
+    return if (coverOnlyReturn) 0f else 1f
+}
+
 internal fun resolveCoverTakeoverDelayBeforeBackNavigationMillis(): Long {
     return COVER_TAKEOVER_PRE_BACK_DELAY_MILLIS
 }
@@ -1809,7 +1820,11 @@ fun VideoDetailScreen(
         isExitTransitionInProgress = isExitTransitionInProgress
     )
     val shellBackgroundAlpha by animateFloatAsState(
-        targetValue = if (useReturningVideoDetailVisualState && sharedBoundsActive) 0f else 1f,
+        targetValue = resolveVideoDetailShellBackgroundAlphaTarget(
+            useReturningVisualState = useReturningVideoDetailVisualState,
+            detailShellSharedBoundsEnabled = detailShellSharedBoundsEnabled,
+            coverSharedBoundsActive = coverSharedBoundsActive
+        ),
         animationSpec = tween(
             durationMillis = homeSharedTransitionMotionSpec.durationMillis.coerceAtLeast(1),
             easing = homeSharedTransitionMotionSpec.easing
