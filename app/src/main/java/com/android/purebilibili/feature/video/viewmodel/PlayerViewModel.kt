@@ -844,7 +844,7 @@ internal fun shouldRestoreAttachedPlayerFromLoadedUi(
         attachedPlayerMediaItemCount == 0 &&
         loadedBvid == requestBvid &&
         (requestCid <= 0L || loadedCid == requestCid) &&
-        loadedAudioLang == requestAudioLang
+        (requestAudioLang == null || loadedAudioLang == requestAudioLang)
 }
 
 internal fun resolveExternalPlaylistSyncDecision(

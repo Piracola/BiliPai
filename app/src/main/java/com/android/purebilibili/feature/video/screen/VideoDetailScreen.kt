@@ -20,6 +20,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -160,6 +161,7 @@ import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
+import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionEasing
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionPlaybackIntent
@@ -308,6 +310,13 @@ internal fun shouldTreatVideoDetailCardExitAsReturning(
     return isExitTransitionInProgress &&
         sharedBoundsActive &&
         !keepLoadedContentForBackPreview
+}
+
+internal fun shouldForceBackPreviewPlayerCover(
+    keepLoadedContentForBackPreview: Boolean,
+    bindLivePlayerForBackPreview: Boolean
+): Boolean {
+    return keepLoadedContentForBackPreview && !bindLivePlayerForBackPreview
 }
 
 internal fun resolveCoverTakeoverDelayBeforeBackNavigationMillis(): Long {
@@ -643,6 +652,21 @@ internal data class VideoDetailRouteSheetFrame(
     val backgroundScrimAlpha: Float,
     val settleProgress: Float
 )
+
+internal data class VideoDetailCardReturnSecondaryContentTiming(
+    val delayMillis: Int,
+    val durationMillis: Int
+)
+
+internal fun resolveVideoDetailCardReturnSecondaryContentTiming(
+    fullDurationMillis: Int
+): VideoDetailCardReturnSecondaryContentTiming {
+    val safeDuration = fullDurationMillis.coerceAtLeast(0)
+    return VideoDetailCardReturnSecondaryContentTiming(
+        delayMillis = (safeDuration * 0.58f).roundToInt(),
+        durationMillis = (safeDuration * 0.32f).roundToInt()
+    )
+}
 
 internal data class VideoDetailMotionSpec(
     val entryPhaseDurationMillis: Int,
@@ -1009,6 +1033,7 @@ private fun PortraitInlineVideoPlayerHost(
     forceCoverOnly: Boolean,
     liveBackPreview: Boolean,
     useTextureSurfaceForNavigation: Boolean,
+    predictiveBackCancelRecoveryGeneration: Int,
     allowLivePlayerSharedElement: Boolean,
     sourceRouteForSharedElement: String?,
     suppressSubtitleOverlay: Boolean,
@@ -1081,6 +1106,7 @@ private fun PortraitInlineVideoPlayerHost(
             forceCoverOnly = forceCoverOnly,
             liveBackPreview = liveBackPreview,
             useTextureSurfaceForNavigation = useTextureSurfaceForNavigation,
+            predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,
             allowLivePlayerSharedElement = allowLivePlayerSharedElement,
             sourceRouteForSharedElement = sourceRouteForSharedElement,
             suppressSubtitleOverlay = suppressSubtitleOverlay,
@@ -1112,6 +1138,8 @@ fun VideoDetailScreen(
     openCommentTargetRpidFromRoute: Long = 0L,
     sourceRouteForSharedElement: String? = null,
     keepLoadedContentForBackPreview: Boolean = false,
+    bindLivePlayerForBackPreview: Boolean = keepLoadedContentForBackPreview,
+    predictiveBackCancelRecoveryGeneration: Int = 0,
     isReturningFromDetail: Boolean = false,
     isQuickReturningFromDetail: Boolean = false,
     onMarkReturningFromDetail: () -> Unit = {},
@@ -1772,6 +1800,36 @@ fun VideoDetailScreen(
         hasSharedTransitionScope = rootSharedTransitionScope != null,
         hasAnimatedVisibilityScope = rootAnimatedVisibilityScope != null
     )
+    val secondaryContentTiming = remember(homeSharedTransitionMotionSpec.durationMillis) {
+        resolveVideoDetailCardReturnSecondaryContentTiming(
+            fullDurationMillis = homeSharedTransitionMotionSpec.durationMillis
+        )
+    }
+    val detailSecondaryContentAlpha = if (
+        detailShellSharedBoundsEnabled && rootAnimatedVisibilityScope != null
+    ) {
+        rootAnimatedVisibilityScope.transition.animateFloat(
+            transitionSpec = {
+                if (targetState == EnterExitState.PostExit) {
+                    tween(
+                        durationMillis = secondaryContentTiming.durationMillis,
+                        delayMillis = secondaryContentTiming.delayMillis,
+                        easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedExit
+                    )
+                } else {
+                    tween(
+                        durationMillis = VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS,
+                        easing = FastOutSlowInEasing
+                    )
+                }
+            },
+            label = "video-detail-card-return-secondary-content"
+        ) { state ->
+            if (state == EnterExitState.PostExit) 0f else 1f
+        }
+    } else {
+        remember { mutableFloatStateOf(1f) }
+    }
     val detailChildTransitionEnabled = transitionEnabled && !detailShellSharedBoundsEnabled
     val coverSharedBoundsActive = shouldEnableVideoCoverSharedTransition(
         transitionEnabled = detailChildTransitionEnabled,
@@ -2214,6 +2272,7 @@ fun VideoDetailScreen(
         fallbackResumePositionMs = resumePositionMsFromRoute,
         startPaused = isPortraitFullscreen && !useSharedPortraitPlayer,
         entryTransitionFinished = entryTransitionFinished,
+        playbackSessionActive = isVisible,
     )
     val shouldKeepVideoScreenAwake by produceState(
         initialValue = shouldKeepVideoPlaybackAwake(
@@ -2799,7 +2858,8 @@ fun VideoDetailScreen(
         }
     }
 
-    LaunchedEffect(uiState, currentBvid, currentBvidCid, isPortraitFullscreen, bvid) {
+    LaunchedEffect(uiState, currentBvid, currentBvidCid, isPortraitFullscreen, bvid, isVisible) {
+        if (!isVisible) return@LaunchedEffect
         val success = uiState as? PlayerUiState.Success ?: return@LaunchedEffect
         if (!shouldSyncMainPlayerToInternalBvid(
                 isPortraitFullscreen = isPortraitFullscreen,
@@ -2870,7 +2930,7 @@ fun VideoDetailScreen(
     var lastCachedMiniPlayerBvid by remember { mutableStateOf<String?>(null) }
 
     //  核心修改：初始化评论 & 媒体中心信息
-    LaunchedEffect(uiState) {
+    LaunchedEffect(uiState, isVisible) {
         if (uiState is PlayerUiState.Success) {
             val info = (uiState as PlayerUiState.Success).info
             val success = uiState as PlayerUiState.Success
@@ -2899,7 +2959,7 @@ fun VideoDetailScreen(
             // 🔧 [性能优化] 只有首次加载或视频切换时才缓存 MiniPlayer 信息
             val shouldCacheMiniPlayer = lastCachedMiniPlayerBvid != currentBvid
 
-            if (miniPlayerManager != null && shouldCacheMiniPlayer) {
+            if (miniPlayerManager != null && shouldCacheMiniPlayer && isVisible) {
                 lastCachedMiniPlayerBvid = currentBvid
 
                 // PiP 判断依赖 MiniPlayerManager 的 active/player/playing/bvid 状态。
@@ -3198,6 +3258,7 @@ fun VideoDetailScreen(
                     },
                     forceCoverOnly = forceCoverOnlyForReturn,
                     useTextureSurfaceForNavigation = transitionEnabled,
+                    predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,
                     allowLivePlayerSharedElement = true,
                     sourceRouteForSharedElement = sourceRouteForSharedElement,
                     suppressSubtitleOverlay = shouldSuppressSubtitleOverlay,
@@ -3262,7 +3323,8 @@ fun VideoDetailScreen(
                             // 🔁 [新增] 播放模式
                             currentPlayMode = currentPlayMode,
                             onPlayModeClick = { com.android.purebilibili.feature.video.player.PlaylistManager.togglePlayMode() },
-                            forceCoverOnlyOnReturn = forceCoverOnlyForReturn
+                            forceCoverOnlyOnReturn = forceCoverOnlyForReturn,
+                            predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration
                         )
                     } else {
                         // 📱 手机竖屏：原有单列布局
@@ -3692,9 +3754,14 @@ fun VideoDetailScreen(
                                     isNavigatingToAudioMode = true
                                     onNavigateToAudioMode()
                                 },
-                                forceCoverOnly = forceCoverOnlyForReturn,
-                                liveBackPreview = keepLoadedContentForBackPreview,
+                                forceCoverOnly = forceCoverOnlyForReturn ||
+                                    shouldForceBackPreviewPlayerCover(
+                                        keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
+                                        bindLivePlayerForBackPreview = bindLivePlayerForBackPreview
+                                    ),
+                                liveBackPreview = bindLivePlayerForBackPreview,
                                 useTextureSurfaceForNavigation = transitionEnabled,
+                                predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,
                                 allowLivePlayerSharedElement = true,
                                 sourceRouteForSharedElement = sourceRouteForSharedElement,
                                 suppressSubtitleOverlay = shouldSuppressSubtitleOverlay,
@@ -3708,6 +3775,7 @@ fun VideoDetailScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(MaterialTheme.colorScheme.background)
+                                .graphicsLayer { alpha = detailSecondaryContentAlpha.value }
                                 // .nestedScroll(nestedScrollConnection) // [Remove] 移除嵌套滚动，确保 Tabs 正常滑动
                         ) {
                             when (uiState) {

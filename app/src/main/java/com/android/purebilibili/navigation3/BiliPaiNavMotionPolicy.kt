@@ -106,6 +106,29 @@ internal fun resolveBiliPaiBackGestureDecision(
     )
 }
 
+internal fun shouldBindVideoDetailBackPreviewPlayer(
+    currentKey: BiliPaiNavKey?,
+    previewKey: BiliPaiNavKey?
+): Boolean {
+    return previewKey is BiliPaiNavKey.VideoDetail && currentKey !is BiliPaiNavKey.VideoDetail
+}
+
+internal fun shouldActivateVideoDetailPlaybackSession(
+    currentKey: BiliPaiNavKey?,
+    detailKey: BiliPaiNavKey.VideoDetail,
+    isImmediateBackPreview: Boolean
+): Boolean {
+    return currentKey == detailKey ||
+        (isImmediateBackPreview && currentKey !is BiliPaiNavKey.VideoDetail)
+}
+
+internal fun shouldRecoverVideoPlayerAfterBackCancellation(
+    currentKey: BiliPaiNavKey?,
+    targetKey: BiliPaiNavKey?
+): Boolean {
+    return currentKey is BiliPaiNavKey.VideoDetail && targetKey is BiliPaiNavKey.VideoDetail
+}
+
 /**
  * 解析 [BiliPaiNavDisplayHost] 全局 `popTransitionSpec` / `predictivePopTransitionSpec` 使用的过渡。
  *

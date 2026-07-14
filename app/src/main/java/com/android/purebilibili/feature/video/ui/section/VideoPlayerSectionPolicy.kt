@@ -1176,6 +1176,18 @@ internal fun shouldBindInlinePlayerViewToPlayer(
         (hostLifecycleStarted || isInPipMode || liveBackPreview)
 }
 
+internal fun shouldRecoverInlinePlayerAfterPredictiveBackCancel(
+    recoveryGeneration: Int,
+    hasPlayerView: Boolean,
+    shouldBindInlinePlayerView: Boolean,
+    isInPipMode: Boolean
+): Boolean {
+    return recoveryGeneration > 0 &&
+        hasPlayerView &&
+        shouldBindInlinePlayerView &&
+        !isInPipMode
+}
+
 internal fun shouldLoadDanmakuForForegroundHost(
     hostLifecycleStarted: Boolean,
     shouldLoadImmediately: Boolean

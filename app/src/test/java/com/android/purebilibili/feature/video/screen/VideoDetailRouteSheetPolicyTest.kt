@@ -8,6 +8,14 @@ import kotlin.test.assertTrue
 class VideoDetailRouteSheetPolicyTest {
 
     @Test
+    fun cardReturnSecondaryContent_fadesLateWhilePlayerRemainsVisible() {
+        val timing = resolveVideoDetailCardReturnSecondaryContentTiming(fullDurationMillis = 400)
+
+        assertEquals(232, timing.delayMillis)
+        assertEquals(128, timing.durationMillis)
+    }
+
+    @Test
     fun cardReturnTargetSourcesEnableRouteSheetMotion() {
         listOf(
             "home",

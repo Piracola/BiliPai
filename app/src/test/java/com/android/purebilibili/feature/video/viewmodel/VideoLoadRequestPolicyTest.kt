@@ -33,6 +33,25 @@ class VideoLoadRequestPolicyTest {
     }
 
     @Test
+    fun `return restore keeps the loaded audio language without showing skeleton`() {
+        assertTrue(
+            shouldRestoreAttachedPlayerFromLoadedUi(
+                force = false,
+                requestBvid = "BV-parent",
+                requestCid = 0L,
+                requestAudioLang = null,
+                ignoreSavedProgress = false,
+                videoCodecOverride = null,
+                loadedBvid = "BV-parent",
+                loadedCid = 123L,
+                loadedAudioLang = "japanese",
+                loadedPlayUrlAvailable = true,
+                attachedPlayerMediaItemCount = 0,
+            )
+        )
+    }
+
+    @Test
     fun `accepts result when request token and bvid both match current`() {
         assertTrue(
             shouldApplyVideoLoadResult(

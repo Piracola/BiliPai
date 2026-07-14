@@ -26,6 +26,20 @@ class VideoDetailMiniPlayerSyncStructureTest {
         assertFalse(miniPlayerSyncBlock.contains("withContext(Dispatchers.Main)"))
     }
 
+    @Test
+    fun backPreviewCannotReplaceTheCurrentMiniPlayerSession() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
+        val playerStateBlock = source
+            .substringAfter("val playerState = rememberVideoPlayerState(")
+            .substringBefore("val shouldKeepVideoScreenAwake")
+        val syncEffect = source
+            .substringAfter("LaunchedEffect(uiState, isVisible)")
+            .substringBefore("//  弹幕加载逻辑已移至 VideoPlayerState")
+
+        assertTrue(playerStateBlock.contains("playbackSessionActive = isVisible"))
+        assertTrue(syncEffect.contains("miniPlayerManager != null && shouldCacheMiniPlayer && isVisible"))
+    }
+
     private fun loadSource(path: String): String {
         val candidates = listOf(
             File(path),

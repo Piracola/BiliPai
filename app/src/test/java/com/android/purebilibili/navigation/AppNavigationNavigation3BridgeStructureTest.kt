@@ -101,6 +101,28 @@ class AppNavigationNavigation3BridgeStructureTest {
     }
 
     @Test
+    fun videoBackCancellationRestoresOnlyTheCurrentVideoPlayerSurface() {
+        val source = appNavigationSource()
+        val navHostCall = source
+            .substringAfter("BiliPaiNavDisplayHost(")
+            .substringBefore(") { key ->")
+
+        assertTrue(navHostCall.contains("onNativeVideoBackCancelled ="))
+        assertTrue(source.contains("predictiveBackCancelRecoveryGeneration ="))
+        assertTrue(source.contains("shouldBindVideoDetailBackPreviewPlayer("))
+    }
+
+    @Test
+    fun videoBackPreviewDoesNotActivateTheTargetPlaybackSession() {
+        val videoDetailBranch = appNavigationSource()
+            .substringAfter("BiliPaiNavEntryContentRole.VIDEO_DETAIL ->")
+            .substringBefore("BiliPaiNavEntryContentRole.ARTICLE_DETAIL ->")
+
+        assertTrue(videoDetailBranch.contains("isVisible = shouldActivateVideoDetailPlaybackSession("))
+        assertFalse(videoDetailBranch.contains("isVisible = true"))
+    }
+
+    @Test
     fun homeVideoUsesComposeCardShellContainerTransformWithoutNativeBackgroundPreview() {
         val source = appNavigationSource()
         val videoDetailBranch = source

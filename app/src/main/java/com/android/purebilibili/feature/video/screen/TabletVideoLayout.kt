@@ -109,7 +109,8 @@ fun TabletVideoLayout(
     // 🔁 [新增] 播放模式
     currentPlayMode: com.android.purebilibili.feature.video.player.PlayMode = com.android.purebilibili.feature.video.player.PlayMode.SEQUENTIAL,
     onPlayModeClick: () -> Unit = {},
-    forceCoverOnlyOnReturn: Boolean = false
+    forceCoverOnlyOnReturn: Boolean = false,
+    predictiveBackCancelRecoveryGeneration: Int = 0
 ) {
     val layoutPolicy = remember(configuration.screenWidthDp) {
         resolveTabletVideoLayoutPolicy(
@@ -196,6 +197,7 @@ fun TabletVideoLayout(
                             isFullscreen = false,
                             isInPipMode = isInPipMode,
                             useTextureSurfaceForNavigation = transitionEnabled,
+                            predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,
                             onToggleFullscreen = onToggleFullscreen,
                             onQualityChange = { qid -> viewModel.changeQuality(qid) },
                             onBack = onBack,

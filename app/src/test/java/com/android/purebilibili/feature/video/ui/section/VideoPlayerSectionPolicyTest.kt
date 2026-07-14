@@ -738,6 +738,26 @@ class VideoPlayerSectionPolicyTest {
     }
 
     @Test
+    fun predictiveBackCancelRecovery_runsOnlyForTheCurrentBoundInlinePlayer() {
+        assertTrue(
+            shouldRecoverInlinePlayerAfterPredictiveBackCancel(
+                recoveryGeneration = 1,
+                hasPlayerView = true,
+                shouldBindInlinePlayerView = true,
+                isInPipMode = false
+            )
+        )
+        assertFalse(
+            shouldRecoverInlinePlayerAfterPredictiveBackCancel(
+                recoveryGeneration = 1,
+                hasPlayerView = true,
+                shouldBindInlinePlayerView = false,
+                isInPipMode = false
+            )
+        )
+    }
+
+    @Test
     fun danmakuReload_runsOnlyWhenForegroundHostCanActuallyLoad() {
         assertTrue(
             shouldLoadDanmakuForForegroundHost(

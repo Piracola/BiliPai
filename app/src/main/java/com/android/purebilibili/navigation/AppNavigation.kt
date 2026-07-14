@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue //  新增
 import androidx.compose.runtime.LaunchedEffect // 新增
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -160,6 +161,9 @@ import com.android.purebilibili.navigation3.resolveBiliPaiNavCardSourceDirection
 import com.android.purebilibili.navigation3.resolveBiliPaiNavEntryContentRole
 import com.android.purebilibili.navigation3.resolveNavigation3SaveableStateKey
 import com.android.purebilibili.navigation3.resolveBiliPaiNavSourceMetadata
+import com.android.purebilibili.navigation3.shouldBindVideoDetailBackPreviewPlayer
+import com.android.purebilibili.navigation3.shouldActivateVideoDetailPlaybackSession
+import com.android.purebilibili.navigation3.shouldRecoverVideoPlayerAfterBackCancellation
 import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
@@ -421,6 +425,7 @@ fun AppNavigation(
                 )
             )
         }
+        var predictiveBackCancelRecoveryGeneration by remember { mutableIntStateOf(0) }
         val currentNavigation3Key = navigation3BackStack.lastOrNull()
         val currentRoute = currentNavigation3Key?.toLegacyRoute()
         val configuredHomeWallpaperUri by SettingsManager.getHomeWallpaperUri(context).collectAsStateWithLifecycle(initialValue = ""
@@ -1863,7 +1868,12 @@ fun AppNavigation(
                                 onUpClick = { mid -> pushNavigation3Route(ScreenRoutes.Space.createRoute(mid)) },
                                 miniPlayerManager = miniPlayerManager,
                                 isInPipMode = isInPipMode,
-                                isVisible = true,
+                                isVisible = shouldActivateVideoDetailPlaybackSession(
+                                    currentKey = navigation3BackStack.lastOrNull(),
+                                    detailKey = videoKey,
+                                    isImmediateBackPreview =
+                                        navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1) == videoKey
+                                ),
                                 startInFullscreen = videoKey.fullscreen,
                                 startAudioFromRoute = videoKey.startAudio,
                                 autoEnterPortraitFromRoute = videoKey.autoPortrait,
@@ -1874,6 +1884,16 @@ fun AppNavigation(
                                 sourceRouteForSharedElement = videoKey.sourceRoute,
                                 keepLoadedContentForBackPreview =
                                     navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1) == videoKey,
+                                bindLivePlayerForBackPreview =
+                                    navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1) == videoKey &&
+                                        shouldBindVideoDetailBackPreviewPlayer(
+                                            currentKey = navigation3BackStack.lastOrNull(),
+                                            previewKey = videoKey
+                                        ),
+                                predictiveBackCancelRecoveryGeneration =
+                                    predictiveBackCancelRecoveryGeneration.takeIf {
+                                        navigation3BackStack.lastOrNull() == videoKey
+                                    } ?: 0,
                                 isReturningFromDetail = navigation3ReturnSession.isReturningFromDetail,
                                 isQuickReturningFromDetail = navigation3ReturnSession.isQuickReturnFromDetail,
                                 onMarkReturningFromDetail = {
@@ -2783,6 +2803,11 @@ fun AppNavigation(
                     predictiveBackExitDirectionOverride = predictiveBackExitDirection,
                     sourceMetadata = navigation3SourceMetadata,
                     onBack = { performSystemBackAction() },
+                    onNativeVideoBackCancelled = { currentKey, targetKey ->
+                        if (shouldRecoverVideoPlayerAfterBackCancellation(currentKey, targetKey)) {
+                            predictiveBackCancelRecoveryGeneration += 1
+                        }
+                    },
                     modifier = Modifier.fillMaxSize(),
                     sharedTransitionScope = LocalSharedTransitionScope.current,
                     visibleBottomBarRoutes = visibleBottomBarRoutes,

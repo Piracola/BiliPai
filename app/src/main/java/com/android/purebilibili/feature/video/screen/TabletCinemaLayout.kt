@@ -174,7 +174,8 @@ fun TabletCinemaLayout(
     currentPlayMode: com.android.purebilibili.feature.video.player.PlayMode =
         com.android.purebilibili.feature.video.player.PlayMode.SEQUENTIAL,
     onPlayModeClick: () -> Unit = {},
-    forceCoverOnlyOnReturn: Boolean = false
+    forceCoverOnlyOnReturn: Boolean = false,
+    predictiveBackCancelRecoveryGeneration: Int = 0
 ) {
     val appContext = LocalContext.current
     val tabletCommentPanelWidthPreset by SettingsManager
@@ -282,7 +283,8 @@ fun TabletCinemaLayout(
                     onPlayModeClick = onPlayModeClick,
                     onRelatedVideoClick = onRelatedVideoClick,
                     playerMaxWidth = policy.playerMaxWidthDp.dp,
-                    forceCoverOnlyOnReturn = forceCoverOnlyOnReturn
+                    forceCoverOnlyOnReturn = forceCoverOnlyOnReturn,
+                    predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration
                 )
 
                 if (success != null) {
@@ -398,7 +400,8 @@ private fun CinemaStagePlayer(
     onPlayModeClick: () -> Unit,
     onRelatedVideoClick: (String, android.os.Bundle?) -> Unit,
     playerMaxWidth: Dp,
-    forceCoverOnlyOnReturn: Boolean
+    forceCoverOnlyOnReturn: Boolean,
+    predictiveBackCancelRecoveryGeneration: Int
 ) {
     val context = LocalContext.current
     val success = uiState as? PlayerUiState.Success
@@ -449,6 +452,7 @@ private fun CinemaStagePlayer(
                 isFullscreen = false,
                 isInPipMode = isInPipMode,
                 useTextureSurfaceForNavigation = transitionEnabled,
+                predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,
                 onToggleFullscreen = onToggleFullscreen,
                 onQualityChange = { qid -> viewModel.changeQuality(qid) },
                 onBack = onBack,

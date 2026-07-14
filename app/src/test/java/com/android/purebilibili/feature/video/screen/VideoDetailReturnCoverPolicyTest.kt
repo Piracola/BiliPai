@@ -36,6 +36,22 @@ class VideoDetailReturnCoverPolicyTest {
     }
 
     @Test
+    fun `video target without player ownership uses its own cover behind the live outgoing video`() {
+        assertTrue(
+            shouldForceBackPreviewPlayerCover(
+                keepLoadedContentForBackPreview = true,
+                bindLivePlayerForBackPreview = false
+            )
+        )
+        assertFalse(
+            shouldForceBackPreviewPlayerCover(
+                keepLoadedContentForBackPreview = true,
+                bindLivePlayerForBackPreview = true
+            )
+        )
+    }
+
+    @Test
     fun `immediate back target mounts the live inline player`() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
             .readText()
@@ -44,7 +60,7 @@ class VideoDetailReturnCoverPolicyTest {
             .substringAfter("PortraitInlineVideoPlayerHost(", "")
             .substringBefore("allowLivePlayerSharedElement = true")
 
-        assertTrue(inlinePlayerCall.contains("liveBackPreview = keepLoadedContentForBackPreview"))
+        assertTrue(inlinePlayerCall.contains("liveBackPreview = bindLivePlayerForBackPreview"))
     }
 
     @Test

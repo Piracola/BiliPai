@@ -451,6 +451,7 @@ fun VideoPlayerSection(
     forceCoverOnly: Boolean = false,
     liveBackPreview: Boolean = false,
     useTextureSurfaceForNavigation: Boolean = false,
+    predictiveBackCancelRecoveryGeneration: Int = 0,
     allowLivePlayerSharedElement: Boolean = true,
     sourceRouteForSharedElement: String? = null,
     suppressSubtitleOverlay: Boolean = false,
@@ -2075,6 +2076,45 @@ fun VideoPlayerSection(
                         "🎬 Foreground surface rebind applied to avoid audio-only resume"
                     }
                 }
+            }
+        }
+
+        LaunchedEffect(
+            predictiveBackCancelRecoveryGeneration,
+            playerViewRef,
+            shouldBindInlinePlayerView,
+            isInPipMode
+        ) {
+            if (!shouldRecoverInlinePlayerAfterPredictiveBackCancel(
+                    recoveryGeneration = predictiveBackCancelRecoveryGeneration,
+                    hasPlayerView = playerViewRef != null,
+                    shouldBindInlinePlayerView = shouldBindInlinePlayerView,
+                    isInPipMode = isInPipMode
+                )
+            ) {
+                return@LaunchedEffect
+            }
+            val player = playerState.player
+            playerViewRef?.let { playerView ->
+                rebindPlayerSurfaceIfNeeded(playerView = playerView, player = player)
+            }
+            if (shouldKickPlaybackAfterSurfaceRecovery(
+                    playWhenReady = player.playWhenReady,
+                    isPlaying = player.isPlaying,
+                    playbackState = player.playbackState,
+                    hasPlaybackResumeIntent = true
+                )
+            ) {
+                player.play()
+            }
+            danmakuManager.recoverAfterForeground(
+                positionMs = player.currentPosition.coerceAtLeast(0L),
+                playWhenReady = player.playWhenReady,
+                playbackState = player.playbackState
+            )
+            Logger.d("VideoPlayerSection") {
+                "↩️ Predictive back cancel restored current video surface: " +
+                    "generation=$predictiveBackCancelRecoveryGeneration, pos=${player.currentPosition}"
             }
         }
 

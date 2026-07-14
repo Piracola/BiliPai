@@ -760,6 +760,7 @@ fun rememberVideoPlayerState(
     fallbackResumePositionMs: Long = 0L,
     startPaused: Boolean = false,
     entryTransitionFinished: Boolean = true,
+    playbackSessionActive: Boolean = true,
 ): VideoPlayerState {
 
     //  尝试复用 MiniPlayerManager 中已加载的 player
@@ -879,7 +880,7 @@ fun rememberVideoPlayerState(
                 .apply {
                     //  [修复] 确保音量正常，解决第二次播放静音问题
                     //  如果 startPaused 为 true，则静音
-                    volume = if (startPaused) {
+                    volume = if (startPaused || !playbackSessionActive) {
                         0f
                     } else {
                         com.android.purebilibili.core.player.PlayerVolumeController
@@ -888,7 +889,7 @@ fun rememberVideoPlayerState(
                     setPlaybackSpeed(preferredPlaybackSpeed)
                     //  [重构] 不在此处调用 prepare()，因为还没有媒体源
                     // prepare() 和 playWhenReady 将在 attachPlayer/loadVideo 设置媒体源后调用
-                    playWhenReady = !startPaused
+                    playWhenReady = !startPaused && playbackSessionActive
                 }
         }
     }
@@ -1214,7 +1215,13 @@ fun rememberVideoPlayerState(
         reuseFromMiniPlayerAtEntry,
         fallbackResumePositionMs,
         entryTransitionFinished,
+        playbackSessionActive,
     ) {
+        if (!playbackSessionActive) {
+            Logger.d("VideoPlayerState", "Back preview keeps UI only; skip playback session: request=$bvid/$cid")
+            return@LaunchedEffect
+        }
+
         // 1️⃣ 首先绑定 player
         viewModel.attachPlayer(player)
         Logger.d(

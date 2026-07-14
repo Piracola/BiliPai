@@ -7,6 +7,7 @@ import com.android.purebilibili.navigation3.predictiveback.BiliPaiSharedElementP
 import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiPredictiveBackAnimationHandler
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -115,6 +116,39 @@ class BiliPaiPredictiveBackAnimationPolicyTest {
             predictiveBackEnabled = false,
         )
         assertTrue(handler is BiliPaiDisabledPredictiveBackAnimation)
+    }
+
+    @Test
+    fun disabledPredictivePreview_keepsRelatedDetailSharedElementPop() {
+        val from = BiliPaiNavKey.VideoDetail("BV_B", sourceRoute = "video/BV_A")
+        val to = BiliPaiNavKey.VideoDetail("BV_A")
+
+        assertTrue(
+            resolveBiliPaiPredictiveBackAnimationHandler(
+                routeTransition = BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT,
+                predictiveBackEnabled = false,
+            ) is BiliPaiDisabledPredictiveBackAnimation
+        )
+        assertEquals(
+            BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT,
+            resolveBiliPaiNavDisplayPopRouteTransition(
+                cardTransitionEnabled = true,
+                sourceMetadata = BiliPaiNavSourceMetadata(),
+                fromKey = from,
+                toKey = to,
+            )
+        )
+        assertEquals(
+            BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT,
+            resolveBiliPaiNavEntryPopRouteTransition(
+                defaultTransition = BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT,
+                fromRoute = from.routeBase,
+                toRoute = to.routeBase,
+                cardTransitionEnabled = true,
+                sharedElementPopReady = true,
+                sourceMetadata = BiliPaiNavSourceMetadata(),
+            )
+        )
     }
 
     @Test

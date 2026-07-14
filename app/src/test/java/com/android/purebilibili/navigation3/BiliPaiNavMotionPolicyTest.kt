@@ -11,6 +11,57 @@ import kotlin.test.assertTrue
 class BiliPaiNavMotionPolicyTest {
 
     @Test
+    fun videoToVideoBackPreview_doesNotStealTheSharedPlayerSurface() {
+        val current = BiliPaiNavKey.VideoDetail("BV_B", sourceRoute = "video/BV_A")
+        val preview = BiliPaiNavKey.VideoDetail("BV_A")
+
+        assertFalse(
+            shouldBindVideoDetailBackPreviewPlayer(
+                currentKey = current,
+                previewKey = preview
+            )
+        )
+        assertTrue(
+            shouldActivateVideoDetailPlaybackSession(
+                currentKey = current,
+                detailKey = current,
+                isImmediateBackPreview = false
+            )
+        )
+        assertFalse(
+            shouldActivateVideoDetailPlaybackSession(
+                currentKey = current,
+                detailKey = preview,
+                isImmediateBackPreview = true
+            )
+        )
+        assertTrue(
+            shouldRecoverVideoPlayerAfterBackCancellation(
+                currentKey = current,
+                targetKey = preview
+            )
+        )
+    }
+
+    @Test
+    fun nonVideoBackPreview_canBindTheTargetDetailPlayer() {
+        val preview = BiliPaiNavKey.VideoDetail("BV_A")
+        assertTrue(
+            shouldBindVideoDetailBackPreviewPlayer(
+                currentKey = BiliPaiNavKey.Settings,
+                previewKey = preview
+            )
+        )
+        assertTrue(
+            shouldActivateVideoDetailPlaybackSession(
+                currentKey = BiliPaiNavKey.Settings,
+                detailKey = preview,
+                isImmediateBackPreview = true
+            )
+        )
+    }
+
+    @Test
     fun cardTransitionEnabled_usesClassicCardMode() {
         assertEquals(
             BiliPaiNavMotionMode.CLASSIC_CARD,
