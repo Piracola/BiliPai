@@ -192,6 +192,8 @@ class BiliPaiNavDisplayHostStructureTest {
 
         assertTrue(source.contains("val popRouteTransition = remember("))
         assertTrue(source.contains("resolveBiliPaiPredictiveBackAnimationHandler"))
+        assertTrue(source.contains("targetBackKey = targetBackKey"))
+        assertTrue(source.contains("cardTransitionEnabled = cardTransitionEnabled"))
         assertFalse(source.contains("resolveBiliPaiNavPopContentTransform(popRouteTransition)"))
     }
 
