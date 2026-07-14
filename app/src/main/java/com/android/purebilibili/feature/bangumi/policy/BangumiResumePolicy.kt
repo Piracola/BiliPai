@@ -47,6 +47,14 @@ internal fun resolveBangumiResumePositionMs(lastTimeSec: Long): Long {
     return lastTimeSec.coerceAtLeast(0L) * 1000L
 }
 
+internal fun resolveBangumiPlaybackStartPositionMs(
+    routeResumePositionMs: Long,
+    savedEpisodePositionMs: Long
+): Long {
+    return routeResumePositionMs.takeIf { it > 0L }
+        ?: savedEpisodePositionMs.coerceAtLeast(0L)
+}
+
 internal fun shouldSendBangumiPlaybackHeartbeat(
     isPlaying: Boolean,
     bvid: String,

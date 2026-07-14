@@ -866,7 +866,7 @@ fun AppNavigation(
                 sourceMetadata = navigation3SourceMetadata
             )
         }
-        val predictiveBackEnabled = true
+        val predictiveBackEnabled = appNavigationSettings.predictiveBackEnabled
         val shouldInterceptTabBack = backGestureDecision.interceptSystemBack
         val predictiveBackAnimationStyle = BiliPaiPredictiveBackAnimationStyle.DEFAULT
         val predictiveBackExitDirection = "auto"

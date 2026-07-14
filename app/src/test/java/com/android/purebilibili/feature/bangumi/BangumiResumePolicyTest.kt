@@ -46,4 +46,26 @@ class BangumiResumePolicyTest {
         assertEquals(0L, request.seasonId)
         assertEquals(1919810L, request.epId)
     }
+
+    @Test
+    fun `bangumi playback restores local episode progress when the route has none`() {
+        assertEquals(
+            45_000L,
+            resolveBangumiPlaybackStartPositionMs(
+                routeResumePositionMs = 0L,
+                savedEpisodePositionMs = 45_000L
+            )
+        )
+    }
+
+    @Test
+    fun `bangumi playback route progress overrides local episode progress`() {
+        assertEquals(
+            12_000L,
+            resolveBangumiPlaybackStartPositionMs(
+                routeResumePositionMs = 12_000L,
+                savedEpisodePositionMs = 45_000L
+            )
+        )
+    }
 }

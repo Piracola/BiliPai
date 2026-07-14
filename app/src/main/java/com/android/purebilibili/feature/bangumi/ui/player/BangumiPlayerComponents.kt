@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.ui.PlayerView
 import com.android.purebilibili.data.model.response.Page
 import com.android.purebilibili.core.util.FormatUtils
@@ -51,6 +53,8 @@ import com.android.purebilibili.feature.video.util.captureAndSaveVideoScreenshot
 import com.android.purebilibili.data.model.response.SponsorSegment
 import com.android.purebilibili.feature.bangumi.resolveBangumiDanmakuTopInsetDp
 import com.android.purebilibili.feature.bangumi.resolveBangumiPlayerTopControlsPaddingTopDp
+import com.android.purebilibili.core.store.DEFAULT_LONG_PRESS_SPEED
+import com.android.purebilibili.core.store.SettingsManager
 import kotlinx.coroutines.launch
 
 /**
@@ -153,6 +157,11 @@ fun BangumiPlayerView(
     var startVolumeStep by remember { mutableIntStateOf(0) }
     var totalVolumeDragDistanceY by remember { mutableFloatStateOf(0f) }
     var seekPreviewPosition by remember { mutableLongStateOf(0L) }
+    val longPressSpeed by SettingsManager.getLongPressSpeed(context)
+        .collectAsState(initial = DEFAULT_LONG_PRESS_SPEED)
+    var longPressOriginalPlaybackParameters by remember(exoPlayer) {
+        mutableStateOf(exoPlayer.playbackParameters)
+    }
     
     // 亮度状态
     var currentBrightness by remember {
@@ -185,6 +194,22 @@ fun BangumiPlayerView(
     Box(
         modifier = modifier
             .background(Color.Black)
+            .pointerInput(isScreenLocked, longPressSpeed, exoPlayer) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        if (isScreenLocked) return@detectDragGesturesAfterLongPress
+                        longPressOriginalPlaybackParameters = exoPlayer.playbackParameters
+                        exoPlayer.playbackParameters = PlaybackParameters(longPressSpeed)
+                    },
+                    onDragEnd = {
+                        exoPlayer.playbackParameters = longPressOriginalPlaybackParameters
+                    },
+                    onDragCancel = {
+                        exoPlayer.playbackParameters = longPressOriginalPlaybackParameters
+                    },
+                    onDrag = { change, _ -> change.consume() }
+                )
+            }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = {

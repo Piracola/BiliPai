@@ -12,6 +12,7 @@ import com.android.purebilibili.data.repository.BangumiRepository
 import com.android.purebilibili.feature.video.player.ExternalPlaylistSource
 import com.android.purebilibili.feature.video.player.PlaylistItem
 import com.android.purebilibili.feature.video.player.PlaylistManager
+import com.android.purebilibili.feature.video.controller.PlaybackProgressManager
 import com.android.purebilibili.feature.video.usecase.VideoInteractionUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -125,6 +126,7 @@ class BangumiPlayerViewModel : BasePlayerViewModel() {
     private var currentSeasonId: Long = 0
     private var currentEpId: Long = 0
     private var bangumiHeartbeatJob: Job? = null
+    private var progressManager: PlaybackProgressManager? = null
 
     //  [修复] 与详情页保持一致的追番状态缓存
     private val followStatusCache = mutableMapOf<Long, Boolean>()
@@ -195,6 +197,9 @@ class BangumiPlayerViewModel : BasePlayerViewModel() {
     override fun attachPlayer(player: ExoPlayer) {
         com.android.purebilibili.core.util.Logger.d("BangumiPlayerVM", "🔗 attachPlayer called, player hashCode: ${player.hashCode()}")
         super.attachPlayer(player)
+        NetworkModule.appContext?.let { context ->
+            progressManager = PlaybackProgressManager.getInstance(context)
+        }
         //  [新增] 添加播放完成监听
         player.addListener(playbackEndListener)
     }
@@ -253,7 +258,18 @@ class BangumiPlayerViewModel : BasePlayerViewModel() {
                 val episodeIndex = detail.episodes?.indexOfFirst { it.id == episode.id } ?: 0
                 
                 // 2. 获取播放地址
-                fetchPlayUrl(detail, episode, episodeIndex, startPositionMs)
+                fetchPlayUrl(
+                    detail = detail,
+                    episode = episode,
+                    episodeIndex = episodeIndex,
+                    startPositionMs = resolveBangumiPlaybackStartPositionMs(
+                        routeResumePositionMs = startPositionMs,
+                        savedEpisodePositionMs = progressManager?.getCachedPosition(
+                            bvid = episode.bvid,
+                            cid = episode.cid
+                        ) ?: 0L
+                    )
+                )
                 
             }.onFailure { e ->
                 _uiState.value = BangumiPlayerState.Error(
@@ -740,6 +756,12 @@ class BangumiPlayerViewModel : BasePlayerViewModel() {
         requirePlaying: Boolean = true
     ) {
         val currentPositionMs = getPlayerCurrentPosition()
+        progressManager?.savePosition(
+            bvid = bvid,
+            cid = episode.cid,
+            positionMs = currentPositionMs,
+            durationMs = getPlayerDuration()
+        )
         val isPlaying = if (requirePlaying) exoPlayer?.isPlaying == true else true
         if (!shouldSendBangumiPlaybackHeartbeat(
                 isPlaying = isPlaying,
