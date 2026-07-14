@@ -160,7 +160,6 @@ import com.android.purebilibili.navigation3.resolveBiliPaiNavEntryContentRole
 import com.android.purebilibili.navigation3.resolveNavigation3SaveableStateKey
 import com.android.purebilibili.navigation3.resolveBiliPaiNavSourceMetadata
 import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
-import com.android.purebilibili.navigation3.shouldUseClassicVideoCardBackHandler
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
 import com.android.purebilibili.navigation3.toLegacyRoute
@@ -1875,15 +1874,6 @@ fun AppNavigation(
                                 },
                                 transitionEnabled = shouldEnableVideoDetailSharedTransition(
                                     cardTransitionEnabled = cardTransitionEnabled
-                                ),
-                                useClassicVideoCardBackHandler = shouldUseClassicVideoCardBackHandler(
-                                    settingEnabled = appNavigationSettings.predictiveBackEnabled,
-                                    cardTransitionEnabled = cardTransitionEnabled,
-                                    videoKey = videoKey,
-                                    previousKey = navigation3BackStack.getOrNull(
-                                        navigation3BackStack.lastIndex - 1
-                                    ),
-                                    sourceMetadata = navigation3SourceMetadata
                                 ),
                                 transitionEnterDurationMillis = navMotionSpec.slowFadeDurationMillis,
                                 onBack = {

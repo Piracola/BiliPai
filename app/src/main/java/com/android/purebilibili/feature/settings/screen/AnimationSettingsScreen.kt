@@ -231,15 +231,14 @@ fun AnimationSettingsContent(
                         IOSDivider()
                         IOSSwitchItem(
                             icon = rememberSettingsSemanticIcon(SettingsIconRole.CARD_TRANSITION_ANIMATION),
-                            title = "返回预测",
-                            subtitle = "从视频详情返回原列表时，卡片随边缘手势收拢",
+                            title = "预测性返回手势",
+                            subtitle = "关闭后仍可边缘返回，但不显示跟手预览，松手后执行普通返回动画",
                             checked = appNavigationSettings.predictiveBackEnabled,
                             onCheckedChange = { enabled ->
                                 scope.launch {
                                     SettingsManager.setPredictiveBackEnabled(context, enabled)
                                 }
                             },
-                            enabled = state.cardTransitionEnabled,
                             iconTint = iOSTeal
                         )
                         IOSDivider()

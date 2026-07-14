@@ -1,6 +1,7 @@
 package com.android.purebilibili.navigation3
 
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiDefaultPredictiveBackAnimation
+import com.android.purebilibili.navigation3.predictiveback.BiliPaiDisabledPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiSharedElementPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiPredictiveBackAnimationHandler
@@ -84,21 +85,21 @@ class BiliPaiPredictiveBackAnimationPolicyTest {
     }
 
     @Test
-    fun legacyDisabledPreference_doesNotDisablePlatformPredictiveBack() {
+    fun disabledPreference_suppressesGlobalPredictivePreview() {
         val handler = resolveBiliPaiPredictiveBackAnimationHandler(
             routeTransition = BiliPaiNavRouteTransition.CLASSIC_CARD,
             predictiveBackEnabled = false,
         )
-        assertTrue(handler is BiliPaiDefaultPredictiveBackAnimation)
+        assertTrue(handler is BiliPaiDisabledPredictiveBackAnimation)
     }
 
     @Test
-    fun disabledSharedElementRoute_keepsSharedElementHandler() {
+    fun disabledSharedElementRoute_suppressesPredictivePreviewBeforeRoutePolicy() {
         val handler = resolveBiliPaiPredictiveBackAnimationHandler(
             routeTransition = BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT,
             predictiveBackEnabled = false,
         )
-        assertTrue(handler is BiliPaiSharedElementPredictiveBackAnimation)
+        assertTrue(handler is BiliPaiDisabledPredictiveBackAnimation)
     }
 
     @Test

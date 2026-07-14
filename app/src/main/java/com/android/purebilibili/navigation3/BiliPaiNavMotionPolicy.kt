@@ -47,35 +47,6 @@ internal fun resolveBiliPaiNavMotionMode(
     }
 }
 
-internal fun shouldUseClassicVideoCardBackHandler(
-    settingEnabled: Boolean,
-    cardTransitionEnabled: Boolean,
-    videoKey: BiliPaiNavKey.VideoDetail,
-    previousKey: BiliPaiNavKey?,
-    sourceMetadata: BiliPaiNavSourceMetadata
-): Boolean {
-    return (!settingEnabled || !cardTransitionEnabled) &&
-        isVideoCardReturnWithRecordedSource(
-            videoKey = videoKey,
-            previousKey = previousKey,
-            sourceMetadata = sourceMetadata
-        )
-}
-
-private fun isVideoCardReturnWithRecordedSource(
-    videoKey: BiliPaiNavKey.VideoDetail,
-    previousKey: BiliPaiNavKey?,
-    sourceMetadata: BiliPaiNavSourceMetadata
-): Boolean {
-    if (previousKey == null) return false
-    return resolveBiliPaiNavDisplayPopRouteTransition(
-        cardTransitionEnabled = true,
-        sourceMetadata = sourceMetadata,
-        fromKey = videoKey,
-        toKey = previousKey
-    ) == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
-}
-
 internal fun resolveBiliPaiNavMotionDecision(
     fromKey: BiliPaiNavKey?,
     toKey: BiliPaiNavKey?,

@@ -282,7 +282,7 @@ class AppNavigationNavigation3BridgeStructureTest {
         assertFalse(source.contains("video" + "PredictiveReturnToCardEnabled"))
         assertFalse(source.contains("video" + "PredictiveReturnSourceBounds"))
         assertFalse(source.contains("shouldEnableVideo" + "PredictiveReturnToCard"))
-        assertTrue(source.contains("val predictiveBackEnabled = true"))
+        assertTrue(source.contains("val predictiveBackEnabled = appNavigationSettings.predictiveBackEnabled"))
         assertTrue(source.contains("BiliPaiPredictiveBackAnimationStyle.DEFAULT"))
         assertFalse(source.contains("shouldUseClassicBackHandler"))
     }
