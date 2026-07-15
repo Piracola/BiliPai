@@ -266,7 +266,7 @@ tasks.matching { task ->
 // }
 
 dependencies {
-    val miuixVersion = "0.9.3"
+    val miuixVersion = "0.9.2"
     val material3Version = "1.5.0-alpha18"
     val media3Version = "1.10.0"
     val lifecycleVersion = "2.10.0"
@@ -352,8 +352,9 @@ dependencies {
     // --- 3.7 Startup (应用初始化) ---
     implementation("androidx.startup:startup-runtime:1.2.0")
     
-    // Liquid glass runtime: Miuix miuix-blur + local liquid/* adapters (InstallerX-aligned).
-    // Kyant AndroidLiquidGlass remains algorithm reference only — no Maven dep.
+    // --- 3.8 Backdrop (液态玻璃效果) ---
+    // 提供透镜折射、玻璃高光、连续圆角等 iOS/visionOS 风格视觉效果
+    implementation("io.github.kyant0:backdrop:2.0.0-alpha03")
 
 
     // --- 4. Player (视频播放器 Media3) ---

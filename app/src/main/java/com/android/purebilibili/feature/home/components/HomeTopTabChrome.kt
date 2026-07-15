@@ -34,7 +34,7 @@ import com.android.purebilibili.core.store.LiquidGlassStyle
 import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.ContainerLevel
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import dev.chrisbanes.haze.HazeState
 
 @Composable

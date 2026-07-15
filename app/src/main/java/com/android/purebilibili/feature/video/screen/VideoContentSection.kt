@@ -57,10 +57,10 @@ import com.android.purebilibili.core.ui.performance.TrackScrollJank
 import com.android.purebilibili.core.store.DanmakuSettings
 import com.android.purebilibili.core.store.HomeSettings
 import com.android.purebilibili.core.store.SettingsManager
-import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.theme.UiPreset
@@ -524,18 +524,11 @@ fun VideoContentSection(
             }
     }
 
-    // Backdrop source must cover every chrome consumer in window coordinates while staying
-    // outside the glass subtree itself; otherwise Miuix samples transparent black out of bounds.
+    // 采样层只挂在 Tab 页滚动内容上；排序栏/顶栏分段控件必须在捕获区外，避免 drawBackdrop 自引用导致 RenderThread 栈溢出。
     val videoContentChromeBackdrop = rememberLayerBackdrop()
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .layerBackdrop(videoContentChromeBackdrop)
-                .background(MaterialTheme.colorScheme.surface)
-        )
         // Inline 弹幕设置不是 Dialog，必须在详情内容之后绘制，避免被列表盖住。
         Column(
             modifier = Modifier.fillMaxSize()
@@ -569,6 +562,7 @@ fun VideoContentSection(
                     0 -> VideoIntroTab(
                         listState = introListState,
                         modifier = Modifier,
+                        chromeBackdrop = videoContentChromeBackdrop,
                         info = info,
                         relatedVideos = relatedVideos,
                         currentPageIndex = currentPageIndex,
@@ -784,12 +778,21 @@ private fun VideoIntroTab(
     onlineCount: String = "",
     showOnlineCount: Boolean = true,
     showInteractionActions: Boolean = true,
-    animateVideoDetailLayout: Boolean = true
+    animateVideoDetailLayout: Boolean = true,
+    chromeBackdrop: LayerBackdrop? = null
 ) {
     val hasPages = info.pages.size > 1
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .then(
+                if (chromeBackdrop != null) {
+                    Modifier.layerBackdrop(chromeBackdrop)
+                } else {
+                    Modifier
+                }
+            ),
         contentPadding = contentPadding
     ) {
         // 1. 移入的 Header 区域
@@ -979,13 +982,20 @@ private fun VideoCommentTab(
             onSortModeChange = onSortModeChange,
             upOnly = upOnlyFilter,
             onUpOnlyToggle = onUpOnlyToggle,
-            backdrop = chromeBackdrop,
-            backdropCoversControl = chromeBackdrop != null
+            backdrop = chromeBackdrop
         )
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (chromeBackdrop != null) {
+                            Modifier.layerBackdrop(chromeBackdrop)
+                        } else {
+                            Modifier
+                        }
+                    ),
                 contentPadding = contentPadding
             ) {
             if (isRepliesLoading && replies.isEmpty()) {
@@ -1465,7 +1475,6 @@ private fun VideoContentTabBar(
                 indicatorHeight = liquidChromeSpec.segmentedControlIndicatorHeightDp.dp,
                 labelFontSize = liquidChromeSpec.labelFontSizeSp.sp,
                 backdrop = backdrop,
-                backdropCoversControl = backdrop != null,
                 forceLiquidChrome = homeSettings.androidNativeLiquidGlassEnabled,
                 liquidGlassEffectsEnabled = liquidChromeSpec.liquidGlassEffectsEnabled,
                 // Avoid extra press refraction in this compact in-content chrome.

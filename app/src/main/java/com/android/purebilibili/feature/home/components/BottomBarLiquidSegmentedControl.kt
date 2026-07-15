@@ -35,6 +35,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -50,7 +52,9 @@ import com.android.purebilibili.core.store.HomeSettings
 import com.android.purebilibili.core.store.resolveSharedLiquidGlassChromeEnabled
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.theme.UiPreset
+import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.AppSurfaceTokens
+import com.android.purebilibili.core.ui.ContainerLevel
 import com.android.purebilibili.core.ui.animation.DampedDragAnimationState
 import com.android.purebilibili.core.ui.animation.horizontalDragGesture
 import com.android.purebilibili.core.ui.animation.rememberDampedDragAnimationState
@@ -59,14 +63,23 @@ import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
 import com.android.purebilibili.core.ui.motion.BottomBarMotionProfile
 import com.android.purebilibili.core.ui.motion.BottomBarMotionSpec
 import com.android.purebilibili.core.ui.motion.resolveBottomBarMotionSpec
-import com.android.purebilibili.feature.home.components.liquid.lens
-import com.android.purebilibili.feature.home.components.liquid.rememberCombinedBackdrop
-import com.android.purebilibili.feature.home.components.liquid.vibrancy
-import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.blur
-import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
+import com.android.purebilibili.feature.home.components.liquid.lens as miuixLens
+import com.android.purebilibili.feature.home.components.liquid.vibrancy as miuixVibrancy
+import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
+import top.yukonga.miuix.kmp.blur.blur as miuixBlur
+import top.yukonga.miuix.kmp.blur.drawBackdrop as miuixDrawBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sign
@@ -94,7 +107,6 @@ internal enum class SegmentedControlChromeStyle {
 
 internal const val BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_HEIGHT_DP = 58
 internal const val BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_INDICATOR_HEIGHT_DP = 56
-internal const val LIQUID_REUSE_FOREGROUND_Z_INDEX = 3f
 private const val SEGMENTED_CONTROL_MIN_INDICATOR_ASPECT_RATIO = 1.6f
 
 internal fun resolveSegmentedControlChromeStyle(
@@ -195,38 +207,78 @@ internal fun shouldDrawSegmentedControlExportCaptureBackdrop(
     return liquidGlassEnabled && hasExternalBackdrop
 }
 
-/**
- * Sample source for [KernelSuMiuixBottomBarIndicatorLayer] under BILIPAI_TUNED.
- *
- * The indicator samples [contentBackdrop] only. A window-aligned page capture supplies
- * the real background and the transparent export capture adds tinted labels above it.
- * A page capture that does not cover the consumer must not be passed as [pageBackdrop].
- *
- * [combinedBackdrop] must be pre-built via [rememberCombinedBackdrop] when used.
- */
-internal fun resolveLiquidReuseIndicatorContentBackdrop(
-    pageBackdrop: Backdrop?,
-    exportBackdrop: Backdrop?,
-    useCombined: Boolean,
-    combinedBackdrop: Backdrop?,
-): Backdrop? {
-    if (useCombined && pageBackdrop != null && exportBackdrop != null && combinedBackdrop != null) {
-        return combinedBackdrop
+@Composable
+internal fun BottomBarLiquidIndicatorSurface(
+    modifier: Modifier = Modifier,
+    shape: Shape = resolveSharedBottomBarCapsuleShape(),
+    liquidGlassEnabled: Boolean,
+    backdrop: Backdrop? = null,
+    hasExternalBackdrop: Boolean = backdrop != null,
+    indicatorLensSpec: BottomBarBackdropPresetLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
+        progress = if (liquidGlassEnabled) 1f else 0f
+    ),
+    indicatorHighlightAlpha: Float = resolveBottomBarLiquidGlassHighlightAlpha(
+        motionProgress = if (liquidGlassEnabled) 1f else 0f
+    ),
+    indicatorGlowAlpha: Float = resolveBottomBarIndicatorGlowAlpha(
+        glassEnabled = liquidGlassEnabled,
+        pressProgress = 0f
+    ),
+    motionProgress: Float = 0f,
+    idleSurfaceColor: Color = Color.Unspecified,
+    layerBlock: GraphicsLayerScope.() -> Unit = {}
+) {
+    val resolvedIdleSurfaceColor = if (idleSurfaceColor == Color.Unspecified) {
+        resolveAndroidNativeIdleIndicatorSurfaceColor(darkTheme = isSystemInDarkTheme())
+    } else {
+        idleSurfaceColor
     }
-    // Export remains the fallback for callers that cannot supply a covering page capture.
-    if (exportBackdrop != null) return exportBackdrop
-    if (pageBackdrop != null) return pageBackdrop
-    return null
+    Box(
+        modifier = modifier.run {
+            if (backdrop != null && shouldDrawSegmentedControlIndicatorBackdrop(
+                    liquidGlassEnabled = liquidGlassEnabled,
+                    motionProgress = motionProgress,
+                    hasExternalBackdrop = hasExternalBackdrop
+                )
+            ) {
+                drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { shape },
+                    effects = {
+                        lens(
+                            refractionHeight = indicatorLensSpec.refractionHeightDp.dp.toPx(),
+                            refractionAmount = indicatorLensSpec.refractionAmountDp.dp.toPx(),
+                            depthEffect = true,
+                            chromaticAberration = true
+                        )
+                    },
+                    highlight = {
+                        Highlight.Default.copy(alpha = maxOf(indicatorHighlightAlpha, indicatorGlowAlpha))
+                    },
+                    shadow = {
+                        Shadow(alpha = indicatorGlowAlpha)
+                    },
+                    innerShadow = {
+                        InnerShadow(
+                            radius = 8.dp * indicatorGlowAlpha,
+                            alpha = indicatorGlowAlpha
+                        )
+                    },
+                    layerBlock = layerBlock,
+                    onDrawSurface = {
+                        drawRect(
+                            color = resolvedIdleSurfaceColor,
+                            alpha = 1f - motionProgress
+                        )
+                        drawRect(Color.Black.copy(alpha = 0.03f * motionProgress))
+                    }
+                )
+            } else {
+                background(resolvedIdleSurfaceColor, shape)
+            }
+        }
+    )
 }
-
-/**
- * Selects the real page capture when the caller has verified that its producer covers the
- * consumer in window coordinates; otherwise callers pass `null` and use the stable fallback.
- */
-internal fun resolveInContentLiquidSamplingBackdrop(
-    pageBackdrop: Backdrop?,
-    fallbackBackdrop: Backdrop?,
-): Backdrop? = pageBackdrop ?: fallbackBackdrop
 
 internal fun resolveSegmentedControlMotionProgress(
     pressProgress: Float,
@@ -244,120 +296,6 @@ internal fun resolveSegmentedControlMotionProgress(
 internal fun resolveSegmentedControlMotionSpec(): BottomBarMotionSpec {
     return resolveBottomBarMotionSpec(profile = BottomBarMotionProfile.ANDROID_NATIVE_FLOATING)
 }
-
-/**
- * Dock indicator band is 56.dp with capture 24/24 and indicator 10/14 lens.
- * Scale those absolute distances by actual capsule height so compact reuse keeps
- * the same top/bottom edge-band fraction after the shared 88/56 drag magnification.
- */
-internal fun resolveLiquidReuseLensStrengthScale(
-    indicatorHeightDp: Float,
-    referenceHeightDp: Float = BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_INDICATOR_HEIGHT_DP.toFloat()
-): Float {
-    if (referenceHeightDp <= 0f) return 0f
-    return (indicatorHeightDp / referenceHeightDp).coerceIn(0f, 1f)
-}
-
-/**
- * Local / export LayerBackdrop capture expands by this bleed on each side.
- * Sample offsets past the recorded region paint solid black in Miuix.
- *
- * Must cover indicator drag-scale (88/56 ≈ +28.5% per side on a full-width capsule)
- * plus refraction amount and panel offset. Export used to be control-sized only,
- * so scaled capsules OOB-sampled black on the pill edge (video tab black lobes).
- */
-internal const val LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP = 40f
-internal const val LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_HEIGHT_DP = 6f
-internal const val LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_AMOUNT_DP = 4f
-internal const val LIQUID_REUSE_TOP_TAB_MAX_REFRACTION_HEIGHT_DP = 16f
-internal const val LIQUID_REUSE_TOP_TAB_MAX_REFRACTION_AMOUNT_DP = 10f
-
-/** Expanded capture size: control measure + bleed on every edge. */
-internal fun resolveLiquidReuseCaptureExtentDp(
-    controlSizeDp: Float,
-    bleedDp: Float = LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP,
-): Float = (controlSizeDp + bleedDp * 2f).coerceAtLeast(controlSizeDp.coerceAtLeast(0f))
-
-/**
- * Caps for [resolveLiquidReuseLensSpec] so page chrome does not OOB-sample black.
- * Floating dock keeps uncapped dock bands (full-screen page backdrop).
- */
-internal fun resolveLiquidReuseLensDistanceCaps(
-    chromeContext: LiquidReuseChromeContext,
-): Pair<Float, Float> = when (chromeContext) {
-    LiquidReuseChromeContext.FLOATING_DOCK ->
-        Float.POSITIVE_INFINITY to Float.POSITIVE_INFINITY
-    LiquidReuseChromeContext.TOP_TAB ->
-        LIQUID_REUSE_TOP_TAB_MAX_REFRACTION_HEIGHT_DP to
-            LIQUID_REUSE_TOP_TAB_MAX_REFRACTION_AMOUNT_DP
-    LiquidReuseChromeContext.IN_CONTENT_SEGMENTED ->
-        LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_HEIGHT_DP to
-            LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_AMOUNT_DP
-}
-
-/**
- * Map bottom-bar lens distances onto a reuse surface.
- *
- * [progress] is interaction strength (press / swipe floor / capture full).
- * [heightScale] is [resolveLiquidReuseLensStrengthScale] so short capsules don't
- * get dock-absolute 24.dp bands that swallow the whole pill.
- * [maxHeightDp]/[maxAmountDp] keep sample offsets inside local capture bleed.
- */
-internal fun resolveLiquidReuseLensSpec(
-    baseHeightDp: Float,
-    baseAmountDp: Float,
-    progress: Float,
-    heightScale: Float,
-    maxHeightDp: Float = Float.POSITIVE_INFINITY,
-    maxAmountDp: Float = Float.POSITIVE_INFINITY,
-): BottomBarBackdropPresetLensSpec {
-    val strength = (progress.coerceIn(0f, 1f) * heightScale.coerceIn(0f, 1f))
-    return BottomBarBackdropPresetLensSpec(
-        refractionHeightDp = (baseHeightDp * strength)
-            .coerceAtMost(maxHeightDp.coerceAtLeast(0f)),
-        refractionAmountDp = (baseAmountDp * strength)
-            .coerceAtMost(maxAmountDp.coerceAtLeast(0f)),
-    )
-}
-
-/** Capture / shell edge lens — dock uses constant 24.dp when glass is on. */
-internal fun resolveLiquidReuseCaptureLensSpec(
-    progress: Float,
-    indicatorHeightDp: Float,
-    chromeContext: LiquidReuseChromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
-): BottomBarBackdropPresetLensSpec {
-    val (maxHeight, maxAmount) = resolveLiquidReuseLensDistanceCaps(chromeContext)
-    return resolveLiquidReuseLensSpec(
-        baseHeightDp = 24f,
-        baseAmountDp = 24f,
-        progress = progress,
-        heightScale = resolveLiquidReuseLensStrengthScale(indicatorHeightDp),
-        maxHeightDp = maxHeight,
-        maxAmountDp = maxAmount,
-    )
-}
-
-/** Capsule lens — dock indicator uses 10.dp height / 14.dp amount at full press. */
-internal fun resolveLiquidReuseIndicatorLensSpec(
-    progress: Float,
-    indicatorHeightDp: Float,
-    chromeContext: LiquidReuseChromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
-): BottomBarBackdropPresetLensSpec {
-    val (maxHeight, maxAmount) = resolveLiquidReuseLensDistanceCaps(chromeContext)
-    return resolveLiquidReuseLensSpec(
-        baseHeightDp = 10f,
-        baseAmountDp = 14f,
-        progress = progress,
-        heightScale = resolveLiquidReuseLensStrengthScale(indicatorHeightDp),
-        maxHeightDp = maxHeight,
-        maxAmountDp = maxAmount,
-    )
-}
-
-/** Shell edge lens is only safe when sampling a full-screen page backdrop. */
-internal fun shouldDrawLiquidReuseShellLens(
-    chromeContext: LiquidReuseChromeContext,
-): Boolean = chromeContext == LiquidReuseChromeContext.FLOATING_DOCK
 
 /**
  * Same panel-offset formula as [KernelSuAlignedBottomBar]: fraction of full dock width,
@@ -389,76 +327,11 @@ internal fun resolveSharedLiquidIndicatorLensProgress(
 /**
  * When glass is active and the capsule is moving, visible labels stay neutral and the
  * selected color is carried by the export layer + tint (same as home bottom bar).
- *
- * [requireActiveMotion]: for top-tab / in-content reuse, idle selected labels must stay
- * theme-colored; only hide selected paint while dragging/moving so export refraction wins.
  */
 internal fun resolveSharedLiquidIndicatorUseGlassColorPath(
     liquidGlassEnabled: Boolean,
-    lensProgress: Float,
-    requireActiveMotion: Boolean = false,
-    isDragging: Boolean = false,
-    motionProgress: Float = 0f,
-): Boolean {
-    if (!liquidGlassEnabled || lensProgress <= 0.001f) return false
-    if (!requireActiveMotion) return true
-    return isDragging || motionProgress > 0.04f
-}
-
-/** Where liquid glass chrome sits — dock-over-feed vs on-page reuse. */
-internal enum class LiquidReuseChromeContext {
-    FLOATING_DOCK,
-    TOP_TAB,
-    IN_CONTENT_SEGMENTED,
-}
-
-/**
- * Shell paints for liquid reuse. Prefer v9.9.7 / dock material; only slightly softens
- * in-content shells so they don't read heavier than the floating bottom bar.
- */
-internal fun resolveLiquidReuseShellContainerColor(
-    baseColor: Color,
-    glassEnabled: Boolean,
-    chromeContext: LiquidReuseChromeContext,
-): Color {
-    if (!glassEnabled || chromeContext == LiquidReuseChromeContext.FLOATING_DOCK) {
-        return baseColor
-    }
-    val maxAlpha = when (chromeContext) {
-        LiquidReuseChromeContext.TOP_TAB -> baseColor.alpha
-        LiquidReuseChromeContext.IN_CONTENT_SEGMENTED ->
-            minOf(baseColor.alpha, 0.42f).coerceAtLeast(0.18f)
-        LiquidReuseChromeContext.FLOATING_DOCK -> baseColor.alpha
-    }
-    return baseColor.copy(alpha = maxAlpha)
-}
-
-internal fun resolveLiquidReuseIndicatorIdleSurfaceColor(
-    darkTheme: Boolean,
-    chromeContext: LiquidReuseChromeContext,
-): Color {
-    // v9.9.7 / dock idle indicator tint for all liquid reuse surfaces.
-    return resolveAndroidNativeIdleIndicatorSurfaceColor(darkTheme)
-}
-
-/** Cap for onDrawSurface idle fade (1 = full dock / v9.9.7 behavior). */
-internal fun resolveLiquidReuseIdleSurfaceMaxAlpha(
-    chromeContext: LiquidReuseChromeContext,
-): Float = 1f
-
-/**
- * Export-layer fill under Combined(page, export). Keep shell-aligned tint so export
- * sampling matches v9.9.7 glass pills (surface under monochrome glyphs).
- */
-internal fun resolveLiquidReuseExportSurfaceColor(
-    shellContainerColor: Color,
-    glassEnabled: Boolean,
-    darkTheme: Boolean,
-): Color = resolveKernelSuBottomBarShellColor(
-    containerColor = shellContainerColor,
-    liquidGlassEnabled = glassEnabled,
-    darkTheme = darkTheme,
-)
+    lensProgress: Float
+): Boolean = liquidGlassEnabled && lensProgress > 0.001f
 
 /** Capture lens strength: full 24dp while interacting, like KernelSu bottom bar capture. */
 internal fun resolveSharedLiquidIndicatorCaptureLensProgress(
@@ -498,10 +371,8 @@ fun BottomBarLiquidSegmentedControl(
     dragSelectionEnabled: Boolean = true,
     preferInlineContentStyle: Boolean = false,
     forceLiquidChrome: Boolean = false,
-    /** External page [LayerBackdrop] (Miuix). Required for real liquid refraction. */
     backdrop: Backdrop? = null,
-    /** True only when [backdrop]'s producer covers this control in window coordinates. */
-    backdropCoversControl: Boolean = false,
+    miuixBackdrop: MiuixBackdrop? = null,
     tapPressRefractionEnabled: Boolean = true,
     containerColorOverride: Color? = null,
     selectedTextColorOverride: Color? = null,
@@ -556,6 +427,7 @@ fun BottomBarLiquidSegmentedControl(
     val safeSelectedIndex = selectedIndex.coerceIn(0, itemCount - 1)
     val motionSpec = remember { resolveSegmentedControlMotionSpec() }
     val clickPulseKey = remember { mutableIntStateOf(0) }
+    val clickPulseTransform = rememberBottomBarClickPulseTransform(clickPulseKey.intValue)
     val dragState = rememberDampedDragAnimationState(
         initialIndex = safeSelectedIndex,
         itemCount = itemCount,
@@ -570,28 +442,16 @@ fun BottomBarLiquidSegmentedControl(
         }
     )
     val indicatorShape = resolveSharedBottomBarCapsuleShape()
+    val containerShapeToken = AppShapes.container(ContainerLevel.Pill)
     val containerShape = indicatorShape
     val indicatorCorner = indicatorHeight / 2
     val isDarkTheme = isSystemInDarkTheme()
     val surfaceColor = AppSurfaceTokens.cardContainer()
-    val localSamplingSurfaceColor = MaterialTheme.colorScheme.surface
-    val localSamplingBackdrop = rememberLayerBackdrop(onDraw = {
-        drawRect(localSamplingSurfaceColor)
-        drawContent()
-    })
-    val samplingBackdrop = if (liquidGlassEnabled) {
-        resolveInContentLiquidSamplingBackdrop(
-            pageBackdrop = backdrop.takeIf { backdropCoversControl },
-            fallbackBackdrop = localSamplingBackdrop,
-        )
-    } else {
-        null
-    }
     val androidNativeTuning = resolveAndroidNativeBottomBarTuning(
         blurEnabled = liquidGlassEnabled,
         darkTheme = isDarkTheme
     )
-    val baseContainerColor = containerColorOverride ?: resolveAndroidNativeFloatingBottomBarContainerColor(
+    val containerColor = containerColorOverride ?: resolveAndroidNativeFloatingBottomBarContainerColor(
         surfaceColor = surfaceColor,
         tuning = androidNativeTuning,
         glassEnabled = liquidGlassEnabled,
@@ -599,16 +459,6 @@ fun BottomBarLiquidSegmentedControl(
         blurIntensity = blurIntensity,
         liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
     )
-    // In-content reuse sits on white pages — dock shell alpha reads as solid gray chips.
-    val containerColor = if (containerColorOverride != null) {
-        baseContainerColor
-    } else {
-        resolveLiquidReuseShellContainerColor(
-            baseColor = baseContainerColor,
-            glassEnabled = liquidGlassEnabled,
-            chromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
-        )
-    }
     val themeColor = MaterialTheme.colorScheme.primary
     val selectedTextColor = selectedTextColorOverride ?: themeColor
     val unselectedTextColor = unselectedTextColorOverride
@@ -644,24 +494,9 @@ fun BottomBarLiquidSegmentedControl(
             )
             .height(height)
     ) {
-        val controlWidth = maxWidth
-        val controlHeight = height
-        val captureWidth = resolveLiquidReuseCaptureExtentDp(controlWidth.value).dp
-        val captureHeight = resolveLiquidReuseCaptureExtentDp(controlHeight.value).dp
-        if (liquidGlassEnabled) {
-            // Local shell sampling: surface fill beyond the control so edge blur never OOB-blacks.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .width(captureWidth)
-                    .height(captureHeight)
-                    .clearAndSetSemantics {}
-                    .layerBackdrop(localSamplingBackdrop)
-            )
-        }
         val contentPadding = containerHorizontalPadding
         val contentVerticalInset = containerVerticalPadding
-        val slotWidth = (controlWidth - (contentPadding * 2)) / itemCount
+        val slotWidth = (maxWidth - (contentPadding * 2)) / itemCount
         val indicatorWidth = resolveSegmentedControlIndicatorWidthDp(
             slotWidthDp = slotWidth.value,
             indicatorHeightDp = indicatorHeight.value,
@@ -671,7 +506,6 @@ fun BottomBarLiquidSegmentedControl(
             slotWidthDp = slotWidth.value,
             indicatorHeightDp = indicatorHeight.value
         ).dp
-        val liquidReuseChrome = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED
         val indicatorOffset = resolveSegmentedControlIndicatorOffsetDp(
             position = resolveSegmentedControlIndicatorPosition(
                 internalPosition = dragState.value,
@@ -682,7 +516,7 @@ fun BottomBarLiquidSegmentedControl(
             contentPaddingDp = contentPadding.value
         ).dp
         val itemWidthPx = with(density) { slotWidth.toPx() }.coerceAtLeast(1f)
-        val dockWidthPx = with(density) { controlWidth.toPx() }.coerceAtLeast(1f)
+        val dockWidthPx = with(density) { maxWidth.toPx() }.coerceAtLeast(1f)
         // Match home bottom bar: drag anywhere on the dock, not only from the capsule.
         val dragModifier = if (enabled && itemCount > 1 && dragSelectionEnabled) {
             Modifier.horizontalDragGesture(
@@ -735,13 +569,9 @@ fun BottomBarLiquidSegmentedControl(
             motionProgress = motionProgress,
             isDragging = dragState.isDragging
         )
-        val reuseIdleSurfaceColor = indicatorIdleSurfaceColorOverride
-            ?: resolveLiquidReuseIndicatorIdleSurfaceColor(
-                darkTheme = isDarkTheme,
-                chromeContext = liquidReuseChrome,
-            )
-        val reuseIdleSurfaceMaxAlpha = resolveLiquidReuseIdleSurfaceMaxAlpha(
-            chromeContext = liquidReuseChrome,
+        val useGlassColorPath = resolveSharedLiquidIndicatorUseGlassColorPath(
+            liquidGlassEnabled = liquidGlassEnabled,
+            lensProgress = lensProgress
         )
         val rawPanelOffsetPx by remember(density, dockWidthPx) {
             derivedStateOf {
@@ -761,73 +591,80 @@ fun BottomBarLiquidSegmentedControl(
         }
         val panelOffsetPx = presetPanelOffsets.indicatorPanelOffsetPx
         val exportPanelOffsetPx = presetPanelOffsets.exportPanelOffsetPx
-        // Match the floating dock export: keep its translucent shell tint while the
-        // indicator grows, instead of exposing the darker raw page capture mid-swipe.
-        val exportSurfaceColor = resolveLiquidReuseExportSurfaceColor(
-            shellContainerColor = containerColor,
-            glassEnabled = liquidGlassEnabled,
-            darkTheme = isDarkTheme,
-        )
-        val tabsBackdrop = rememberLayerBackdrop(onDraw = {
-            drawRect(exportSurfaceColor)
-            drawContent()
-        })
-        // Never self-draw tabsBackdrop on the same node that records it.
-        val hasExternalBackdrop = backdropCoversControl && backdrop != null
-        val combinedIndicatorBackdrop = if (samplingBackdrop != null) {
-            rememberCombinedBackdrop(samplingBackdrop, tabsBackdrop)
-        } else {
-            null
-        }
-        // Keep the real page capture underneath the transparent label export. Miuix aligns
-        // coordinate-dependent LayerBackdrops in window space, so callers must attach the
-        // supplied backdrop to a sibling background that covers this control's bounds.
-        val indicatorContentBackdrop = resolveLiquidReuseIndicatorContentBackdrop(
-            pageBackdrop = samplingBackdrop,
-            exportBackdrop = tabsBackdrop,
-            useCombined = true,
-            combinedBackdrop = combinedIndicatorBackdrop,
-        ) ?: tabsBackdrop
+        val tabsBackdrop = rememberLayerBackdrop()
+        val tabsMiuixBackdrop = rememberMiuixLayerBackdrop()
+        // Never fall back export/shell sampling to tabsBackdrop: that LayerBackdrop is
+        // recorded on the export node, and self-drawBackdrop overflows HyperOS
+        // MiBackgroundBlurBlend (RenderThread stack overflow). Also never CombinedBackdrop
+        // the page + tabs layers — same nested RenderNode failure mode as the dock bar.
+        val hasExternalBackdrop = backdrop != null
+        val hasMiuixExternalBackdrop = miuixBackdrop != null
+        val containerBackdrop = backdrop
         val captureLensProgress = resolveSharedLiquidIndicatorCaptureLensProgress(
             lensProgress = lensProgress,
             isDragging = dragState.isDragging
         )
-        // Height-scaled dock bands, amount-capped so local sampling + bleed never OOB-blacks.
-        val captureLensSpec = resolveLiquidReuseCaptureLensSpec(
-            progress = captureLensProgress,
-            indicatorHeightDp = resolvedIndicatorHeight.value,
-            chromeContext = liquidReuseChrome,
+        // Full 24dp capture lens while interacting — same constant strength as bottom bar capture.
+        val captureLensSpec = resolveBottomBarBackdropPresetCaptureLens(
+            progress = captureLensProgress
         )
-        val indicatorLensSpec = resolveLiquidReuseIndicatorLensSpec(
-            progress = lensProgress,
-            indicatorHeightDp = resolvedIndicatorHeight.value,
-            chromeContext = liquidReuseChrome,
+        // Indicator capsule lens follows swipe, not only finger-down press.
+        val indicatorLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
+            progress = lensProgress
         )
-        val drawShellLens = shouldDrawLiquidReuseShellLens(liquidReuseChrome)
-        val indicatorIdleSurfaceColor = reuseIdleSurfaceColor
+        val captureHighlightAlpha = resolveBottomBarLiquidGlassHighlightAlpha(captureLensProgress)
+        val indicatorGlowAlpha = resolveBottomBarIndicatorGlowAlpha(
+            glassEnabled = liquidGlassEnabled,
+            pressProgress = effectivePressProgress,
+            motionProgress = lensProgress
+        )
+        val indicatorIdleSurfaceColor = indicatorIdleSurfaceColorOverride
+            ?: resolveBottomBarIdleIndicatorSurfaceColor(
+                preset = homeSettings.bottomBarLiquidGlassPreset,
+                darkTheme = isDarkTheme
+            )
+        val foregroundAboveIndicator = shouldRenderBottomBarForegroundAboveIndicator(
+            homeSettings.bottomBarLiquidGlassPreset
+        )
+
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .kernelSuMiuixFloatingDockSurface(
-                    shape = containerShape,
-                    backdrop = samplingBackdrop,
-                    containerColor = containerColor,
-                    blurEnabled = liquidGlassEnabled,
-                    glassEnabled = liquidGlassEnabled,
-                    // Page chrome has no full-screen backdrop under the shell — edge lens paints black.
-                    drawShellLens = drawShellLens,
-                    blurRadius = androidNativeTuning.shellBlurRadiusDp.dp,
-                    hazeState = null,
-                    motionTier = MotionTier.Normal,
-                    isTransitionRunning = false,
-                    forceLowBlurBudget = false,
-                    liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
-                    // Soft edge on white pages; full dock shadow looks heavy on chips.
-                    dropShadowAlphaScale = if (liquidGlassEnabled) 0.35f else 1f,
-                )
+                .run {
+                    if (miuixBackdrop != null) {
+                        this.kernelSuMiuixFloatingDockSurface(
+                            shape = containerShape,
+                            backdrop = miuixBackdrop,
+                            containerColor = containerColor,
+                            blurEnabled = liquidGlassEnabled,
+                            glassEnabled = liquidGlassEnabled,
+                            blurRadius = androidNativeTuning.shellBlurRadiusDp.dp,
+                            hazeState = null,
+                            motionTier = MotionTier.Normal,
+                            isTransitionRunning = false,
+                            forceLowBlurBudget = false,
+                            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
+                        )
+                    } else {
+                        this.kernelSuFloatingDockSurface(
+                            shape = containerShape,
+                            backdrop = backdrop,
+                            containerColor = containerColor,
+                            blurEnabled = liquidGlassEnabled,
+                            glassEnabled = liquidGlassEnabled,
+                            blurRadius = androidNativeTuning.shellBlurRadiusDp.dp,
+                            hazeState = null,
+                            motionTier = MotionTier.Normal,
+                            isTransitionRunning = false,
+                            forceLowBlurBudget = false,
+                            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
+                        )
+                    }
+                }
         )
 
-        // 1) Visible labels stay above the capsule so a missing capture never hides content.
+        // 1) Visible labels BEHIND the capsule (bottom-bar z-order).
+        //    While sliding they stay neutral; theme color is revealed only through glass.
         BottomBarLiquidSegmentedLabels(
             items = items,
             selectedIndex = safeSelectedIndex,
@@ -842,124 +679,163 @@ fun BottomBarLiquidSegmentedControl(
             onSelected = onSelected,
             interactive = false,
             applyItemScale = true,
-            // Keep theme-color interpolation in the visible layer. Hidden Miuix captures are not
-            // reliable enough on every RenderThread to be the only source of readable content.
-            forceUnselectedColor = false,
+            forceUnselectedColor = useGlassColorPath,
             modifier = Modifier
                 .matchParentSize()
                 .padding(horizontal = contentPadding, vertical = contentVerticalInset)
-                .zIndex(LIQUID_REUSE_FOREGROUND_Z_INDEX)
+                .zIndex(if (foregroundAboveIndicator) 1f else 0f)
                 .graphicsLayer { translationX = panelOffsetPx }
         )
 
-        // 2) Hidden export capture: expanded LayerBackdrop + centered control content.
-        // Capsule samples this export; bleed must match local so drag-scale never OOB-blacks.
-        if (liquidGlassEnabled) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .width(captureWidth)
-                    .height(captureHeight)
-                    .clearAndSetSemantics {}
-                    .alpha(0f)
-                    .layerBackdrop(tabsBackdrop)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .width(controlWidth)
-                        .height(controlHeight)
-                        .graphicsLayer { translationX = exportPanelOffsetPx }
-                        .run {
-                            // Match the floating dock whenever the caller guarantees that the
-                            // external page source covers this control. The expanded export fill
-                            // remains underneath as safe edge sampling beyond the control bounds.
-                            if (
-                                shouldDrawSegmentedControlExportCaptureBackdrop(
-                                    liquidGlassEnabled = liquidGlassEnabled,
-                                    hasExternalBackdrop = hasExternalBackdrop
-                                ) &&
-                                samplingBackdrop != null &&
-                                samplingBackdrop !== localSamplingBackdrop
-                            ) {
-                                drawBackdrop(
-                                    backdrop = samplingBackdrop,
-                                    shape = { containerShape },
-                                    effects = {
-                                        vibrancy()
-                                        blur(4.dp.toPx(), 4.dp.toPx())
-                                        if (captureLensProgress > 0.001f) {
-                                            lens(
-                                                refractionHeight = captureLensSpec.refractionHeightDp.dp.toPx(),
-                                                refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx(),
-                                            )
-                                        }
-                                    },
-                                    onDrawSurface = {
-                                        drawRect(
-                                            exportSurfaceColor
-                                        )
-                                    }
-                                )
-                            } else {
-                                this
+        // 2) Hidden export capture: monochrome glyphs, theme tint on content only (not backdrop).
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clearAndSetSemantics {}
+                .alpha(0f)
+                .run {
+                    if (hasMiuixExternalBackdrop) {
+                        this.miuixLayerBackdrop(tabsMiuixBackdrop)
+                            .graphicsLayer { translationX = exportPanelOffsetPx }
+                            .run {
+                                if (
+                                    shouldDrawSegmentedControlExportCaptureBackdrop(
+                                        liquidGlassEnabled = liquidGlassEnabled,
+                                        hasExternalBackdrop = true
+                                    )
+                                ) {
+                                    miuixDrawBackdrop(
+                                        backdrop = miuixBackdrop,
+                                        shape = { containerShape },
+                                        effects = {
+                                            miuixVibrancy()
+                                            miuixBlur(4.dp.toPx(), 4.dp.toPx())
+                                            if (captureLensProgress > 0.001f) {
+                                                miuixLens(
+                                                    refractionHeight = captureLensSpec.refractionHeightDp.dp.toPx(),
+                                                    refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx(),
+                                                    depthEffect = true,
+                                                    chromaticAberration = 0.5f
+                                                )
+                                            }
+                                        },
+                                        onDrawSurface = { drawRect(containerColor) }
+                                    )
+                                } else {
+                                    this
+                                }
                             }
-                        }
-                ) {
-                    BottomBarLiquidSegmentedLabels(
-                        items = items,
-                        selectedIndex = safeSelectedIndex,
-                        indicatorPosition = indicatorPosition,
-                        motionProgress = motionProgress,
-                        selectionEmphasis = refractionMotionProfile.exportSelectionEmphasis,
-                        // Match bottom bar export: neutral glyphs then SrcIn-tint to primary.
-                        selectedTextColor = exportMonochromeColor,
-                        unselectedTextColor = exportMonochromeColor,
-                        enabled = enabled,
-                        labelFontSize = labelFontSize,
-                        indicatorCorner = indicatorCorner,
-                        onSelected = onSelected,
-                        interactive = false,
-                        applyItemScale = true,
-                        forceUnselectedColor = false,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = contentPadding, vertical = contentVerticalInset)
-                            .graphicsLayer(colorFilter = ColorFilter.tint(exportTintColor))
-                    )
+                    } else {
+                        this.layerBackdrop(tabsBackdrop)
+                            .graphicsLayer { translationX = exportPanelOffsetPx }
+                            .run {
+                                if (
+                                    shouldDrawSegmentedControlExportCaptureBackdrop(
+                                        liquidGlassEnabled = liquidGlassEnabled,
+                                        hasExternalBackdrop = hasExternalBackdrop
+                                    ) && containerBackdrop != null
+                                ) {
+                                    drawBackdrop(
+                                        backdrop = containerBackdrop,
+                                        shape = { containerShape },
+                                        effects = {
+                                            vibrancy()
+                                            blur(androidNativeTuning.shellBlurRadiusDp.dp.toPx())
+                                            if (captureLensProgress > 0.001f) {
+                                                lens(
+                                                    refractionHeight = captureLensSpec.refractionHeightDp.dp.toPx(),
+                                                    refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx(),
+                                                    depthEffect = true,
+                                                    chromaticAberration = true
+                                                )
+                                            }
+                                        },
+                                        highlight = {
+                                            Highlight.Default.copy(alpha = captureHighlightAlpha)
+                                        },
+                                        onDrawSurface = { drawRect(containerColor) }
+                                    )
+                                } else {
+                                    this
+                                }
+                            }
+                    }
                 }
-            }
+        ) {
+            BottomBarLiquidSegmentedLabels(
+                items = items,
+                selectedIndex = safeSelectedIndex,
+                indicatorPosition = indicatorPosition,
+                motionProgress = motionProgress,
+                selectionEmphasis = refractionMotionProfile.exportSelectionEmphasis,
+                // Match bottom bar export: neutral glyphs then SrcIn-tint to primary.
+                selectedTextColor = exportMonochromeColor,
+                unselectedTextColor = exportMonochromeColor,
+                enabled = enabled,
+                labelFontSize = labelFontSize,
+                indicatorCorner = indicatorCorner,
+                onSelected = onSelected,
+                interactive = false,
+                applyItemScale = true,
+                forceUnselectedColor = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = contentPadding, vertical = contentVerticalInset)
+                    .graphicsLayer(colorFilter = ColorFilter.tint(exportTintColor))
+            )
         }
 
-        // 3) Capsule on top — samples export theme glyphs through glass (Miuix only).
-        KernelSuMiuixBottomBarIndicatorLayer(
-            visible = true,
-            dockContentAlpha = 1f,
-            indicatorTranslationXPx = with(density) { indicatorOffset.toPx() },
-            indicatorPanelOffsetPx = panelOffsetPx,
-            indicatorWidth = indicatorWidth,
-            indicatorHeight = resolvedIndicatorHeight,
-            shellShape = indicatorShape,
-            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
-            contentBackdrop = indicatorContentBackdrop,
-            // Non-BILIPAI presets sample this; Combined keeps page+export when available.
-            backdrop = combinedIndicatorBackdrop ?: samplingBackdrop,
-            indicatorLensSpec = indicatorLensSpec,
-            effectivePressProgress = lensProgress,
-            indicatorIdleSurfaceColor = indicatorIdleSurfaceColor,
-            glassEnabled = liquidGlassEnabled,
-            motionProgress = motionProgress,
-            velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
-            isDragging = dragState.isDragging,
-            indicatorLayerScaleProgress = indicatorLayerScaleProgress,
-            indicatorLayerScaleTransform = null,
-            bottomBarMotionSpec = motionSpec,
-            isDarkTheme = isDarkTheme,
-            idleSurfaceMaxAlpha = reuseIdleSurfaceMaxAlpha,
-            // Multi-offset depth/chroma samples past local bleed → black lobes on video tabs.
-            lensDepthEffect = false,
-            lensChromaticAberration = 0f,
-        )
+        // 3) Capsule on top — samples export theme glyphs through glass.
+        if (miuixBackdrop != null) {
+            KernelSuMiuixBottomBarIndicatorLayer(
+                visible = true,
+                dockContentAlpha = 1f,
+                indicatorTranslationXPx = with(density) { indicatorOffset.toPx() },
+                indicatorPanelOffsetPx = panelOffsetPx,
+                indicatorWidth = indicatorWidth,
+                indicatorHeight = resolvedIndicatorHeight,
+                shellShape = indicatorShape,
+                liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
+                contentBackdrop = tabsMiuixBackdrop,
+                backdrop = miuixBackdrop,
+                indicatorLensSpec = indicatorLensSpec,
+                effectivePressProgress = lensProgress,
+                indicatorIdleSurfaceColor = indicatorIdleSurfaceColor,
+                glassEnabled = liquidGlassEnabled,
+                motionProgress = motionProgress,
+                velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
+                isDragging = dragState.isDragging,
+                indicatorLayerScaleProgress = indicatorLayerScaleProgress,
+                indicatorLayerScaleTransform = null,
+                bottomBarMotionSpec = motionSpec,
+                isDarkTheme = isDarkTheme
+            )
+        } else {
+            KernelSuBottomBarIndicatorLayer(
+                visible = true,
+                dockContentAlpha = 1f,
+                indicatorTranslationXPx = with(density) { indicatorOffset.toPx() },
+                indicatorPanelOffsetPx = panelOffsetPx,
+                indicatorSettleReboundTransform = clickPulseTransform,
+                indicatorWidth = indicatorWidth,
+                indicatorHeight = resolvedIndicatorHeight,
+                shellShape = indicatorShape,
+                liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
+                contentBackdrop = tabsBackdrop,
+                backdrop = backdrop,
+                indicatorLensSpec = indicatorLensSpec,
+                effectivePressProgress = lensProgress,
+                indicatorIdleSurfaceColor = indicatorIdleSurfaceColor,
+                glassEnabled = liquidGlassEnabled,
+                motionProgress = motionProgress,
+                velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
+                isDragging = dragState.isDragging,
+                indicatorLayerScaleProgress = indicatorLayerScaleProgress,
+                indicatorLayerScaleTransform = null,
+                bottomBarMotionSpec = motionSpec,
+                isDarkTheme = isDarkTheme
+            )
+        }
 
         // 4) Invisible hit / drag layer above everything.
         BottomBarLiquidSegmentedLabels(

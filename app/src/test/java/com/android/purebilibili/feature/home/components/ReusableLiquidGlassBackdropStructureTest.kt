@@ -7,20 +7,14 @@ import kotlin.test.assertTrue
 class ReusableLiquidGlassBackdropStructureTest {
 
     @Test
-    fun `audio library records full background behind its segmented control`() {
+    fun `audio library records pager content outside its segmented control`() {
         val source = loadSource(
             "app/src/main/java/com/android/purebilibili/feature/audio/screen/ListenVideoScreen.kt"
         )
 
         assertTrue(source.contains("val selectionBackdrop = rememberLayerBackdrop()"))
         assertTrue(source.contains("backdrop = selectionBackdrop"))
-        assertTrue(source.contains("backdropCoversControl = true"))
-        assertTrue(source.contains(".background(listenVideoBackground)"))
         assertTrue(source.contains(".layerBackdrop(selectionBackdrop)"))
-        val backdropIndex = source.indexOf(".layerBackdrop(selectionBackdrop)")
-        val backgroundIndex = source.indexOf(".background(listenVideoBackground)")
-        assertTrue(backdropIndex < backgroundIndex)
-        assertTrue(backgroundIndex < source.indexOf("BottomBarLiquidSegmentedControl("))
     }
 
     @Test
@@ -55,9 +49,9 @@ class ReusableLiquidGlassBackdropStructureTest {
             "app/src/main/java/com/android/purebilibili/feature/audio/screen/MusicPlayerContent.kt"
         )
 
-        assertTrue(source.contains("val selectionBackdrop = rememberMiuixLayerBackdrop()"))
+        assertTrue(source.contains("val selectionBackdrop = rememberLayerBackdrop()"))
         assertTrue(source.contains("backdrop = selectionBackdrop"))
-        assertTrue(source.contains(".miuixLayerBackdrop(selectionBackdrop)"))
+        assertTrue(source.contains(".layerBackdrop(selectionBackdrop)"))
     }
 
     private fun loadSource(path: String): String {

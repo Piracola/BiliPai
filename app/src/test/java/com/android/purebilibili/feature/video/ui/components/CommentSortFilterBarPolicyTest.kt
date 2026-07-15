@@ -41,8 +41,6 @@ class CommentSortFilterBarPolicyTest {
 
         assertTrue(source.contains("backdrop: Backdrop? = null"))
         assertTrue(source.contains("backdrop = backdrop"))
-        assertTrue(source.contains("backdropCoversControl = backdropCoversControl"))
-        assertTrue(source.contains("end = LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP.dp"))
         assertTrue(source.contains("forceLiquidChrome = homeSettings.androidNativeLiquidGlassEnabled"))
         assertTrue(source.contains("liquidGlassEffectsEnabled = backdrop != null"))
     }

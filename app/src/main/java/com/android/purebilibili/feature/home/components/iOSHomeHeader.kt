@@ -38,7 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalDensity
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1435,7 +1435,7 @@ fun iOSHomeHeader(
     pullProgress: Float = 0f,  // 0.0 ~ 1.0+ 下拉进度
     pagerState: androidx.compose.foundation.pager.PagerState? = null, // [New] PagerState for sync
     // [New] LayerBackdrop for liquid glass effect
-    backdrop: LayerBackdrop? = null,
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop? = null,
     homeSettings: com.android.purebilibili.core.store.HomeSettings? = null,
     topTabsVisible: Boolean = true,
     topTabsCollapsed: Boolean = false,

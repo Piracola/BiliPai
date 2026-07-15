@@ -48,12 +48,12 @@ import com.android.purebilibili.core.ui.rememberAppCoinIcon
 import com.android.purebilibili.core.ui.rememberAppLikeFilledIcon
 import com.android.purebilibili.core.ui.rememberAppLikeIcon
 import com.android.purebilibili.core.ui.rememberAppShareIcon
-import com.android.purebilibili.feature.home.components.kernelSuMiuixFloatingDockSurface
+import com.android.purebilibili.feature.home.components.kernelSuFloatingDockSurface
 import com.android.purebilibili.feature.home.components.resolveAndroidNativeBottomBarTuning
 import com.android.purebilibili.feature.home.components.resolveAndroidNativeFloatingBottomBarContainerColor
 import com.android.purebilibili.feature.home.components.resolveBottomBarDarkTheme
 import com.android.purebilibili.feature.home.components.resolveSharedBottomBarCapsuleShape
-import top.yukonga.miuix.kmp.blur.Backdrop
+import com.kyant.backdrop.Backdrop
 
 internal const val BOTTOM_INPUT_BAR_PLACEHOLDER_MIN_CONTRAST = 4.5f
 
@@ -235,7 +235,7 @@ private fun FloatingLiquidBottomInputBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .kernelSuMiuixFloatingDockSurface(
+                .kernelSuFloatingDockSurface(
                     shape = shellShape,
                     backdrop = backdrop,
                     containerColor = containerColor,
@@ -303,7 +303,7 @@ private fun FloatingLiquidBottomInputBarContentRow(
             modifier = Modifier
                 .weight(1f)
                 .height(36.dp)
-                .kernelSuMiuixFloatingDockSurface(
+                .kernelSuFloatingDockSurface(
                     shape = commentFieldShape,
                     backdrop = backdrop,
                     containerColor = commentFieldContainerColor,

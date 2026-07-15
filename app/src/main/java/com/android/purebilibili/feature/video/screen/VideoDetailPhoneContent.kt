@@ -47,8 +47,8 @@ import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
 import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
 import com.android.purebilibili.feature.video.player.PlaylistItem
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
@@ -139,13 +139,9 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                         val floatingLiquidBottomInputBar = shouldUseFloatingLiquidBottomInputBar(
                             androidNativeLiquidGlassEnabled = homeSettings.androidNativeLiquidGlassEnabled
                         )
-                        // Keep a stable surface in the capture while comment sorting replaces
-                        // the list; BottomInputBar stays outside so it cannot self-sample.
-                        val bottomInputBarBackdropFallbackColor = MaterialTheme.colorScheme.surface
-                        val bottomInputBarBackdrop = rememberLayerBackdrop(onDraw = {
-                            drawRect(bottomInputBarBackdropFallbackColor)
-                            drawContent()
-                        })
+                        // Capture scrolling detail content only; BottomInputBar stays outside
+                        // so drawBackdrop does not self-sample (same contract as tab chrome).
+                        val bottomInputBarBackdrop = rememberLayerBackdrop()
                         val showExternalPlaylistQueueBarOnCurrentTab =
                             shouldShowExternalPlaylistQueueBarOnContentTab(
                                 queueAvailable = shouldShowExternalPlaylistQueueBar,

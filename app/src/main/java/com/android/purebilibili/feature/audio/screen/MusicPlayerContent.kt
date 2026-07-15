@@ -110,7 +110,8 @@ import kotlin.math.roundToInt
 import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
-
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 private val MusicFallbackColor = Color(0xFF342B42)
 private val MusicContentColor = Color.White
@@ -159,7 +160,7 @@ internal fun MusicPlayerContent(
     }
     val effectiveReduceMotion = reduceMotion || systemReduceMotion
     val musicBackdrop = rememberMiuixLayerBackdrop()
-    val selectionBackdrop = rememberMiuixLayerBackdrop()
+    val selectionBackdrop = rememberLayerBackdrop()
 
     LaunchedEffect(state.coverUrl) {
         val result = loadMusicArtwork(context.imageLoader, state.coverUrl, context)
@@ -215,7 +216,7 @@ internal fun MusicPlayerContent(
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .miuixLayerBackdrop(selectionBackdrop)
+                            .layerBackdrop(selectionBackdrop)
                     ) { page ->
                         if (page == 0) {
                             PlayerPage(

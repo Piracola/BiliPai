@@ -98,26 +98,18 @@ class VideoContentTabBarPolicyTest {
         )
 
         assertTrue(source.contains("val videoContentChromeBackdrop = rememberLayerBackdrop()"))
-        assertTrue(source.contains(".background(MaterialTheme.colorScheme.surface)"))
-        assertTrue(source.contains(".layerBackdrop(videoContentChromeBackdrop)"))
-        val backdropIndex = source.indexOf(".layerBackdrop(videoContentChromeBackdrop)")
-        val backgroundIndex = source.indexOf(".background(MaterialTheme.colorScheme.surface)")
-        assertTrue(backdropIndex < backgroundIndex)
-        assertTrue(backgroundIndex < source.indexOf("VideoContentTabBar("))
         assertTrue(source.contains("chromeBackdrop = videoContentChromeBackdrop"))
         assertTrue(source.contains("backdrop = videoContentChromeBackdrop"))
         assertTrue(source.contains("backdrop = chromeBackdrop"))
-        assertTrue(source.contains("backdropCoversControl = backdrop != null"))
         assertTrue(source.contains("Column(modifier = modifier.fillMaxSize())"))
         assertTrue(
             source.contains(
-                "Backdrop source must cover every chrome consumer in window coordinates"
+                "采样层只挂在 Tab 页滚动内容上；排序栏/顶栏分段控件必须在捕获区外"
             )
         )
         val commentTabSource = source.substringAfter("private fun VideoCommentTab(")
             .substringBefore("private fun VideoHeaderContent(")
         assertTrue(commentTabSource.contains("CommentSortFilterBar("))
-        assertTrue(commentTabSource.contains("backdropCoversControl = chromeBackdrop != null"))
         assertFalse(commentTabSource.contains("item {\n                CommentSortFilterBar("))
         val pagerBlock = source
             .substringAfter("HorizontalPager(")

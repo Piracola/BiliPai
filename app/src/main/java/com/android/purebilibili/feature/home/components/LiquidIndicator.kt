@@ -1,21 +1,362 @@
 // 文件路径: feature/home/components/LiquidIndicator.kt
-// Pure policy/math helpers for liquid indicator geometry and lens profiles.
-// Composable Kyant/drawBackdrop paths removed (InstallerX/Miuix stack owns rendering).
 package com.android.purebilibili.feature.home.components
 
+
+
+import android.os.Build
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.blur
 import com.android.purebilibili.core.store.LiquidGlassMode
 import com.android.purebilibili.core.store.LiquidGlassStyle
-import kotlin.math.abs
-// LiquidGlassTuning lives in this package (LiquidGlassTuning.kt).
+import com.android.purebilibili.core.ui.blur.shouldAllowHomeChromeLiquidGlass
+import com.android.purebilibili.core.ui.motion.AppMotionTokens
+import com.android.purebilibili.core.ui.motion.BottomBarMotionSpec
+import com.android.purebilibili.core.ui.motion.resolveBottomBarMotionSpec
+
+/**
+ * 🌊 液态玻璃选中指示器
+ * 
+ * 实现类似 visionOS 的玻璃折射效果：
+ * - 透镜折射效果 (Android 13+ 支持)
+ * - 拖拽时放大形变
+ * - 高光和内阴影
+ * 
+ * @param position 当前位置（浮点索引）
+ * @param itemWidth 单个项目宽度
+ * @param itemCount 项目数量
+ * @param isDragging 是否正在拖拽
+ * @param velocity 当前速度（用于形变）
+ * @param hazeState HazeState 实例（用于模糊效果）
+ * @param modifier Modifier
+ */
+@Composable
+internal fun LiquidIndicator(
+    position: Float,
+    itemWidth: Dp,
+    itemCount: Int,
+    isDragging: Boolean,
+    velocity: Float = 0f,
+    startPadding: Dp = 0.dp,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+    isLiquidGlassEnabled: Boolean = false,
+    clampToBounds: Boolean = false,
+    edgeInset: Dp = 0.dp,
+    viewportShiftPx: Float = 0f,
+    indicatorWidthMultiplier: Float = 1.42f,
+    indicatorMinWidth: Dp = 104.dp,
+    indicatorMaxWidth: Dp = 136.dp,
+    maxWidthToItemRatio: Float = Float.POSITIVE_INFINITY,
+    indicatorHeight: Dp = 54.dp,
+    lensIntensityBoost: Float = 1f,
+    edgeWarpBoost: Float = 1f,
+    chromaticBoost: Float = 1f,
+    lensAmountScale: Float = 1f,
+    lensHeightScale: Float = 1f,
+    forceChromaticAberration: Boolean = false,
+    liquidGlassStyle: LiquidGlassStyle = LiquidGlassStyle.CLASSIC, // [New]
+    liquidGlassTuning: LiquidGlassTuning? = null,
+    motionSpec: BottomBarMotionSpec = resolveBottomBarMotionSpec(),
+    backdrop: Backdrop? = null // [New] Backdrop for refraction
+) {
+    val density = LocalDensity.current
+    val resolvedTuning = remember(liquidGlassStyle, liquidGlassTuning) {
+        liquidGlassTuning ?: resolveLiquidGlassTuning(liquidGlassStyle)
+    }
+    val styleTuning = remember(resolvedTuning) { resolveLiquidStyleTuning(resolvedTuning) }
+    val lensProfile = remember(
+        isDragging,
+        velocity,
+        lensIntensityBoost,
+        edgeWarpBoost,
+        chromaticBoost,
+        resolvedTuning,
+        motionSpec
+    ) {
+        resolveLiquidLensProfile(
+            isDragging = isDragging,
+            velocityPxPerSecond = velocity,
+            idleThresholdPxPerSecond = styleTuning.idleThresholdPxPerSecond,
+            dragMotionFloor = styleTuning.dragMotionFloor,
+            lensIntensityBoost = lensIntensityBoost * styleTuning.lensIntensityMultiplier,
+            edgeWarpBoost = edgeWarpBoost * styleTuning.edgeWarpMultiplier,
+            chromaticBoost = chromaticBoost * styleTuning.chromaticMultiplier,
+            velocityRangePxPerSecond = motionSpec.indicator.lensVelocityRangePxPerSecond
+        )
+    }
+    
+    val itemWidthPx = with(density) { itemWidth.toPx() }
+    val indicatorWidthPx = resolveLiquidIndicatorWidthPx(
+        itemWidthPx = itemWidthPx,
+        widthMultiplier = indicatorWidthMultiplier,
+        minWidthPx = with(density) { indicatorMinWidth.toPx() },
+        maxWidthPx = with(density) { indicatorMaxWidth.toPx() },
+        maxWidthToItemRatio = maxWidthToItemRatio
+    )
+    val indicatorWidth = with(density) { indicatorWidthPx.toDp() }
+
+    // [优化] 使用 graphicsLayer 进行位移，避免 Layout 重排
+    // 计算位置 (Px)
+    val startPaddingPx = with(density) { startPadding.toPx() }
+    val edgeInsetPx = with(density) { edgeInset.toPx() }
+    // 居中偏移：(Item宽度 - 指示器宽度) / 2
+    val centerOffsetPx = (itemWidthPx - indicatorWidthPx) / 2f
+    
+    // 速度形变
+    val deformation = lensProfile.motionFraction *
+        (motionSpec.indicator.deformationScaleXDelta * styleTuning.deformationMultiplier)
+
+    val targetScaleX = 1f + deformation
+    val targetScaleY = 1f - (deformation * motionSpec.indicator.deformationScaleYCompressionRatio)
+
+    val scaleX by animateFloatAsState(
+        targetValue = targetScaleX,
+        animationSpec = motionSpec.indicator.scaleSpring.toSpringSpec(),
+        label = "scaleX"
+    )
+    val scaleY by animateFloatAsState(
+        targetValue = targetScaleY,
+        animationSpec = motionSpec.indicator.scaleSpring.toSpringSpec(),
+        label = "scaleY"
+    )
+    val dragScale by animateFloatAsState(
+        targetValue = if (isDragging) 1.0f else 1f,
+        animationSpec = motionSpec.indicator.dragScaleSpring.toSpringSpec(),
+        label = "dragScale"
+    )
+
+    val finalScaleX = scaleX * dragScale
+    val finalScaleY = scaleY * dragScale
+
+    // 指示器形状
+    val shape = RoundedCornerShape(indicatorHeight / 2)
+    
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        val containerWidthPx = with(density) { maxWidth.toPx() }
+         Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    // [核心优化] 在绘制阶段计算位移
+                    translationX = resolveIndicatorTranslationXPx(
+                        position = position,
+                        itemWidthPx = itemWidthPx,
+                        indicatorWidthPx = indicatorWidthPx,
+                        startPaddingPx = startPaddingPx,
+                        containerWidthPx = containerWidthPx,
+                        clampToBounds = clampToBounds,
+                        edgeInsetPx = edgeInsetPx,
+                        viewportShiftPx = viewportShiftPx
+                    )
+                    
+                    this.scaleX = finalScaleX
+                    this.scaleY = finalScaleY
+                    shadowElevation = 0f
+                }
+                .size(indicatorWidth, indicatorHeight)
+                .clip(shape)
+                .run {
+                    if (isLiquidGlassEnabled && backdrop != null && shouldAllowHomeChromeLiquidGlass(Build.VERSION.SDK_INT)) {
+                        this.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { shape },
+                            effects = {
+                                blur(
+                                    styleTuning.idleBlurRadius *
+                                        (0.06f + resolvedTuning.progress * 0.94f)
+                                )
+                                if (lensProfile.shouldRefract && resolvedTuning.refractionAmount > 0.5f) {
+                                    lens(
+                                        refractionHeight = lensProfile.refractionHeight *
+                                            lensHeightScale.coerceIn(0.1f, 1f) *
+                                            blendFloat(1f, 0.35f, resolvedTuning.progress),
+                                        refractionAmount = lensProfile.refractionAmount *
+                                            lensAmountScale.coerceIn(0.1f, 1f) *
+                                            blendFloat(1f, 0.18f, resolvedTuning.progress),
+                                        depthEffect = styleTuning.depthEffectEnabled,
+                                        chromaticAberration = forceChromaticAberration || (
+                                            styleTuning.allowChromaticAberration &&
+                                                lensProfile.aberrationStrength > 0.01f
+                                            )
+                                    )
+                                }
+                            },
+                            onDrawSurface = {
+                                drawLiquidSphereSurface(
+                                    baseColor = color,
+                                    lensProfile = lensProfile,
+                                    tuning = resolvedTuning
+                                )
+                            }
+                        )
+                    } else {
+                        // Fallback
+                         this.background(color)
+                    }
+                }
+        )
+    }
+}
+
+
+/**
+ * 简化版液态指示器（不依赖 Backdrop）
+ * 
+ * 使用标准 Compose 动画实现类似效果
+ */
+/**
+ * 简化版液态指示器（适用于 TabRow 等变长场景）
+ * 
+ * 使用标准 Compose 动画实现类似效果
+ */
+@Composable
+fun SimpleLiquidIndicator(
+    position: Float, // [修复] 直接接受 Float 而非 State，简化 API
+    itemWidthPx: Float, // [修复] 使用像素值计算
+    isDragging: Boolean,
+    velocityPxPerSecond: Float = 0f,
+    isLiquidGlassEnabled: Boolean = false,
+    liquidGlassStyle: LiquidGlassStyle = LiquidGlassStyle.CLASSIC,
+    liquidGlassTuning: LiquidGlassTuning? = null,
+    backdrop: Backdrop? = null,
+    indicatorColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+    indicatorHeight: Dp = 34.dp,
+    cornerRadius: Dp = 16.dp,
+    widthRatio: Float = 0.78f,
+    minWidth: Dp = 48.dp,
+    horizontalInset: Dp = 16.dp,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val resolvedTuning = remember(liquidGlassStyle, liquidGlassTuning) {
+        liquidGlassTuning ?: resolveLiquidGlassTuning(liquidGlassStyle)
+    }
+    val styleTuning = remember(resolvedTuning) { resolveLiquidStyleTuning(resolvedTuning) }
+    val lensProfile = remember(isDragging, velocityPxPerSecond, resolvedTuning) {
+        resolveLiquidLensProfile(
+            isDragging = isDragging,
+            velocityPxPerSecond = velocityPxPerSecond,
+            idleThresholdPxPerSecond = styleTuning.idleThresholdPxPerSecond,
+            dragMotionFloor = styleTuning.dragMotionFloor,
+            lensIntensityBoost = styleTuning.lensIntensityMultiplier,
+            edgeWarpBoost = styleTuning.edgeWarpMultiplier,
+            chromaticBoost = styleTuning.chromaticMultiplier
+        )
+    }
+    val minWidthPx = with(density) { minWidth.toPx() }
+    val horizontalInsetPx = with(density) { horizontalInset.toPx() }
+    val indicatorWidthPx = resolveTopTabIndicatorWidthPx(
+        itemWidthPx = itemWidthPx,
+        widthRatio = widthRatio,
+        minWidthPx = minWidthPx,
+        horizontalInsetPx = horizontalInsetPx
+    )
+    val indicatorWidth = with(density) { indicatorWidthPx.toDp() }
+    val indicatorHeightPx = with(density) { indicatorHeight.toPx() }
+    
+    // [修复] 居中偏移：将指示器居中放置在每个 Tab 单元格内
+    val centerOffsetPx = (itemWidthPx - indicatorWidthPx) / 2f
+    
+    val scale by animateFloatAsState(
+        targetValue = 1f + lensProfile.motionFraction * (0.12f * styleTuning.deformationMultiplier),
+        animationSpec = AppMotionTokens.expressiveSpec(),
+        label = "scale"
+    )
+    val indicatorAlphaScale by animateFloatAsState(
+        targetValue = if (isLiquidGlassEnabled) 0.92f else 1f,
+        animationSpec = AppMotionTokens.standardSpec(),
+        label = "indicatorAlphaScale"
+    )
+    val resolvedIndicatorColor = indicatorColor.copy(
+        alpha = (indicatorColor.alpha * indicatorAlphaScale).coerceIn(0f, 1f)
+    )
+    
+    // [修复] 使用 BoxWithConstraints 获取父容器高度来计算垂直居中
+    BoxWithConstraints(
+        modifier = modifier.fillMaxHeight()
+    ) {
+        val parentHeightPx = with(density) { maxHeight.toPx() }
+        val verticalCenterOffsetPx = (parentHeightPx - indicatorHeightPx) / 2f
+        
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    translationX = position * itemWidthPx + centerOffsetPx
+                    translationY = verticalCenterOffsetPx
+                    
+                    this.scaleX = scale
+                    this.scaleY = 1f - lensProfile.motionFraction * (0.08f * styleTuning.deformationMultiplier)
+                }
+                .size(indicatorWidth, indicatorHeight)
+                .clip(RoundedCornerShape(cornerRadius))
+                .run {
+                    if (isLiquidGlassEnabled && backdrop != null && shouldAllowHomeChromeLiquidGlass(Build.VERSION.SDK_INT)) {
+                        this.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(cornerRadius) },
+                            effects = {
+                                blur(
+                                    styleTuning.idleBlurRadius *
+                                        (0.06f + resolvedTuning.progress * 0.94f)
+                                )
+                                if (lensProfile.shouldRefract && resolvedTuning.refractionAmount > 0.5f) {
+                                    lens(
+                                        refractionHeight = lensProfile.refractionHeight *
+                                            blendFloat(1f, 0.35f, resolvedTuning.progress),
+                                        refractionAmount = lensProfile.refractionAmount *
+                                            blendFloat(1f, 0.18f, resolvedTuning.progress),
+                                        depthEffect = styleTuning.depthEffectEnabled,
+                                        chromaticAberration = styleTuning.allowChromaticAberration &&
+                                            lensProfile.aberrationStrength > 0.01f
+                                    )
+                                }
+                            },
+                            onDrawSurface = {
+                                drawLiquidSphereSurface(
+                                    baseColor = resolvedIndicatorColor,
+                                    lensProfile = lensProfile,
+                                    tuning = resolvedTuning
+                                )
+                            }
+                        )
+                    } else {
+                        this.background(resolvedIndicatorColor)
+                    }
+                }
+                .border(
+                    width = 0.7.dp,
+                    color = Color.White.copy(alpha = if (isLiquidGlassEnabled) 0.62f else 0.25f),
+                    shape = RoundedCornerShape(cornerRadius)
+                )
+        )
+    }
+}
 
 internal fun resolveTopTabIndicatorWidthPx(
     itemWidthPx: Float,

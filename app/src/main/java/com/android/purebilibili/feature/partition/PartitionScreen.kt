@@ -61,11 +61,9 @@ import com.android.purebilibili.core.ui.CutePersonLoadingIndicator
 import com.android.purebilibili.core.ui.animation.DampedDragAnimationState
 import com.android.purebilibili.core.ui.animation.rememberDampedDragAnimationState
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
-import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
 import com.android.purebilibili.core.ui.LocalSharedTransitionEnabled
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.globalWallpaperAwareBackground
-import com.android.purebilibili.core.ui.resolveAdaptiveScaffoldContainerColor
 import com.android.purebilibili.core.util.responsiveContentWidth
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.core.util.FormatUtils
@@ -90,7 +88,9 @@ import com.android.purebilibili.data.model.response.BangumiType
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
-import com.android.purebilibili.feature.home.components.KernelSuMiuixBottomBarIndicatorLayer
+import com.android.purebilibili.feature.home.components.BottomBarClickPulseTransform
+import com.android.purebilibili.feature.home.components.BottomBarIndicatorLayerTransform
+import com.android.purebilibili.feature.home.components.KernelSuBottomBarIndicatorLayer
 import com.android.purebilibili.feature.home.components.resolveAndroidNativeIdleIndicatorSurfaceColor
 import com.android.purebilibili.feature.home.components.resolveBottomBarBackdropPresetIndicatorLens
 import com.android.purebilibili.feature.home.components.resolveBottomBarBackdropPresetProgress
@@ -104,9 +104,8 @@ import com.android.purebilibili.feature.home.components.resolveSegmentedControlM
 import com.android.purebilibili.feature.home.components.resolveSegmentedControlMotionSpec
 import com.android.purebilibili.feature.home.components.shouldShowTopTabIcon
 import com.android.purebilibili.feature.home.components.shouldShowTopTabText
-import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import com.android.purebilibili.core.ui.blur.unifiedBlur
@@ -374,14 +373,6 @@ fun PartitionContent(
         ),
         label = "partitionVideoListPush"
     )
-    val pageBackgroundColor = resolveAdaptiveScaffoldContainerColor(
-        requestedContainerColor = MaterialTheme.colorScheme.background,
-        defaultBackgroundColor = MaterialTheme.colorScheme.background,
-        globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
-    )
-    val sideRailBackdrop = rememberLayerBackdrop(onDraw = {
-        drawRect(pageBackgroundColor)
-    })
 
     val shouldLoadMore by remember(state.videos.size, state.isLoading) {
         derivedStateOf {
@@ -395,17 +386,12 @@ fun PartitionContent(
         }
     }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .globalWallpaperAwareBackground()
             .responsiveContentWidth(maxWidth = 1000.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .layerBackdrop(sideRailBackdrop)
-        )
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -429,7 +415,6 @@ fun PartitionContent(
                     end = 4.dp
                 ),
                 liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled,
-                backdrop = sideRailBackdrop,
                 onVideoListPushChanged = { sideRailVideoPushTargetPx = it },
                 onPartitionSelected = { partition ->
                     val bangumiType = resolvePartitionBangumiType(partition.id)
@@ -467,7 +452,6 @@ private fun PartitionSideRail(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues,
     liquidGlassIndicatorEnabled: Boolean,
-    backdrop: Backdrop,
     onVideoListPushChanged: (Float) -> Unit,
     onPartitionSelected: (PartitionCategory) -> Unit
 ) {
@@ -508,12 +492,14 @@ private fun PartitionSideRail(
                 itemSlotHeightPx = itemSlotHeightPx
             )
         }
+        val railBackdrop = rememberLayerBackdrop()
+
         PartitionSideRailMovingIndicator(
             dragState = dragState,
             itemSlotHeightPx = itemSlotHeightPx,
             indicatorOffsetPxProvider = currentIndicatorOffsetPxProvider,
             liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled,
-            backdrop = backdrop,
+            backdrop = railBackdrop,
             maxVideoPushPx = maxVideoPushPx,
             horizontalPadding = indicatorHorizontalPadding,
             onVideoListPushChanged = onVideoListPushChanged
@@ -523,6 +509,7 @@ private fun PartitionSideRail(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .layerBackdrop(railBackdrop)
                 .partitionSideRailIndicatorLongPressDrag(
                     dragState = dragState,
                     itemHeightPx = itemHeightPx,
@@ -559,7 +546,7 @@ private fun PartitionSideRailMovingIndicator(
     itemSlotHeightPx: Float,
     indicatorOffsetPxProvider: () -> Float,
     liquidGlassIndicatorEnabled: Boolean,
-    backdrop: Backdrop,
+    backdrop: com.kyant.backdrop.Backdrop,
     maxVideoPushPx: Float,
     horizontalPadding: PartitionSideRailIndicatorHorizontalPadding,
     onVideoListPushChanged: (Float) -> Unit
@@ -603,12 +590,13 @@ private fun PartitionSideRailMovingIndicator(
         val density = LocalDensity.current
         val indicatorWidth = (maxWidth - horizontalPadding.start - horizontalPadding.end)
             .coerceAtLeast(0.dp)
-        KernelSuMiuixBottomBarIndicatorLayer(
+        KernelSuBottomBarIndicatorLayer(
             visible = true,
             dockContentAlpha = 1f,
             indicatorTranslationXPx = with(density) { horizontalPadding.start.toPx() },
             indicatorTranslationYPx = indicatorOffsetPxProvider(),
             indicatorPanelOffsetPx = 0f,
+            indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
             indicatorWidth = indicatorWidth,
             indicatorHeight = PartitionSideRailItemHeight,
             shellShape = shape,

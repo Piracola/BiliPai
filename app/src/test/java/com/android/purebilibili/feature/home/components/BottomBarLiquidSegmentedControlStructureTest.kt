@@ -82,104 +82,6 @@ class BottomBarLiquidSegmentedControlStructureTest {
     }
 
     @Test
-    fun `compact segmented indicator scales lens distances by bottom bar height ratio`() {
-        assertEquals(
-            27f / 56f,
-            resolveLiquidReuseLensStrengthScale(indicatorHeightDp = 27f),
-            absoluteTolerance = 0.001f
-        )
-        assertEquals(
-            1f,
-            resolveLiquidReuseLensStrengthScale(indicatorHeightDp = 56f),
-            absoluteTolerance = 0.001f
-        )
-        assertEquals(
-            1f,
-            resolveLiquidReuseLensStrengthScale(indicatorHeightDp = 64f),
-            absoluteTolerance = 0.001f
-        )
-    }
-
-    @Test
-    fun `reuse capture and indicator lens match dock bands at full height`() {
-        val capture = resolveLiquidReuseCaptureLensSpec(
-            progress = 1f,
-            indicatorHeightDp = 56f,
-            chromeContext = LiquidReuseChromeContext.FLOATING_DOCK,
-        )
-        val indicator = resolveLiquidReuseIndicatorLensSpec(
-            progress = 1f,
-            indicatorHeightDp = 56f,
-            chromeContext = LiquidReuseChromeContext.FLOATING_DOCK,
-        )
-
-        assertEquals(24f, capture.refractionHeightDp, absoluteTolerance = 0.001f)
-        assertEquals(24f, capture.refractionAmountDp, absoluteTolerance = 0.001f)
-        assertEquals(10f, indicator.refractionHeightDp, absoluteTolerance = 0.001f)
-        assertEquals(14f, indicator.refractionAmountDp, absoluteTolerance = 0.001f)
-    }
-
-    @Test
-    fun `reuse lens keeps dock edge-band fraction on compact capsules`() {
-        val height = 28f
-        val scale = height / 56f
-        val capture = resolveLiquidReuseCaptureLensSpec(
-            progress = 1f,
-            indicatorHeightDp = height,
-            chromeContext = LiquidReuseChromeContext.FLOATING_DOCK,
-        )
-        val indicator = resolveLiquidReuseIndicatorLensSpec(
-            progress = 1f,
-            indicatorHeightDp = height,
-            chromeContext = LiquidReuseChromeContext.FLOATING_DOCK,
-        )
-
-        assertEquals(24f * scale, capture.refractionHeightDp, absoluteTolerance = 0.001f)
-        assertEquals(24f * scale, capture.refractionAmountDp, absoluteTolerance = 0.001f)
-        assertEquals(10f * scale, indicator.refractionHeightDp, absoluteTolerance = 0.001f)
-        assertEquals(14f * scale, indicator.refractionAmountDp, absoluteTolerance = 0.001f)
-    }
-
-    @Test
-    fun `in-content reuse keeps indicator refraction inside aligned backdrop`() {
-        val capture = resolveLiquidReuseCaptureLensSpec(
-            progress = 1f,
-            indicatorHeightDp = 56f,
-            chromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
-        )
-        val indicator = resolveLiquidReuseIndicatorLensSpec(
-            progress = 1f,
-            indicatorHeightDp = 56f,
-            chromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
-        )
-
-        assertEquals(
-            LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_HEIGHT_DP,
-            capture.refractionHeightDp,
-            absoluteTolerance = 0.001f
-        )
-        assertEquals(
-            LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_AMOUNT_DP,
-            capture.refractionAmountDp,
-            absoluteTolerance = 0.001f
-        )
-        assertEquals(
-            LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_HEIGHT_DP,
-            indicator.refractionHeightDp,
-            absoluteTolerance = 0.001f
-        )
-        assertEquals(
-            LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_AMOUNT_DP,
-            indicator.refractionAmountDp,
-            absoluteTolerance = 0.001f
-        )
-        assertTrue(capture.refractionAmountDp <= LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP)
-        assertTrue(indicator.refractionAmountDp <= LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP)
-        assertFalse(shouldDrawLiquidReuseShellLens(LiquidReuseChromeContext.IN_CONTENT_SEGMENTED))
-        assertTrue(shouldDrawLiquidReuseShellLens(LiquidReuseChromeContext.FLOATING_DOCK))
-    }
-
-    @Test
     fun `segmented indicator offset follows slot position without clamping dead zone`() {
         assertEquals(
             4f,
@@ -380,12 +282,9 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertTrue(source.contains("holdPressUntilReleaseTargetSettles = true"))
         assertTrue(source.contains("indicatorLayerScaleTransform = null"))
         assertTrue(source.contains("resolveBottomBarRefractionMotionProfile("))
-        // InstallerX-aligned: Miuix-only liquid stack (no Kyant dual path).
-        assertTrue(source.contains(".kernelSuMiuixFloatingDockSurface("))
-        assertFalse(source.contains(".kernelSuFloatingDockSurface("))
-        assertFalse(source.contains("com.kyant.backdrop"))
+        assertTrue(source.contains(".kernelSuFloatingDockSurface("))
         assertTrue(source.contains("blurRadius = androidNativeTuning.shellBlurRadiusDp.dp"))
-        assertTrue(source.contains("blur(4.dp.toPx(), 4.dp.toPx())"))
+        assertTrue(source.contains("blur(androidNativeTuning.shellBlurRadiusDp.dp.toPx())"))
         assertFalse(source.contains("blur(8.dp.toPx())"))
         assertFalse(source.contains(".border("))
         assertTrue(source.contains("BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_HEIGHT_DP = 58"))
@@ -393,50 +292,27 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertTrue(source.contains("resolveSharedLiquidIndicatorPanelOffsetPx("))
         assertTrue(source.contains("4.dp.toPx()"))
         assertTrue(source.contains("resolveBottomBarItemMotionVisual("))
-        assertTrue(source.contains("rememberCombinedBackdrop("))
-        assertTrue(source.contains("resolveLiquidReuseIndicatorContentBackdrop("))
-        assertTrue(source.contains("contentBackdrop = indicatorContentBackdrop"))
-        // Real page capture stays below the shell-tinted label export.
-        assertTrue(source.contains("useCombined = true"))
-        assertTrue(source.contains("backdrop = combinedIndicatorBackdrop ?: samplingBackdrop"))
+        assertFalse(source.contains("rememberCombinedBackdrop("))
         assertFalse(source.contains("backdrop ?: tabsBackdrop"))
         assertFalse(source.contains("containerBackdrop = backdrop ?: tabsBackdrop"))
         assertTrue(source.contains("shouldDrawSegmentedControlExportCaptureBackdrop("))
         assertTrue(source.contains("drawBackdrop("))
-        assertTrue(source.contains("resolveLiquidReuseCaptureLensSpec("))
-        assertTrue(source.contains("resolveLiquidReuseIndicatorLensSpec("))
-        assertTrue(source.contains("drawShellLens = drawShellLens"))
-        assertTrue(source.contains("shouldDrawLiquidReuseShellLens("))
-        assertTrue(source.contains("LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP"))
-        assertTrue(source.contains("resolveLiquidReuseCaptureExtentDp("))
-        assertTrue(source.contains("chromeContext = liquidReuseChrome"))
+        assertTrue(source.contains("resolveBottomBarBackdropPresetCaptureLens("))
+        assertTrue(source.contains("resolveBottomBarBackdropPresetIndicatorLens("))
         assertTrue(source.contains("resolveSharedLiquidIndicatorLensProgress("))
         assertTrue(source.contains("resolveSharedLiquidIndicatorCaptureLensProgress("))
-        // Export LayerBackdrop must expand with bleed so 88/56 scale never OOB-blacks.
-        assertTrue(source.contains(".width(captureWidth)"))
-        assertTrue(source.contains(".height(captureHeight)"))
-        assertTrue(source.contains(".layerBackdrop(tabsBackdrop)"))
-        assertTrue(source.contains("samplingBackdrop !== localSamplingBackdrop"))
-        // In-content capsule: no multi-offset depth/chroma (OOB black past local bleed).
-        assertTrue(source.contains("lensDepthEffect = false"))
-        assertTrue(source.contains("lensChromaticAberration = 0f"))
-        // Capture matches bottom-bar export: edge lens only (no depth/dispersion).
-        assertFalse(
-            source.contains(
-                "refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx(),\n" +
-                    "                                        depthEffect = true"
-            )
-        )
-        assertFalse(source.contains("forceUnselectedColor = useGlassColorPath"))
+        assertTrue(source.contains("forceUnselectedColor = useGlassColorPath"))
         assertTrue(source.contains("exportMonochromeColor"))
         assertTrue(source.contains("resolveSharedLiquidExportMonochromeColor("))
         assertTrue(source.contains("ColorFilter.tint(exportTintColor)"))
         assertTrue(source.contains("applyItemScale = true"))
         assertTrue(source.contains("scaleX = labelScale"))
         assertTrue(source.contains("scaleY = labelScale"))
+        assertTrue(source.contains("resolveBottomBarLiquidGlassHighlightAlpha(") || source.contains("resolveBottomBarLiquidGlassHighlightAlpha("))
+        assertTrue(source.contains("Highlight.Default.copy(alpha = captureHighlightAlpha)"))
+        assertTrue(source.contains("rememberBottomBarClickPulseTransform("))
         assertTrue(source.contains("rememberBottomBarIndicatorDragScaleProgress("))
-        assertTrue(source.contains("KernelSuMiuixBottomBarIndicatorLayer("))
-        assertFalse(source.contains("KernelSuBottomBarIndicatorLayer("))
+        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
         assertTrue(source.contains("indicatorLayerScaleProgress = indicatorLayerScaleProgress"))
         assertTrue(source.contains("indicatorLayerScaleTransform = null"))
         assertTrue(source.contains("effectivePressProgress = lensProgress"))
@@ -447,19 +323,9 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertFalse(source.contains("resolveIosFloatingBottomIndicatorTintAlpha("))
         assertFalse(source.contains("resolveLiquidSegmentedIndicatorColor("))
         assertTrue(source.contains("liquidGlassEffectsEnabled: Boolean = true"))
-        assertTrue(source.contains("backdropCoversControl: Boolean = false"))
-        assertTrue(source.contains("pageBackdrop = backdrop.takeIf { backdropCoversControl }"))
         assertTrue(source.contains("dragSelectionEnabled: Boolean = true"))
         assertFalse(source.contains("shellBackdrop"))
-        assertFalse(source.contains("miuixBackdrop:"))
-        assertTrue(source.contains("val exportSurfaceColor = resolveLiquidReuseExportSurfaceColor("))
-        assertTrue(source.contains("glassEnabled = liquidGlassEnabled"))
-        assertTrue(source.contains("darkTheme = isDarkTheme"))
-        assertTrue(source.contains("val tabsBackdrop = rememberLayerBackdrop(onDraw = {"))
-        assertTrue(source.contains("drawRect(exportSurfaceColor)"))
-        assertTrue(source.contains("drawContent()"))
-        assertTrue(source.contains("samplingBackdrop !== localSamplingBackdrop"))
-        assertFalse(source.contains("!samplingBackdrop.isCoordinatesDependent"))
+        assertTrue(source.contains("val tabsBackdrop = rememberLayerBackdrop()"))
         assertTrue(source.contains(".layerBackdrop(tabsBackdrop)"))
         assertTrue(source.contains("val exportTintColor = resolveAndroidNativeExportTintColor("))
         assertTrue(source.contains(".graphicsLayer(colorFilter = ColorFilter.tint(exportTintColor))"))
@@ -468,6 +334,8 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertFalse(source.contains("val useIndicatorBackdrop = liquidGlassEnabled && indicatorVisualPolicy.shouldRefract"))
         assertFalse(source.contains("LiquidIndicator("))
         assertFalse(source.contains("backdrop = indicatorBackdrop"))
+        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
+        assertTrue(source.contains("chromaticAberration = true"))
         assertTrue(source.contains("getHomeSettings("))
         assertTrue(source.contains("resolveSharedLiquidGlassChromeEnabled("))
         assertTrue(source.contains("resolveSegmentedControlChromeStyle("))
@@ -499,32 +367,23 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertTrue(source.contains("indicatorWidth = indicatorWidth"))
         assertTrue(source.contains("indicatorHeight = resolvedIndicatorHeight"))
         assertTrue(source.contains("indicatorPanelOffsetPx = panelOffsetPx"))
+        assertTrue(source.contains("indicatorSettleReboundTransform = clickPulseTransform"))
         assertFalse(source.contains("scaleX = indicatorTransform.scaleX"))
         assertFalse(source.contains("scaleY = indicatorTransform.scaleY"))
         assertFalse(source.contains("containerWidthDp = maxWidth.value"))
-        // Capture edge lens is dock-aligned; capsule depth/dispersion lives in shared indicator layer.
-        assertFalse(source.contains("chromaticAberration = 0.5f"))
-        val indicatorIndex = source.indexOf("KernelSuMiuixBottomBarIndicatorLayer(")
+        val indicatorIndex = source.indexOf("KernelSuBottomBarIndicatorLayer(")
         val visibleLabelsIndex = source.indexOf(
             "selectionEmphasis = refractionMotionProfile.visibleSelectionEmphasis"
         )
         assertTrue(indicatorIndex >= 0)
-        // Visible labels stay above the capsule and interpolate theme color directly.
+        // Visible labels must be composed BEFORE the capsule so theme color shows through glass.
         assertTrue(visibleLabelsIndex >= 0)
         assertTrue(visibleLabelsIndex < indicatorIndex)
-        assertTrue(source.contains(".zIndex(LIQUID_REUSE_FOREGROUND_Z_INDEX)"))
-        assertTrue(source.contains("val localSamplingBackdrop = rememberLayerBackdrop(onDraw = {"))
-        assertTrue(source.contains("drawRect(localSamplingSurfaceColor)"))
-        assertTrue(source.contains(".layerBackdrop(localSamplingBackdrop)"))
-        assertTrue(source.contains("fallbackBackdrop = localSamplingBackdrop"))
-        assertTrue(source.contains("resolveLiquidReuseCaptureExtentDp(controlWidth.value)"))
-        assertTrue(source.contains("resolveLiquidReuseCaptureExtentDp(controlHeight.value)"))
-        assertTrue(source.contains(".width(captureWidth)"))
-        assertTrue(source.contains(".height(captureHeight)"))
-        assertTrue(source.contains("backdrop = samplingBackdrop,"))
-        assertFalse(source.contains("allowExportOnly"))
-        assertTrue(source.contains("forceUnselectedColor = false"))
-        assertTrue(source.contains("contentBackdrop = indicatorContentBackdrop"))
+        assertTrue(source.contains("contentBackdrop = tabsBackdrop"))
+        assertTrue(
+            source.contains("backdrop = backdrop,"),
+            "Indicator must sample external page backdrop only; never CombinedBackdrop/tabs self-capture"
+        )
         assertFalse(source.contains("val indicatorPolicy = remember(itemCount)"))
         assertFalse(source.contains("resolveBottomBarIndicatorPolicy(itemCount = itemCount)"))
         assertTrue(source.contains("resolveSharedLiquidIndicatorPanelOffsetPx("))

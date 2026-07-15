@@ -158,10 +158,7 @@ class VideoDetailScreenPolicyTest {
         // Visibility stays independent; reuse only switches floating liquid chrome.
         assertTrue(source.contains("shouldUseFloatingLiquidBottomInputBar("))
         assertTrue(source.contains("resolveBottomInputBarContentBottomPadding("))
-        assertTrue(source.contains("val bottomInputBarBackdropFallbackColor = MaterialTheme.colorScheme.surface"))
-        assertTrue(source.contains("val bottomInputBarBackdrop = rememberLayerBackdrop(onDraw = {"))
-        assertTrue(source.contains("drawRect(bottomInputBarBackdropFallbackColor)"))
-        assertTrue(source.contains("drawContent()"))
+        assertTrue(source.contains("val bottomInputBarBackdrop = rememberLayerBackdrop()"))
         assertTrue(source.contains(".layerBackdrop(bottomInputBarBackdrop)"))
         assertTrue(source.contains("backdrop = if (floatingLiquidBottomInputBar)"))
     }

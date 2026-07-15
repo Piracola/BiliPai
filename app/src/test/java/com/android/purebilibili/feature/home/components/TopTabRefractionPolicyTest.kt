@@ -17,24 +17,21 @@ class TopTabRefractionPolicyTest {
         assertTrue(source.contains("shouldUseMovingIosCapsule"))
         assertTrue(source.contains("shouldUseLiquidGlassIndicator"))
         assertFalse(source.contains("shouldForceDragLiquidGlassIndicator"))
-        assertTrue(source.contains("KernelSuMiuixBottomBarIndicatorLayer("))
-        assertFalse(source.contains("KernelSuBottomBarIndicatorLayer("))
+        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
         assertFalse(source.contains("BottomBarLiquidIndicatorSurface("))
         assertTrue(source.contains("resolveBottomBarRefractionMotionProfile("))
-        assertTrue(source.contains("resolveLiquidReuseIndicatorLensSpec("))
+        assertTrue(source.contains("resolveBottomBarBackdropPresetIndicatorLens("))
         assertTrue(source.contains("topTabShouldStretchIndicator"))
         assertTrue(source.contains("val shouldPrimeTopTabLiquidGlassCapture ="))
-        // v9.9.7 topology: sample export capture only (surface-filled for Miuix).
-        assertTrue(source.contains("val topTabContentBackdrop = rememberLayerBackdrop(onDraw = {"))
-        assertTrue(source.contains("val topTabIndicatorContentBackdrop: Backdrop?"))
-        assertTrue(source.contains("contentBackdrop = topTabIndicatorContentBackdrop"))
-        assertTrue(source.contains("backdrop = effectiveTopTabIndicatorContentBackdrop ?: backdrop"))
-        assertTrue(source.contains("resolveIosTopTabCapsuleContainerColor("))
+        assertTrue(source.contains("val topTabContentBackdrop = rememberLayerBackdrop()"))
+        assertTrue(source.contains("val effectiveTopTabIndicatorContentBackdrop: Backdrop?"))
+        assertTrue(source.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)"))
+        assertTrue(source.contains("contentBackdrop = effectiveTopTabIndicatorContentBackdrop"))
+        assertTrue(source.contains("backdrop = backdrop"))
         assertTrue(source.contains("val glassLayersAlwaysOn = shouldUseLiquidGlassIndicator"))
         assertTrue(source.contains("resolveTopTabIndicatorBackdropPolicy("))
-        assertTrue(source.contains("indicatorLayerScaleTransform = null") || source.contains("indicatorLayerScaleTransform = if (topTabDragActive)"))
+        assertTrue(source.contains("indicatorLayerScaleTransform = if (topTabDragActive)"))
         assertFalse(source.contains("indicatorHeight = 4.dp"))
-        assertFalse(source.contains("com.kyant.backdrop"))
     }
 
     @Test
@@ -364,36 +361,17 @@ class TopTabRefractionPolicyTest {
         assertTrue(source.contains("resolveTopTabIndicatorRenderPosition("))
         assertTrue(source.contains("pagerCurrentPageOffsetFraction = pagerState?.currentPageOffsetFraction"))
         assertTrue(source.contains("resolveTopTabClickAction(index, selectedIndex)"))
-        assertTrue(source.contains("KernelSuMiuixBottomBarIndicatorLayer("))
-        assertFalse(source.contains("KernelSuBottomBarIndicatorLayer("))
+        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
         assertFalse(source.contains("BottomBarLiquidIndicatorSurface("))
         assertFalse(source.contains("LiquidIndicator("))
         assertFalse(source.contains("SimpleLiquidIndicator("))
         assertFalse(source.contains("BottomBarStyleIndicatorSurface("))
-        assertTrue(source.contains("resolveSharedLiquidIndicatorCaptureLensProgress("))
-        assertTrue(source.contains("resolveLiquidReuseCaptureLensSpec("))
-        assertTrue(source.contains("resolveLiquidReuseIndicatorLensSpec("))
-        assertTrue(source.contains("drawBackdrop("))
-        assertTrue(source.contains("vibrancy()"))
-        assertTrue(source.contains("blur(4.dp.toPx(), 4.dp.toPx())"))
-        assertTrue(source.contains("refractionHeight = topTabCaptureLensSpec.refractionHeightDp.dp.toPx()"))
-        assertTrue(source.contains("refractionAmount = topTabCaptureLensSpec.refractionAmountDp.dp.toPx()"))
-        // Capture matches dock export (edge only); indicator capsule keeps depth/dispersion.
-        assertFalse(
-            source.contains(
-                "refractionAmount = topTabCaptureLensSpec.refractionAmountDp.dp.toPx(),\n" +
-                    "                                                    depthEffect = true"
-            )
-        )
+        assertFalse(source.contains("drawBackdrop("))
         assertFalse(source.contains(".layerBackdrop(tabsBackdrop)"))
         assertFalse(source.contains("rememberCombinedBackdrop(backdrop, tabsBackdrop)"))
         assertTrue(source.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)"))
         assertTrue(source.contains("if (shouldPrimeTopTabLiquidGlassCapture)"))
         assertTrue(source.contains("layerBackdrop(topTabContentBackdrop)"))
-        // Export capture expands with reuse bleed; skip coordinate-dependent page re-sample.
-        assertTrue(source.contains("resolveLiquidReuseCaptureExtentDp("))
-        assertTrue(source.contains("!backdrop.isCoordinatesDependent"))
-        assertFalse(source.contains("com.kyant.backdrop"))
     }
 
     @Test

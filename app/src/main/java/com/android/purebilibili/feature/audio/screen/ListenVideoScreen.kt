@@ -72,8 +72,8 @@ import com.android.purebilibili.feature.audio.viewmodel.ListenVideoUiState
 import com.android.purebilibili.feature.audio.viewmodel.ListenVideoViewModel
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
 import com.android.purebilibili.feature.video.player.PlaylistManager
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -156,13 +156,6 @@ internal fun ListenVideoScreen(
     )
     val scope = rememberCoroutineScope()
     val selectionBackdrop = rememberLayerBackdrop()
-    val listenVideoBackground = Brush.verticalGradient(
-        listOf(
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f),
-            MaterialTheme.colorScheme.background,
-            MaterialTheme.colorScheme.background
-        )
-    )
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }
@@ -171,65 +164,65 @@ internal fun ListenVideoScreen(
     }
 
     BoxWithConstraints(
-        modifier = modifier.fillMaxSize()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .layerBackdrop(selectionBackdrop)
-                .background(listenVideoBackground)
-        )
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            val layout = resolveListenVideoLayout(maxWidth.value.toInt())
-            Column(modifier = Modifier.fillMaxSize()) {
-                ListenVideoHeader(
-                    nowPlaying = nowPlaying,
-                    onNowPlayingClick = onNowPlayingClick,
-                    onRefresh = onRefresh,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                )
-                BottomBarLiquidSegmentedControl(
-                    items = sectionLabels,
-                    selectedIndex = pagerState.currentPage,
-                    onSelected = { index ->
-                        scope.launch { pagerState.animateScrollToPage(index) }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    height = 52.dp,
-                    indicatorHeight = 46.dp,
-                    forceLiquidChrome = true,
-                    preferInlineContentStyle = false,
-                    backdrop = selectionBackdrop,
-                    backdropCoversControl = true,
-                    indicatorPositionProvider = {
-                        pagerState.currentPage + pagerState.currentPageOffsetFraction
-                    }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.weight(1f)
-                ) { page ->
-                    ListenVideoPage(
-                        section = ListenVideoSection.entries[page],
-                        state = state,
-                        layout = layout,
-                        onPlaylistSelected = onPlaylistSelected,
-                        onAlbumSelected = onAlbumSelected,
-                        onArtistSelected = onArtistSelected,
-                        onRetryIndex = onRetryIndex,
-                        onLogin = onLogin,
-                        modifier = Modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f),
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.background
                     )
+                )
+            )
+            .statusBarsPadding()
+    ) {
+        val layout = resolveListenVideoLayout(maxWidth.value.toInt())
+        Column(modifier = Modifier.fillMaxSize()) {
+            ListenVideoHeader(
+                nowPlaying = nowPlaying,
+                onNowPlayingClick = onNowPlayingClick,
+                onRefresh = onRefresh,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            )
+            BottomBarLiquidSegmentedControl(
+                items = sectionLabels,
+                selectedIndex = pagerState.currentPage,
+                onSelected = { index ->
+                    scope.launch { pagerState.animateScrollToPage(index) }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                height = 52.dp,
+                indicatorHeight = 46.dp,
+                forceLiquidChrome = true,
+                preferInlineContentStyle = false,
+                backdrop = selectionBackdrop,
+                indicatorPositionProvider = {
+                    pagerState.currentPage + pagerState.currentPageOffsetFraction
                 }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .weight(1f)
+                    .layerBackdrop(selectionBackdrop)
+            ) { page ->
+                ListenVideoPage(
+                    section = ListenVideoSection.entries[page],
+                    state = state,
+                    layout = layout,
+                    onPlaylistSelected = onPlaylistSelected,
+                    onAlbumSelected = onAlbumSelected,
+                    onArtistSelected = onArtistSelected,
+                    onRetryIndex = onRetryIndex,
+                    onLogin = onLogin,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }

@@ -172,48 +172,34 @@ class HomeChromeLiquidSurfaceStructureTest {
             lightweightTopTabItemSource.contains(".align(Alignment.BottomCenter)")
         )
         assertTrue(
-            "matched top dock helper should use Miuix floating dock renderer for header controls",
-            topBarSource.contains(".kernelSuMiuixFloatingDockSurface(") &&
+            "matched top dock helper should still use the KSU floating dock renderer for header controls",
+            topBarSource.contains(".kernelSuFloatingDockSurface(") &&
                 topBarSource.contains("liquidGlassPreset: BottomBarLiquidGlassPreset") &&
                 topBarSource.contains("liquidGlassPreset = liquidGlassPreset")
         )
         assertTrue(
-            "top tab indicator should reuse the Miuix bottom-bar indicator layer when chrome exists",
+            "top tab indicator should reuse the bottom bar KSU indicator layer when chrome exists",
             topBarSource.contains("val shouldRenderTopTabLiquidGlassIndicator = shouldUseLiquidGlassIndicator") &&
                 topBarSource.contains("!hasOuterChromeSurface") &&
                 topBarSource.contains("val shouldUseMd3DockBackedCapsule =") &&
-                topBarSource.contains("KernelSuMiuixBottomBarIndicatorLayer(") &&
+                topBarSource.contains("KernelSuBottomBarIndicatorLayer(") &&
                 topBarSource.contains("val shouldPrimeTopTabLiquidGlassCapture =") &&
-                topBarSource.contains("val topTabContentBackdrop = rememberLayerBackdrop(onDraw = {") &&
+                topBarSource.contains("val topTabContentBackdrop = rememberLayerBackdrop()") &&
+                topBarSource.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)") &&
                 topBarSource.contains("layerBackdrop(topTabContentBackdrop)") &&
                 topBarSource.contains("ColorFilter.tint(topTabExportTintColor)") &&
                 topBarSource.contains("TopTabLiquidColorMode.GLASS_EXPORT") &&
-                topBarSource.contains("colorMode = TopTabLiquidColorMode.NORMAL") &&
-                !topBarSource.contains("TopTabLiquidColorMode.GLASS_VISIBLE") &&
+                topBarSource.contains("TopTabLiquidColorMode.GLASS_VISIBLE") &&
                 topBarSource.contains("resolveSharedLiquidExportMonochromeColor(") &&
                 topBarSource.contains("shouldRenderBottomBarIndicatorBackdrop(") &&
                 topBarSource.contains("val glassLayersAlwaysOn = shouldUseLiquidGlassIndicator") &&
                 topBarSource.contains("resolveTopTabIndicatorBackdropPolicy(") &&
                 topBarSource.contains("allowIdleGlassEffect = false") &&
-                topBarSource.contains("contentBackdrop = topTabIndicatorContentBackdrop") &&
-                topBarSource.contains("resolveIosTopTabCapsuleContainerColor(") &&
+                topBarSource.contains("contentBackdrop = topTabContentBackdrop") &&
                 topBarSource.contains("topTabListScrollOffsetPx") &&
                 topBarSource.contains("One shared shift for export") &&
                 topBarSource.contains("indicatorPanelOffsetPx = 0f") &&
                 topBarSource.contains("!shouldUseMd3DockBackedCapsule && !shouldUseMd3LiquidCapsule")
-        )
-        assertTrue(
-            "top-tab labels must stay above the indicator and interpolate theme color directly",
-            topBarSource.contains(
-                "state = listState,\n" +
-                    "                    modifier = Modifier\n" +
-                    "                        .fillMaxSize()\n" +
-                    "                        .zIndex(LIQUID_REUSE_FOREGROUND_Z_INDEX),"
-            ) && topBarSource.contains(
-                ".fillMaxSize()\n" +
-                    "                        .zIndex(1f)\n" +
-                    "                        .graphicsLayer { clip = false }"
-            )
         )
         assertFalse(
             "top tab row should not keep the old bottom-bar local backdrop capture names",
@@ -230,13 +216,15 @@ class HomeChromeLiquidSurfaceStructureTest {
                 topBarSource.contains("rememberCombinedBackdrop(backdrop, tabContentBackdrop)")
         )
         assertTrue(
-            "KSU dock surface should use Miuix floating dock (InstallerX-aligned) with lens support",
-            bottomBar.readText().contains("internal fun Modifier.kernelSuMiuixFloatingDockSurface(") &&
-                bottomBar.readText().contains("miuixVibrancy()") &&
+            "KSU dock surface should use backdrop vibrancy, blur, and lens like the floating bottom bar",
+            bottomBar.readText().contains("internal fun Modifier.kernelSuFloatingDockSurface(") &&
+                bottomBar.readText().contains("vibrancy()") &&
                 bottomBar.readText().contains("drawShellLens: Boolean = true") &&
-                bottomBar.readText().contains("miuixLens(") &&
-                !bottomBar.readText().contains("internal fun Modifier.kernelSuFloatingDockSurface(") &&
-                !bottomBar.readText().contains("com.kyant.backdrop")
+                bottomBar.readText().contains("glassEnabled && drawShellLens") &&
+                bottomBar.readText().contains("shellRefractionHeightDp") &&
+                bottomBar.readText().contains("shellRefractionAmountDp") &&
+                bottomBar.readText().contains("runtimeShaderEffect(") &&
+                bottomBar.readText().contains("LIQUID_GLASS_SHADER_KEY")
         )
         assertFalse(
             "bottom bar should not keep the old appChromeLiquidSurface renderer",
