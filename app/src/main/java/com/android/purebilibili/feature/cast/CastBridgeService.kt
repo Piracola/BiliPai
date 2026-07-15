@@ -8,7 +8,6 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import com.android.purebilibili.core.util.Logger
 import org.fourthline.cling.android.AndroidUpnpService
-import org.fourthline.cling.android.AndroidUpnpServiceImpl
 import org.fourthline.cling.model.meta.Device
 import org.fourthline.cling.model.meta.LocalDevice
 import org.fourthline.cling.model.meta.RemoteDevice
@@ -41,6 +40,22 @@ class CastBridgeService : Service() {
     private var deviceCache: List<CastDeviceInfo> = emptyList()
 
     private val registryListener = object : DefaultRegistryListener() {
+        override fun remoteDeviceDiscoveryFailed(
+            registry: Registry,
+            device: RemoteDevice,
+            ex: Exception
+        ) {
+            val identity = device.identity
+            val cause = generateSequence(ex as Throwable?) { it.cause }.last()
+            Logger.w(
+                TAG,
+                "DLNA device hydration failed: location=${identity.descriptorURL}, " +
+                    "udn=${identity.udn.identifierString}, cause=${cause.message}",
+                ex
+            )
+            refreshDevices()
+        }
+
         override fun remoteDeviceAdded(registry: Registry, device: RemoteDevice) {
             refreshDevices()
         }
@@ -174,10 +189,10 @@ class CastBridgeService : Service() {
         if (clingBound) return
 
         acquireMulticastLock()
-        val intent = Intent(this, AndroidUpnpServiceImpl::class.java)
+        val intent = Intent(this, BiliPaiUpnpServiceImpl::class.java)
         clingBound = bindService(intent, clingConnection, Context.BIND_AUTO_CREATE)
         if (!clingBound) {
-            Logger.e(TAG, "Failed to bind AndroidUpnpServiceImpl from bridge")
+            Logger.e(TAG, "Failed to bind BiliPaiUpnpServiceImpl from bridge")
             releaseMulticastLock()
         }
     }

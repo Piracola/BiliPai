@@ -58,7 +58,7 @@
         <!-- 📺 DLNA Cling Service (JitPack/Cling)
              通过 manifestPlaceholders 支持发布时快速回滚到主进程 -->
         <service
-            android:name="org.fourthline.cling.android.AndroidUpnpServiceImpl"
+            android:name=".feature.cast.BiliPaiUpnpServiceImpl"
             android:process="${castServiceProcess}" />
 
         <service
