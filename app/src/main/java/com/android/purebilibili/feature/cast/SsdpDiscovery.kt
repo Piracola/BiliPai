@@ -19,7 +19,7 @@ import java.net.NetworkInterface
 
 /**
  * 手动 SSDP 发现实现
- * 用于在 Cling 库不工作时作为备用方案
+ * DLNA 设备发现入口
  */
 object SsdpDiscovery {
     private const val TAG = "SsdpDiscovery"

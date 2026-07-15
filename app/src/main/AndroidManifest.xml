@@ -55,17 +55,6 @@
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="31">
 
-        <!-- 📺 DLNA Cling Service (JitPack/Cling)
-             通过 manifestPlaceholders 支持发布时快速回滚到主进程 -->
-        <service
-            android:name=".feature.cast.BiliPaiUpnpServiceImpl"
-            android:process="${castServiceProcess}" />
-
-        <service
-            android:name=".feature.cast.CastBridgeService"
-            android:exported="false"
-            android:process="${castServiceProcess}" />
-
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.android.purebilibili.feature.plugin.googlecast.CastOptionsProvider" />

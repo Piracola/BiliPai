@@ -8,7 +8,6 @@ import com.android.purebilibili.core.plugin.CastPluginMediaRequest
 import com.android.purebilibili.core.plugin.CastPluginRoute
 import com.android.purebilibili.core.plugin.PluginCapability
 import com.android.purebilibili.core.plugin.PluginCapabilityManifest
-import com.android.purebilibili.feature.cast.DlnaManager
 import com.android.purebilibili.feature.cast.associateNotNullBy
 import com.android.purebilibili.feature.cast.SsdpCastClient
 import com.android.purebilibili.feature.cast.SsdpDiscovery
@@ -60,18 +59,11 @@ class DlnaCastPlugin : CastPluginApi {
 
     private var discoveryJob: Job? = null
     private var ssdpJob: Job? = null
-    private var boundContext: Context? = null
-
-    private var clingCache = emptyMap<String, com.android.purebilibili.feature.cast.CastDeviceInfo>()
     private var ssdpCache = emptyMap<String, SsdpDiscovery.SsdpDevice>()
 
     override fun startRouteDiscovery(context: Context) {
         if (discoveryJob?.isActive == true) return
         val appContext = context.applicationContext
-
-        DlnaManager.bindService(appContext)
-        boundContext = appContext
-        DlnaManager.refresh()
 
         startRouteCollector()
         refreshSsdpDevices(appContext)
@@ -79,27 +71,16 @@ class DlnaCastPlugin : CastPluginApi {
 
     override fun refreshRouteDiscovery(context: Context) {
         val appContext = context.applicationContext
-        if (boundContext == null) {
-            DlnaManager.bindService(appContext)
-            boundContext = appContext
-        }
         startRouteCollector()
-        DlnaManager.refresh()
         refreshSsdpDevices(appContext)
     }
 
     private fun startRouteCollector() {
         if (discoveryJob?.isActive == true) return
         discoveryJob = scope.launch {
-            combine(
-                DlnaManager.devices,
-                _ssdpDevices,
-                _ssdpProfiles
-            ) { clingDevices, ssdpDevices, profiles ->
-                val visibleSsdp = resolveVisibleSsdpDevices(clingDevices, ssdpDevices, profiles)
-                buildDlnaRouteSnapshot(clingDevices, visibleSsdp)
+            combine(_ssdpDevices, _ssdpProfiles) { ssdpDevices, profiles ->
+                buildDlnaRouteSnapshot(resolveVisibleSsdpDevices(ssdpDevices, profiles))
             }.collect { snapshot ->
-                clingCache = snapshot.clingCache
                 ssdpCache = snapshot.ssdpCache
                 _routes.value = snapshot.routes
             }
@@ -132,16 +113,9 @@ class DlnaCastPlugin : CastPluginApi {
         ssdpJob?.cancel()
         ssdpJob = null
 
-        val ctx = boundContext
-        if (ctx != null) {
-            DlnaManager.unbindService(ctx)
-            boundContext = null
-        }
-
         _routes.value = emptyList()
         _ssdpDevices.value = emptyList()
         _ssdpProfiles.value = emptyMap()
-        clingCache = emptyMap()
         ssdpCache = emptyMap()
         _isDiscovering.value = false
     }
@@ -151,12 +125,8 @@ class DlnaCastPlugin : CastPluginApi {
         route: CastPluginRoute,
         media: CastPluginMediaRequest
     ): Result<Unit> {
-        val selection = resolveDlnaRouteSelection(route.routeId, clingCache, ssdpCache)
+        val selection = resolveDlnaRouteSelection(route.routeId, ssdpCache)
         return when (selection) {
-            is DlnaRouteSelection.Cling -> {
-                DlnaManager.cast(selection.device, media.url, media.title, media.creator)
-                Result.success(Unit)
-            }
             is DlnaRouteSelection.Ssdp -> {
                 SsdpCastClient.cast(selection.device, media.url, media.title, media.creator)
             }

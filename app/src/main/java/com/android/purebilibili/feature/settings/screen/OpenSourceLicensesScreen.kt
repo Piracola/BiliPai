@@ -244,24 +244,6 @@ val openSourceLibraries = listOf(
         description = "媒体路由与投屏设备发现"
     ),
     OpenSourceLibrary(
-        name = "Cling",
-        license = "LGPL-2.1",
-        url = "https://github.com/4thline/cling",
-        description = "UPnP/DLNA 投屏协议支持"
-    ),
-    OpenSourceLibrary(
-        name = "Jetty",
-        license = "EPL-1.0 / Apache 2.0",
-        url = "https://github.com/eclipse/jetty.project",
-        description = "本地服务与 HTTP 支持"
-    ),
-    OpenSourceLibrary(
-        name = "Java Servlet API",
-        license = "CDDL / GPLv2 with Classpath Exception",
-        url = "https://github.com/javaee/servlet-spec",
-        description = "Servlet 接口规范"
-    ),
-    OpenSourceLibrary(
         name = "NanoHTTPD",
         license = "BSD-3-Clause",
         url = "https://github.com/NanoHttpd/nanohttpd",

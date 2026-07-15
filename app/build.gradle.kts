@@ -73,12 +73,6 @@ android {
         }
     }
 
-    // 投屏服务进程开关：
-    // 默认独立 :cast 进程（通过 CastBridgeService 做跨进程 IPC）
-    // 如需快速回滚，可传 -PcastServiceProcess=com.android.purebilibili
-    val castServiceProcess =
-        (project.findProperty("castServiceProcess") as String?) ?: ":cast"
-
     defaultConfig {
         applicationId = "com.android.purebilibili"
         minSdk = 26
@@ -99,7 +93,6 @@ android {
             abiFilters += listOf("arm64-v8a")
         }
 
-        manifestPlaceholders["castServiceProcess"] = castServiceProcess
         buildConfigField("String", "BUILD_COMMIT_SHA", buildCommitSha.toBuildConfigStringLiteral())
         buildConfigField("String", "BUILD_GIT_REF", buildGitRef.toBuildConfigStringLiteral())
         buildConfigField("String", "BUILD_WORKFLOW_RUN_ID", buildWorkflowRunId.toBuildConfigStringLiteral())
@@ -401,16 +394,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-cast-framework:22.3.1")
     implementation("androidx.mediarouter:mediarouter:1.8.1")
 
-    // --- 8.3 DLNA & Local Proxy (投屏) ---
-    // DLNA Casting (Cling)
-    implementation("org.fourthline.cling:cling-core:2.1.2")
-    implementation("org.fourthline.cling:cling-support:2.1.2")
-    // Jetty (Cling 传输层依赖)
-    implementation("org.eclipse.jetty:jetty-server:8.1.22.v20160922")
-    implementation("org.eclipse.jetty:jetty-servlet:8.1.22.v20160922")
-    implementation("org.eclipse.jetty:jetty-client:8.1.22.v20160922")
-    implementation("javax.servlet:javax.servlet-api:3.1.0")
-    
+    // --- 8.3 DLNA Local Proxy (投屏) ---
     // NanoHTTPD (Lightweight local proxy server)
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 

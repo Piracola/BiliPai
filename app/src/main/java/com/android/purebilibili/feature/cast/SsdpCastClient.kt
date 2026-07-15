@@ -12,8 +12,8 @@ import java.net.URI
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * SSDP fallback caster.
- * 当设备仅通过 SSDP 被发现而没有进入 Cling registry 时，直接通过 SOAP 调 AVTransport。
+ * SSDP/DLNA caster.
+ * 通过 SOAP 调 AVTransport。
  */
 object SsdpCastClient {
     private const val TAG = "SsdpCastClient"
