@@ -65,9 +65,9 @@ import com.android.purebilibili.data.model.response.LiveAreaParent
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.data.repository.LiveRepository
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import kotlinx.coroutines.launch
 
 @Composable

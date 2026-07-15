@@ -107,8 +107,9 @@ class AppNavigationAppearancePolicyTest {
     @Test
     fun bottomBarBackdropCapturesGlobalWallpaperBeforeNavDisplayContent() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/navigation/AppNavigation.kt")
+        // Dock liquid glass samples Miuix LayerBackdrop (InstallerX-aligned), not Kyant.
         val capturedLayerSource = source
-            .substringAfter(".layerBackdrop(bottomBarBackdrop)")
+            .substringAfter(".miuixLayerBackdrop(bottomBarBackdrop)")
             .substringBefore("// ===== 全局底栏")
 
         val wallpaperIndex = capturedLayerSource.indexOf("HomeWallpaperBackdrop(")

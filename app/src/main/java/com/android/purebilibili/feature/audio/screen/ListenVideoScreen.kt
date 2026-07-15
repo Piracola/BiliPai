@@ -72,8 +72,8 @@ import com.android.purebilibili.feature.audio.viewmodel.ListenVideoUiState
 import com.android.purebilibili.feature.audio.viewmodel.ListenVideoViewModel
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
 import com.android.purebilibili.feature.video.player.PlaylistManager
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
