@@ -260,7 +260,9 @@ internal fun shouldUseVideoCardShellContainerTransform(
     hasAnimatedVisibilityScope: Boolean
 ): Boolean {
     if (!transitionEnabled || !hasSharedTransitionScope || !hasAnimatedVisibilityScope) return false
-    return isVideoCardReturnTargetRoute(sourceRoute?.substringBefore("?"))
+    val normalizedSourceRoute = sourceRoute?.substringBefore("?")
+    if (normalizedSourceRoute?.startsWith("space/") == true) return false
+    return isVideoCardReturnTargetRoute(normalizedSourceRoute)
 }
 
 internal fun shouldEnableVideoMetadataSharedTransition(

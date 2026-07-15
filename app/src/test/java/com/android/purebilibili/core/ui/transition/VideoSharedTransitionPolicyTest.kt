@@ -131,7 +131,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoCardShellContainerTransform_supportsReturnTargetSourcesAndScopes() {
+    fun videoCardShellContainerTransform_usesCoverOnlyForSpaceSources() {
         assertTrue(
             shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "home",
@@ -172,7 +172,7 @@ class VideoSharedTransitionPolicyTest {
                 hasAnimatedVisibilityScope = true
             )
         )
-        assertTrue(
+        assertFalse(
             shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "space/42",
                 transitionEnabled = true,
