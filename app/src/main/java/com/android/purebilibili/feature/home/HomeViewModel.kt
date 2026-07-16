@@ -324,6 +324,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
         syncTodayWatchFeedbackFromStore()
         viewModelScope.launch {
+            PluginManager.awaitPluginReady(ADFILTER_PLUGIN_ID)
+            reFilterAllContent()
+        }
+        viewModelScope.launch {
             PluginManager.pluginsFlow.collect { plugins ->
                 val plugin = plugins.find { it.plugin.id == TodayWatchPlugin.PLUGIN_ID }?.plugin as? TodayWatchPlugin
                 if (plugin !== observedTodayWatchPlugin) {
@@ -366,7 +370,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val oldState = _uiState.value
         val newCategoryStates = oldState.categoryStates.mapValues { (_, content) ->
             content.copy(
-                videos = filterHomeFeedbackVideos(content.videos.filter { it.owner.mid !in blockedMids }).toImmutableList(),
+                videos = PluginManager.filterFeedItems(
+                    filterHomeFeedbackVideos(content.videos.filter { it.owner.mid !in blockedMids })
+                ).toImmutableList(),
                 // Filter live rooms if possible (assuming uid matches mid)
                 liveRooms = content.liveRooms.filter { it.uid !in blockedMids }.toImmutableList(),
                 followedLiveRooms = content.followedLiveRooms.filter { it.uid !in blockedMids }.toImmutableList()
@@ -1231,9 +1237,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 refreshIdx = maxOf(refreshIdx, recommendRequestIndex)
             }
             
-            // 首批请求可与插件初始化并行；展示前等待关键词配置恢复，避免冷启动露出被屏蔽内容。
-            PluginManager.awaitPluginReady(ADFILTER_PLUGIN_ID)
-
             //  [Feature] 应用屏蔽 + 原生插件 + JSON 规则插件过滤器
             val blockedFiltered = validVideos.filter { video -> video.owner.mid !in blockedMids }
             val feedbackFiltered = filterHomeFeedbackVideos(blockedFiltered)
