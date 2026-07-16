@@ -15,3 +15,9 @@ val LocalSetBottomBarVisible = compositionLocalOf<(Boolean) -> Unit> {
  * 用于获取当前全局底栏可见性的 CompositionLocal (可选)
  */
 val LocalBottomBarVisible = compositionLocalOf<Boolean> { true }
+
+/**
+ * 全局“预测性返回手势”设置：关闭后仍可边缘返回，但不上报跟手进度、不显示预测预览。
+ * 由 [com.android.purebilibili.navigation.AppNavigation] 从用户偏好提供。
+ */
+val LocalPredictiveBackGestureEnabled = compositionLocalOf { true }

@@ -68,6 +68,7 @@ import android.content.ContextWrapper
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.toArgb
+import com.android.purebilibili.core.ui.LocalPredictiveBackGestureEnabled
 import com.android.purebilibili.core.ui.rememberAppShareIcon
 import com.android.purebilibili.core.ui.rememberAppLikeFilledIcon
 import com.android.purebilibili.core.ui.rememberAppLikeIcon
@@ -454,11 +455,16 @@ private fun ImagePreviewOverlayContent(
             }
 
             val backEventState = rememberNavigationEventState(NavigationEventInfo.None)
+            val predictiveBackGestureEnabled = LocalPredictiveBackGestureEnabled.current
             val backProgress =
-                (backEventState.transitionState as? NavigationEventTransitionState.InProgress)
-                    ?.latestEvent
-                    ?.progress
-                    ?: 0f
+                if (predictiveBackGestureEnabled) {
+                    (backEventState.transitionState as? NavigationEventTransitionState.InProgress)
+                        ?.latestEvent
+                        ?.progress
+                        ?: 0f
+                } else {
+                    0f
+                }
             LaunchedEffect(backProgress, isDismissing) {
                 if (!isDismissing && backProgress > 0f) {
                     animateTrigger.snapTo(1f - backProgress)
@@ -467,6 +473,7 @@ private fun ImagePreviewOverlayContent(
             NavigationBackHandler(
                 state = backEventState,
                 isBackEnabled = !isDismissing,
+                reportPredictiveProgress = predictiveBackGestureEnabled,
                 onBackCancelled = { commitTransition: () -> Unit ->
                     scope.launch {
                         animateTrigger.animateTo(

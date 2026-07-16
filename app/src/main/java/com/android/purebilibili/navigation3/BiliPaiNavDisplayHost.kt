@@ -482,6 +482,9 @@ internal fun BiliPaiNavDisplayHost(
     NavigationBackHandler(
         state = navigationEventState,
         isBackEnabled = scene.previousEntries.isNotEmpty(),
+        // 关闭全局预测性返回时不向 NavDisplay 上报 InProgress，避免 seek 跟手预览；
+        // 松手后仍走 performBack + 普通 popTransitionSpec。
+        reportPredictiveProgress = predictiveBackEnabled,
         onBackCompleted = performBack,
         onBackCancelled = { commitTransition ->
             onNativeVideoBackCancelled(currentBackKey, targetBackKey)

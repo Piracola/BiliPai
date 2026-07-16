@@ -55,6 +55,17 @@ class BiliPaiNavDisplayHostStructureTest {
     }
 
     @Test
+    fun navDisplayHostSuppressesPredictiveProgressWhenPreferenceDisabled() {
+        val source = navDisplayHostSource()
+        val backHandlerBlock = source
+            .substringAfter("NavigationBackHandler(")
+            .substringBefore("onBackCancelled")
+
+        assertTrue(backHandlerBlock.contains("reportPredictiveProgress = predictiveBackEnabled"))
+        assertTrue(source.contains("predictiveBackEnabled = predictiveBackEnabled"))
+    }
+
+    @Test
     fun navDisplayHostPreservesApplicationExtrasForEntryViewModels() {
         val source = navDisplayHostSource()
 

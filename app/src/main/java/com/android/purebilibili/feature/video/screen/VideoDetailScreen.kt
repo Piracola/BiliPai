@@ -157,6 +157,7 @@ import kotlinx.coroutines.launch
 //  共享元素过渡
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.android.purebilibili.core.ui.LocalPredictiveBackGestureEnabled
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
@@ -3041,9 +3042,11 @@ fun VideoDetailScreen(
         isPortraitFullscreen = isPortraitFullscreen,
     )
     val localBackEventState = rememberNavigationEventState(NavigationEventInfo.None)
+    val predictiveBackGestureEnabled = LocalPredictiveBackGestureEnabled.current
     NavigationBackHandler(
         state = localBackEventState,
         isBackEnabled = localBackTarget != VideoDetailLocalBackTarget.NAVIGATE_BACK,
+        reportPredictiveProgress = predictiveBackGestureEnabled,
         onBackCompleted = { commitTransition: () -> Unit ->
             when (localBackTarget) {
                 VideoDetailLocalBackTarget.EXIT_PORTRAIT_FULLSCREEN -> isPortraitFullscreen = false

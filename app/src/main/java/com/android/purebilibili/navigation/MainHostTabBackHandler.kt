@@ -4,13 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.android.purebilibili.core.ui.LocalPredictiveBackGestureEnabled
 
 /**
  * 主页底栏 Tab 二级返回：栈顶为 [com.android.purebilibili.navigation3.BiliPaiNavKey.MainHost]
  * 且当前不在首页 Tab 时，边缘返回手势回到首页 Tab（而非直接退出应用）。
  *
- * 使用 [NavigationBackHandler] 替代 [androidx.activity.compose.BackHandler]，
- * 以保留系统预测性返回手势预览。
+ * 使用 [NavigationBackHandler] 替代 [androidx.activity.compose.BackHandler]。
+ * 跟手预览受全局「预测性返回手势」开关控制。
  *
  * 关键：回首页走立即落地（snap）路径而非横向滚动动画（animate）。
  * 预测式返回手势在被系统执行 commit 时，HorizontalPager 内部常因上一帧的惯性测量
@@ -24,9 +25,11 @@ internal fun MainHostTabBackHandler(
     onReturnToHomeTab: () -> Unit,
 ) {
     val navEventState = rememberNavigationEventState(NavigationEventInfo.None)
+    val predictiveBackGestureEnabled = LocalPredictiveBackGestureEnabled.current
     NavigationBackHandler(
         state = navEventState,
         isBackEnabled = enabled,
+        reportPredictiveProgress = predictiveBackGestureEnabled,
         onBackCompleted = onReturnToHomeTab,
     )
 }

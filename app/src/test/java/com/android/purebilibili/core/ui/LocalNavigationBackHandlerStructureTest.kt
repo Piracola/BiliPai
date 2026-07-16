@@ -21,4 +21,14 @@ class LocalNavigationBackHandlerStructureTest {
             assertFalse(source.contains("import androidx.activity.compose.BackHandler"), relativePath)
         }
     }
+
+    @Test
+    fun localNavigationBackHandlerRespectsGlobalPredictivePreference() {
+        val source = File(
+            "src/main/java/com/android/purebilibili/core/ui/LocalNavigationBackHandler.kt"
+        ).readText()
+
+        assertTrue(source.contains("LocalPredictiveBackGestureEnabled.current"))
+        assertTrue(source.contains("reportPredictiveProgress = predictiveBackGestureEnabled"))
+    }
 }

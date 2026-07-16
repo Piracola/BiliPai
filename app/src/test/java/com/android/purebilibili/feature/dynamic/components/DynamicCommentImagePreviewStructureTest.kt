@@ -14,6 +14,8 @@ class DynamicCommentImagePreviewStructureTest {
         ).readText()
 
         assertTrue(source.contains("NavigationBackHandler("))
+        assertTrue(source.contains("LocalPredictiveBackGestureEnabled.current"))
+        assertTrue(source.contains("reportPredictiveProgress = predictiveBackGestureEnabled"))
         assertTrue(source.contains("?.latestEvent"))
         assertTrue(source.contains("?.progress"))
         assertTrue(source.contains("animateTrigger.snapTo(1f - backProgress)"))

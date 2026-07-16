@@ -63,6 +63,10 @@ import androidx.navigationevent.NavigationEventTransitionState
  * @param isBackEnabled Controls whether back navigation gestures are handled.
  * @param onBackCancelled Called if a back navigation gesture is cancelled.
  * @param onBackCompleted Called when a back navigation gesture completes.
+ * @param reportPredictiveProgress When `false`, started/progressed events do not publish
+ *   [NavigationEventTransitionState.InProgress] into [NavigationEventState.transitionState].
+ *   Completions and cancellations still run. Use this to keep edge-swipe back while suppressing
+ *   follow-finger predictive previews (e.g. Navigation3 [androidx.navigation3.ui.NavDisplay] seek).
  * @throws IllegalArgumentException If the provided [NavigationEventState] is passed to multiple
  *   [NavigationEventHandler] Composable. Each handler must have its own unique state.
  */
@@ -85,6 +89,7 @@ fun NavigationEventHandler(
     onBackCompleted: (() -> Unit) -> Unit = { callBack ->
         callBack()
     },
+    reportPredictiveProgress: Boolean = true,
 ) {
     val dispatcher =
         checkNotNull(LocalNavigationEventDispatcherOwner.current) {
@@ -110,6 +115,12 @@ fun NavigationEventHandler(
         sourceHandler.isBackEnabled = isBackEnabled
         sourceHandler.currentOnBackCancelled = onBackCancelled
         sourceHandler.currentOnBackCompleted = onBackCompleted
+        sourceHandler.reportPredictiveProgress = reportPredictiveProgress
+        if (!reportPredictiveProgress &&
+            state.transitionState is NavigationEventTransitionState.InProgress
+        ) {
+            state.transitionState = NavigationEventTransitionState.Idle
+        }
 
         sourceHandler.setInfo(state.currentInfo, state.backInfo, state.forwardInfo)
     }
@@ -145,6 +156,8 @@ fun NavigationEventHandler(
  * @param isBackEnabled Controls whether back navigation gestures are handled.
  * @param onBackCancelled Called if a back navigation gesture is cancelled.
  * @param onBackCompleted Called when a back navigation gesture completes and navigation occurs.
+ * @param reportPredictiveProgress When `false`, suppress follow-finger predictive progress while
+ *   still completing edge-swipe / system back on lift.
  */
 @Composable
 fun NavigationBackHandler(
@@ -154,6 +167,7 @@ fun NavigationBackHandler(
         callback()
     },
     onBackCompleted: (() -> Unit) -> Unit,
+    reportPredictiveProgress: Boolean = true,
 ) {
     NavigationEventHandler(
         state = state,
@@ -165,6 +179,7 @@ fun NavigationBackHandler(
         onBackCancelled = onBackCancelled,
         onBackCompleted = onBackCompleted,
         isBackEnabled = isBackEnabled,
+        reportPredictiveProgress = reportPredictiveProgress,
     )
 }
 
@@ -220,13 +235,22 @@ private class ComposeNavigationEventHandler<T : NavigationEventInfo>(
     var currentOnForwardCompleted: (() -> Unit) -> Unit = {}
     var currentOnBackCancelled: (() -> Unit) -> Unit = {}
     var currentOnBackCompleted: (() -> Unit) -> Unit = {}
+    /**
+     * When false, started/progressed events keep [NavigationEventState.transitionState] idle so
+     * consumers (NavDisplay seek, custom scrim progress) do not render a follow-finger preview.
+     */
+    var reportPredictiveProgress: Boolean = true
 
     override fun onForwardStarted(event: NavigationEvent) {
-        onTransitionStateChanged(transitionState)
+        if (reportPredictiveProgress) {
+            onTransitionStateChanged(transitionState)
+        }
     }
 
     override fun onForwardProgressed(event: NavigationEvent) {
-        onTransitionStateChanged(transitionState)
+        if (reportPredictiveProgress) {
+            onTransitionStateChanged(transitionState)
+        }
     }
 
     override fun onForwardCancelled() {
@@ -242,11 +266,15 @@ private class ComposeNavigationEventHandler<T : NavigationEventInfo>(
     }
 
     override fun onBackStarted(event: NavigationEvent) {
-        onTransitionStateChanged(transitionState)
+        if (reportPredictiveProgress) {
+            onTransitionStateChanged(transitionState)
+        }
     }
 
     override fun onBackProgressed(event: NavigationEvent) {
-        onTransitionStateChanged(transitionState)
+        if (reportPredictiveProgress) {
+            onTransitionStateChanged(transitionState)
+        }
     }
 
     override fun onBackCancelled() {
@@ -279,6 +307,8 @@ private class ComposeNavigationEventHandler<T : NavigationEventInfo>(
  * @param isBackEnabled Controls whether back navigation gestures are handled.
  * @param onBackCancelled Called if a back navigation gesture is cancelled.
  * @param onBackCompleted Called when a back navigation gesture completes and navigation occurs.
+ * @param reportPredictiveProgress When `false`, suppress follow-finger predictive progress while
+ *   still completing edge-swipe / system back on lift.
  */
 @Composable
 @Suppress("unused") // Reason: Miuix Library use that
@@ -287,6 +317,7 @@ fun NavigationBackHandler(
     isBackEnabled: Boolean = true,
     onBackCancelled: () -> Unit = {},
     onBackCompleted: () -> Unit,
+    reportPredictiveProgress: Boolean = true,
 ) {
     NavigationEventHandler(
         state = state,
@@ -302,6 +333,7 @@ fun NavigationBackHandler(
             onBackCompleted()
         },
         isBackEnabled = isBackEnabled,
+        reportPredictiveProgress = reportPredictiveProgress,
     )
 }
 
