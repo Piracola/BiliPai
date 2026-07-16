@@ -9,6 +9,56 @@ import kotlin.test.assertTrue
 class VideoCardTransitionBackgroundPolicyTest {
 
     @Test
+    fun snapshotBlur_isEnabledForActivePhasesOnApi31Plus() {
+        assertTrue(
+            shouldUseVideoCardTransitionSnapshotBlur(
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+                motionTier = MotionTier.Normal,
+                sdkInt = 35,
+            )
+        )
+        assertTrue(
+            shouldUseVideoCardTransitionSnapshotBlur(
+                phase = VideoCardTransitionBackgroundPhase.HELD,
+                motionTier = MotionTier.Normal,
+                sdkInt = 31,
+            )
+        )
+        assertTrue(
+            shouldUseVideoCardTransitionSnapshotBlur(
+                phase = VideoCardTransitionBackgroundPhase.RETURNING,
+                motionTier = MotionTier.Normal,
+                sdkInt = 35,
+            )
+        )
+    }
+
+    @Test
+    fun snapshotBlur_isDisabledForIdleReducedOrLegacyApi() {
+        assertFalse(
+            shouldUseVideoCardTransitionSnapshotBlur(
+                phase = VideoCardTransitionBackgroundPhase.IDLE,
+                motionTier = MotionTier.Normal,
+                sdkInt = 35,
+            )
+        )
+        assertFalse(
+            shouldUseVideoCardTransitionSnapshotBlur(
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+                motionTier = MotionTier.Reduced,
+                sdkInt = 35,
+            )
+        )
+        assertFalse(
+            shouldUseVideoCardTransitionSnapshotBlur(
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+                motionTier = MotionTier.Normal,
+                sdkInt = 30,
+            )
+        )
+    }
+
+    @Test
     fun navBackdrop_isHiddenWhenPredictiveReturnTargetsAnotherVideoDetail() {
         assertFalse(
             shouldShowVideoCardTransitionNavBackdrop(

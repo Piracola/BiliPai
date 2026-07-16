@@ -38,6 +38,23 @@ class HomeVideoTransitionBackgroundStructureTest {
         assertFalse(source.contains("val predictiveBlurProgress = predictiveBackState.progressProvider()"))
     }
 
+    @Test
+    fun videoCardTransitionBackgroundUsesFrozenSnapshotLayerForDynamicBlur() {
+        val source = listOf(
+            File("app/src/main/java/com/android/purebilibili/core/ui/transition/VideoCardTransitionBackgroundPolicy.kt"),
+            File("src/main/java/com/android/purebilibili/core/ui/transition/VideoCardTransitionBackgroundPolicy.kt"),
+        ).first { it.exists() }.readText()
+
+        assertTrue(source.contains("rememberGraphicsLayer()"))
+        assertTrue(source.contains("shouldUseVideoCardTransitionSnapshotBlur"))
+        assertTrue(source.contains("freezeRecording"))
+        assertTrue(source.contains("contentLayer.record"))
+        assertTrue(source.contains("BlurEffect("))
+        // 冻结后不得每帧对 live content 再挂 android RenderEffect
+        assertFalse(source.contains("android.graphics.RenderEffect"))
+        assertFalse(source.contains("createBlurEffect("))
+    }
+
     private fun homeScreenSource(): String {
         return listOf(
             File("app/src/main/java/com/android/purebilibili/feature/home/HomeScreen.kt"),
