@@ -119,7 +119,7 @@ data class CommentUiState(
     val fraudDetectRpid: Long = 0  // 被检测的评论 rpid
 )
 
-// 二级评论状态 (从 PlayerViewModel 移过来)
+// 二级评论状态 (从 VideoPlaybackViewModel 移过来)
 data class SubReplyUiState(
     val visible: Boolean = false,
     val rootReply: ReplyItem? = null,

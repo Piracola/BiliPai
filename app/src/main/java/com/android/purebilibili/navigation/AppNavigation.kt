@@ -2431,7 +2431,7 @@ fun AppNavigation(
                             }
                         BiliPaiNavEntryContentRole.AUDIO_MODE -> {
                                 val audioModeKey = key as BiliPaiNavKey.AudioMode
-                                val viewModel: com.android.purebilibili.feature.video.viewmodel.PlayerViewModel =
+                                val viewModel: com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel =
                                     viewModel()
                                 DisposableEffect(Unit) {
                                     onAudioModeEnter()

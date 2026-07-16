@@ -7,7 +7,7 @@ import com.android.purebilibili.data.model.response.Stat
 import com.android.purebilibili.data.model.response.ViewInfo
 import androidx.media3.common.Player
 import androidx.media3.ui.AspectRatioFrameLayout
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -399,7 +399,7 @@ class PortraitVideoPagerPolicyTest {
 
     @Test
     fun portraitInteractionUi_prefersLocalOverrideWhenSharedPlayerStateBelongsToAnotherVideo() {
-        val sharedState = PlayerUiState.Success(
+        val sharedState = VideoPlaybackUiState.Success(
             info = ViewInfo(
                 bvid = "BV_PREV",
                 aid = 1001L,
@@ -507,7 +507,7 @@ class PortraitVideoPagerPolicyTest {
         assertTrue(source.contains("rememberIsolatedDanmakuManager("))
         assertTrue(source.contains("key = \"portrait_comments_\$initialBvid\""))
         assertTrue(source.contains("commentViewModel.clearForVideoChange()"))
-        assertTrue(pagerSignature.contains("viewModel: PlayerViewModel,\n    sharedPlayer: ExoPlayer?"))
+        assertTrue(pagerSignature.contains("viewModel: VideoPlaybackViewModel,\n    sharedPlayer: ExoPlayer?"))
         assertFalse(pagerSignature.contains("commentViewModel: VideoCommentViewModel"))
     }
 }

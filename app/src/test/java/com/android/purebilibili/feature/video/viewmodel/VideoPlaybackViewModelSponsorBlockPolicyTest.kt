@@ -10,7 +10,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class PlayerViewModelSponsorBlockPolicyTest {
+class VideoPlaybackViewModelSponsorBlockPolicyTest {
 
     @Test
     fun showButtonAction_updatesSkipUiState() {
@@ -61,7 +61,7 @@ class PlayerViewModelSponsorBlockPolicyTest {
     @Test
     fun sponsorBlockVideoSnapshot_capturesCoverAndUpFaceBeforeSeek() {
         val snapshot = buildSponsorBlockVideoSnapshot(
-            currentState = PlayerUiState.Success(
+            currentState = VideoPlaybackUiState.Success(
                 info = ViewInfo(
                     bvid = "BV1",
                     cid = 123L,

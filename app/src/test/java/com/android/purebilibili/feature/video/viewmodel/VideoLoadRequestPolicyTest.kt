@@ -843,7 +843,7 @@ class VideoLoadRequestPolicyTest {
 
     @Test
     fun `clearSubtitleFields removes all subtitle data from success state`() {
-        val state = PlayerUiState.Success(
+        val state = VideoPlaybackUiState.Success(
             info = com.android.purebilibili.data.model.response.ViewInfo(
                 bvid = "BV1test",
                 cid = 2233L
@@ -888,7 +888,7 @@ class VideoLoadRequestPolicyTest {
 
     @Test
     fun `clearTransientPlaybackPreviewData removes stale videoshot data when switching playback target`() {
-        val state = PlayerUiState.Success(
+        val state = VideoPlaybackUiState.Success(
             info = com.android.purebilibili.data.model.response.ViewInfo(
                 bvid = "BV1test",
                 cid = 2233L
@@ -907,7 +907,7 @@ class VideoLoadRequestPolicyTest {
 
     @Test
     fun `shouldApplyVideoshotResult only accepts videoshot matching current playback target`() {
-        val current = PlayerUiState.Success(
+        val current = VideoPlaybackUiState.Success(
             info = com.android.purebilibili.data.model.response.ViewInfo(
                 bvid = "BV1test",
                 cid = 4455L
@@ -940,7 +940,7 @@ class VideoLoadRequestPolicyTest {
 
     @Test
     fun `clearTransientPlaybackPreviewData keeps same instance when no videoshot exists`() {
-        val state = PlayerUiState.Success(
+        val state = VideoPlaybackUiState.Success(
             info = com.android.purebilibili.data.model.response.ViewInfo(
                 bvid = "BV1test",
                 cid = 2233L

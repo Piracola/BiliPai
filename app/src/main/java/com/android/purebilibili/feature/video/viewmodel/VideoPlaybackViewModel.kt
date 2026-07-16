@@ -1,5 +1,5 @@
-// File: feature/video/PlayerViewModel.kt
-//  [重构] 简化版 PlayerViewModel - 使用 UseCase 层
+// File: feature/video/VideoPlaybackViewModel.kt
+//  [重构] 简化版 VideoPlaybackViewModel - 使用 UseCase 层
 package com.android.purebilibili.feature.video.viewmodel
 
 import android.net.Uri
@@ -173,8 +173,8 @@ internal fun shouldResumePlaybackAfterSponsorBlockSkip(
     return true
 }
 
-internal fun buildSponsorBlockVideoSnapshot(currentState: PlayerUiState): SponsorBlockVideoSnapshot? {
-    val success = currentState as? PlayerUiState.Success ?: return null
+internal fun buildSponsorBlockVideoSnapshot(currentState: VideoPlaybackUiState): SponsorBlockVideoSnapshot? {
+    val success = currentState as? VideoPlaybackUiState.Success ?: return null
     val info = success.info
     return SponsorBlockVideoSnapshot(
         videoTitle = info.title,
@@ -367,12 +367,12 @@ internal fun hostForPlaybackLog(url: String?): String {
 }
 
 // ========== UI State ==========
-sealed class PlayerUiState {
+sealed class VideoPlaybackUiState {
     data class Loading(
         val retryAttempt: Int = 0,
         val maxAttempts: Int = 4,
         val message: String = "\u52a0\u8f7d\u4e2d..."
-    ) : PlayerUiState() {
+    ) : VideoPlaybackUiState() {
         companion object { val Initial = Loading() }
     }
     
@@ -442,7 +442,7 @@ sealed class PlayerUiState {
         val subtitleSecondaryCues: List<SubtitleCue> = emptyList(),
         val ownerFollowerCount: Int? = null,
         val ownerVideoCount: Int? = null
-    ) : PlayerUiState() {
+    ) : VideoPlaybackUiState() {
         val cdnCount: Int get() = allVideoUrls.size.coerceAtLeast(1)
         val currentCdnLabel: String get() = "线路${currentCdnIndex + 1}"
     }
@@ -450,7 +450,7 @@ sealed class PlayerUiState {
     data class Error(
         val error: VideoLoadError,
         val canRetry: Boolean = true
-    ) : PlayerUiState() {
+    ) : VideoPlaybackUiState() {
         val msg: String get() = error.toUserMessage()
     }
 }
@@ -939,7 +939,7 @@ internal fun resolveExternalPlaylistSyncDecision(
     }
 }
 
-internal fun clearSubtitleFields(state: PlayerUiState.Success): PlayerUiState.Success {
+internal fun clearSubtitleFields(state: VideoPlaybackUiState.Success): VideoPlaybackUiState.Success {
     return state.copy(
         subtitleEnabled = false,
         subtitleOwnerBvid = null,
@@ -956,12 +956,12 @@ internal fun clearSubtitleFields(state: PlayerUiState.Success): PlayerUiState.Su
     )
 }
 
-internal fun clearTransientPlaybackPreviewData(state: PlayerUiState.Success): PlayerUiState.Success {
+internal fun clearTransientPlaybackPreviewData(state: VideoPlaybackUiState.Success): VideoPlaybackUiState.Success {
     return if (state.videoshotData == null) state else state.copy(videoshotData = null)
 }
 
 internal fun shouldApplyVideoshotResult(
-    currentState: PlayerUiState.Success,
+    currentState: VideoPlaybackUiState.Success,
     videoshotBvid: String,
     videoshotCid: Long
 ): Boolean {
@@ -1078,7 +1078,7 @@ internal fun resolveSubtitleTrackLoadDecision(
 }
 
 // ========== ViewModel ==========
-class PlayerViewModel : ViewModel() {
+class VideoPlaybackViewModel : ViewModel() {
     // UseCases
     private val playbackUseCase = VideoPlaybackUseCase()
     private val playbackLoader = PlaybackLoader.from(playbackUseCase)
@@ -1093,7 +1093,7 @@ class PlayerViewModel : ViewModel() {
     private var playbackCdnFallbackState: PlaybackCdnFallbackState = PlaybackCdnFallbackState.Inactive
     
     // State
-    private val _uiState = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading.Initial)
+    private val _uiState = MutableStateFlow<VideoPlaybackUiState>(VideoPlaybackUiState.Loading.Initial)
     val uiState = _uiState.asStateFlow()
     
     private val _toastEvent = Channel<PlayerToastMessage>()
@@ -1133,12 +1133,12 @@ class PlayerViewModel : ViewModel() {
             try {
                 // Check if we even have a local token
                 if (com.android.purebilibili.core.store.TokenManager.sessDataCache.isNullOrEmpty()) {
-                     com.android.purebilibili.core.util.Logger.e("PlayerViewModel", "fetchUserCoins: No local token found")
+                     com.android.purebilibili.core.util.Logger.e("VideoPlaybackViewModel", "fetchUserCoins: No local token found")
                     _userCoinBalance.value = -4.0 // Local Token Missing
                     return@launch
                 }
 
-                com.android.purebilibili.core.util.Logger.d("PlayerViewModel", "fetchUserCoins calls getNavInfo")
+                com.android.purebilibili.core.util.Logger.d("VideoPlaybackViewModel", "fetchUserCoins calls getNavInfo")
                 
                 // [Fix] Use IO dispatcher and timeout to prevent hanging
                 val result = withContext(Dispatchers.IO) {
@@ -1147,22 +1147,22 @@ class PlayerViewModel : ViewModel() {
                     }
                 }
                 
-                com.android.purebilibili.core.util.Logger.d("PlayerViewModel", 
+                com.android.purebilibili.core.util.Logger.d("VideoPlaybackViewModel", 
                     "NavInfo: code=${result.code}, isLogin=${result.data?.isLogin}, money=${result.data?.money}, wallet=${result.data?.wallet?.bcoin_balance}")
                 
                 if (result.code == 0 && result.data != null) {
                     if (result.data.isLogin) {
                         _userCoinBalance.value = result.data.money
                     } else {
-                        com.android.purebilibili.core.util.Logger.w("PlayerViewModel", "User not logged in according to getNavInfo")
+                        com.android.purebilibili.core.util.Logger.w("VideoPlaybackViewModel", "User not logged in according to getNavInfo")
                         _userCoinBalance.value = -3.0 // API says Not Logged In
                     }
                 } else {
-                    com.android.purebilibili.core.util.Logger.e("PlayerViewModel", "getNavInfo failed: code=${result.code}")
+                    com.android.purebilibili.core.util.Logger.e("VideoPlaybackViewModel", "getNavInfo failed: code=${result.code}")
                     _userCoinBalance.value = -1.0 // Network/API Error
                 }
             } catch (e: Exception) {
-                com.android.purebilibili.core.util.Logger.e("PlayerViewModel", "fetchUserCoins Error: ${e.javaClass.simpleName} - ${e.message}")
+                com.android.purebilibili.core.util.Logger.e("VideoPlaybackViewModel", "fetchUserCoins Error: ${e.javaClass.simpleName} - ${e.message}")
                 e.printStackTrace()
                 _userCoinBalance.value = -2.0 // Exception (Network or Timeout)
             }
@@ -1185,7 +1185,7 @@ class PlayerViewModel : ViewModel() {
         val normalizedSpeed = speed.coerceAtLeast(0.1f)
         player.playbackParameters = PlaybackParameters(normalizedSpeed, 1.0f)
 
-        val current = _uiState.value as? PlayerUiState.Success ?: return true
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return true
         if (current.isQualitySwitching) return true
 
         val audioPreference = appContext?.let {
@@ -1212,7 +1212,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private suspend fun refreshPlaybackAudioForSpeedCompatibility(
-        current: PlayerUiState.Success,
+        current: VideoPlaybackUiState.Success,
         audioPreference: Int,
         currentPos: Long,
         playWhenReady: Boolean
@@ -1565,7 +1565,7 @@ class PlayerViewModel : ViewModel() {
     private var followGroupTargetMid: Long = 0L
     
     fun showFavoriteFolderDialog(requestedAid: Long? = null) {
-        val currentAid = (_uiState.value as? PlayerUiState.Success)?.info?.aid
+        val currentAid = (_uiState.value as? VideoPlaybackUiState.Success)?.info?.aid
         val targetAid = resolveFavoriteFolderDialogTargetAid(
             requestedAid = requestedAid,
             currentAid = currentAid
@@ -1651,7 +1651,7 @@ class PlayerViewModel : ViewModel() {
 
     fun saveFavoriteFolderSelection() {
         if (_isSavingFavoriteFolders.value) return
-        val currentAid = (_uiState.value as? PlayerUiState.Success)?.info?.aid
+        val currentAid = (_uiState.value as? VideoPlaybackUiState.Success)?.info?.aid
         val targetAid = resolveFavoriteFolderDialogTargetAid(
             requestedAid = favoriteFoldersBoundAid,
             currentAid = currentAid
@@ -1713,7 +1713,7 @@ class PlayerViewModel : ViewModel() {
         selectedFolderIds: Set<Long>
     ) {
         _uiState.update { state ->
-            if (state is PlayerUiState.Success) {
+            if (state is VideoPlaybackUiState.Success) {
                 val resolvedState = resolveFavoriteSaveUiState(
                     originalFolderIds = originalFolderIds,
                     selectedFolderIds = selectedFolderIds,
@@ -1732,12 +1732,12 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun updateFavoriteUiState(targetAid: Long?, selectedFolderIds: Set<Long>) {
-        val currentAid = (_uiState.value as? PlayerUiState.Success)?.info?.aid
+        val currentAid = (_uiState.value as? VideoPlaybackUiState.Success)?.info?.aid
         if (!shouldSyncFavoriteFolderUiState(targetAid = targetAid, currentAid = currentAid)) {
             return
         }
         _uiState.update { state ->
-            if (state is PlayerUiState.Success) {
+            if (state is VideoPlaybackUiState.Success) {
                 state.copy(isFavorited = selectedFolderIds.isNotEmpty())
             } else {
                 state
@@ -1862,7 +1862,7 @@ class PlayerViewModel : ViewModel() {
         viewModelScope.launch {
             com.android.purebilibili.core.store.SettingsManager.getAudioQuality(context)
                 .collect { 
-                    com.android.purebilibili.core.util.Logger.d("PlayerViewModel", "🎵 Audio preference updated from Settings to: $it")
+                    com.android.purebilibili.core.util.Logger.d("VideoPlaybackViewModel", "🎵 Audio preference updated from Settings to: $it")
                     _audioQualityPreference.value = it 
                 }
         }
@@ -1876,7 +1876,7 @@ class PlayerViewModel : ViewModel() {
             )
         ) {
             initWithContext(requireNotNull(globalContext))
-            Logger.d("PlayerVM", "♻️ Bootstrapped PlayerViewModel context from NetworkModule")
+            Logger.d("PlayerVM", "♻️ Bootstrapped VideoPlaybackViewModel context from NetworkModule")
         }
     }
     
@@ -2059,7 +2059,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun resolveCurrentPlaylistIndex(items: List<PlaylistItem>): Int {
-        val currentInfo = (_uiState.value as? PlayerUiState.Success)?.info
+        val currentInfo = (_uiState.value as? VideoPlaybackUiState.Success)?.info
         return PlaylistManager.currentIndex.value
             .takeIf { it in items.indices }
             ?: currentInfo?.bvid?.let { bvid ->
@@ -2126,7 +2126,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun resolveCurrentNextAvailability(): Triple<Boolean, Boolean, Boolean> {
-        val current = _uiState.value as? PlayerUiState.Success
+        val current = _uiState.value as? VideoPlaybackUiState.Success
         val hasNextPage = current?.let { success ->
             val pages = success.info.pages
             if (pages.size <= 1) {
@@ -2147,7 +2147,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun resolveCurrentPreviousAvailability(): Triple<Boolean, Boolean, Boolean> {
-        val current = _uiState.value as? PlayerUiState.Success
+        val current = _uiState.value as? VideoPlaybackUiState.Success
         val hasPreviousPage = current?.let { success ->
             val pages = success.info.pages
             if (pages.size <= 1) {
@@ -2192,7 +2192,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun playNextPageOrSeason(ignoreSavedProgress: Boolean = false): Boolean {
-        val current = _uiState.value as? PlayerUiState.Success ?: return false
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return false
 
         // 1. 优先检查分P
         val pages = current.info.pages
@@ -2254,7 +2254,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun playPreviousPageOrSeason(ignoreSavedProgress: Boolean = false): Boolean {
-        val current = _uiState.value as? PlayerUiState.Success ?: return false
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return false
 
         val pages = current.info.pages
         if (pages.size > 1) {
@@ -2486,7 +2486,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun retryAiSummary() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (current.aiSummary != null) return
         loadAiSummary(
             bvid = current.info.bvid,
@@ -2525,17 +2525,17 @@ class PlayerViewModel : ViewModel() {
         videoNoteJob?.cancel()
         Logger.d(
             "PlayerVM",
-            "SUB_DBG loadVideo start: request=${playbackRequest.bvid}/${playbackRequest.cid}, aid=${playbackRequest.aid}, force=${playbackRequest.force}, current=$currentBvid/$currentCid, ui=${(_uiState.value as? PlayerUiState.Success)?.info?.bvid}/${(_uiState.value as? PlayerUiState.Success)?.info?.cid}"
+            "SUB_DBG loadVideo start: request=${playbackRequest.bvid}/${playbackRequest.cid}, aid=${playbackRequest.aid}, force=${playbackRequest.force}, current=$currentBvid/$currentCid, ui=${(_uiState.value as? VideoPlaybackUiState.Success)?.info?.bvid}/${(_uiState.value as? VideoPlaybackUiState.Success)?.info?.cid}"
         )
         
         //  防止重复加载：只有在正在加载同一视频时才跳过 (且语言未改变)
-        val currentLang = (_uiState.value as? PlayerUiState.Success)?.currentAudioLang
+        val currentLang = (_uiState.value as? VideoPlaybackUiState.Success)?.currentAudioLang
         val isSameLang = currentLang == playbackRequest.audioLang
         
         if (!playbackRequest.force &&
             currentBvid == playbackRequest.bvid &&
             isSameLang &&
-            _uiState.value is PlayerUiState.Loading
+            _uiState.value is VideoPlaybackUiState.Loading
         ) {
             Logger.d("PlayerVM", " Already loading ${playbackRequest.bvid}, skip")
             return
@@ -2548,7 +2548,7 @@ class PlayerViewModel : ViewModel() {
             player.playbackState in listOf(Player.STATE_READY, Player.STATE_BUFFERING) &&
             player.playerError == null // 没有播放错误
         
-        val currentSuccess = _uiState.value as? PlayerUiState.Success
+        val currentSuccess = _uiState.value as? VideoPlaybackUiState.Success
         val miniPlayerManager = appContext?.let { MiniPlayerManager.getInstance(it) }
         val isSamePlaybackRequest = shouldTreatAsSamePlaybackRequest(
             requestBvid = playbackRequest.bvid,
@@ -2724,7 +2724,7 @@ class PlayerViewModel : ViewModel() {
                 return@launch
             }
             Logger.w("VideoReturnTrace", "show Loading.Initial for ${playbackRequest.bvid}")
-            _uiState.value = PlayerUiState.Loading.Initial
+            _uiState.value = VideoPlaybackUiState.Loading.Initial
             
                 val isLoggedIn = resolveVideoPlaybackAuthState(
                     hasSessionCookie = !com.android.purebilibili.core.store.TokenManager.sessDataCache.isNullOrEmpty(),
@@ -2785,7 +2785,7 @@ class PlayerViewModel : ViewModel() {
                 } ?: true
                 
                 Logger.d(
-                    "PlayerViewModel",
+                    "VideoPlaybackViewModel",
                     "⏯️ AutoPlay Decision: arg=${playbackRequest.autoPlay}, setting=${shouldAutoPlay}, Final=$shouldAutoPlay, codec=$videoCodecPreference, blocked=$sessionBlockedCodecs"
                 )
             
@@ -2808,7 +2808,7 @@ class PlayerViewModel : ViewModel() {
             val dataSaverLimitedQuality = shouldLimitQuality && finalQuality > 32
             if (dataSaverLimitedQuality) {
                 finalQuality = 32
-                com.android.purebilibili.core.util.Logger.d("PlayerViewModel", "📉 省流量模式(${dataSaverMode.label}): 限制画质为480P")
+                com.android.purebilibili.core.util.Logger.d("VideoPlaybackViewModel", "📉 省流量模式(${dataSaverMode.label}): 限制画质为480P")
             }
             
             try {
@@ -2896,7 +2896,7 @@ class PlayerViewModel : ViewModel() {
                                 (cdnSelection.regionLabel?.let { ", 属地优选=$it" } ?: "")
                         )
                         
-                        _uiState.value = PlayerUiState.Success(
+                        _uiState.value = VideoPlaybackUiState.Success(
                             info = result.info,
                             playUrl = cdnSelection.playUrl,
                             audioUrl = cdnSelection.audioUrl,
@@ -3011,7 +3011,7 @@ class PlayerViewModel : ViewModel() {
                             "PlayerVM",
                             "SUB_DBG loadVideo error: requested=${playbackRequest.bvid}/${playbackRequest.cid}, token=$requestToken, error=${loadResult.error}"
                         )
-                        _uiState.value = PlayerUiState.Error(loadResult.error, loadResult.canRetry)
+                        _uiState.value = VideoPlaybackUiState.Error(loadResult.error, loadResult.canRetry)
                     }
                 }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
@@ -3027,7 +3027,7 @@ class PlayerViewModel : ViewModel() {
                 }
                 Logger.e("PlayerVM", "⚠️ Video load timed out for ${playbackRequest.bvid}")
                 PlaybackCooldownManager.recordFailure(playbackRequest.bvid, "timeout")
-                _uiState.value = PlayerUiState.Error(VideoLoadError.Timeout)
+                _uiState.value = VideoPlaybackUiState.Error(VideoLoadError.Timeout)
             } catch (e: CancellationException) {
                 Logger.d("PlayerVM", "loadVideo canceled: bvid=${playbackRequest.bvid} token=$requestToken")
                 throw e
@@ -3043,7 +3043,7 @@ class PlayerViewModel : ViewModel() {
                     return@launch
                 }
                 Logger.e("PlayerVM", "⚠️ Unexpected load exception", e)
-                _uiState.value = PlayerUiState.Error(VideoLoadError.UnknownError(e))
+                _uiState.value = VideoPlaybackUiState.Error(VideoLoadError.UnknownError(e))
             } finally {
                 if (activeLoadJob === kotlinx.coroutines.currentCoroutineContext()[Job]) {
                     activeLoadJob = null
@@ -3056,7 +3056,7 @@ class PlayerViewModel : ViewModel() {
      * [New] Change Audio Language (AI Translation)
      */
     fun changeAudioLanguage(lang: String?) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (current.currentAudioLang == lang) return
         
         Logger.d("PlayerVM", "🗣️ Changing audio language to: $lang")
@@ -3267,11 +3267,11 @@ class PlayerViewModel : ViewModel() {
                 isPlaying = player.isPlaying
             )
         } ?: true
-        val currentAudioLang = (_uiState.value as? PlayerUiState.Success)?.currentAudioLang
+        val currentAudioLang = (_uiState.value as? VideoPlaybackUiState.Success)?.currentAudioLang
         
         //  检查当前错误类型，如果是全局冷却则清除所有冷却
         val currentState = _uiState.value
-        if (currentState is PlayerUiState.Error && 
+        if (currentState is VideoPlaybackUiState.Error && 
             currentState.error is VideoLoadError.GlobalCooldown) {
             PlaybackCooldownManager.clearAll()
         } else {
@@ -3294,7 +3294,7 @@ class PlayerViewModel : ViewModel() {
      * 解码类错误时的安全重试：强制使用 AVC，规避特定机型 HEVC/AV1 解码异常导致的卡死。
      */
     fun retryWithCodecFallback() {
-        val current = _uiState.value as? PlayerUiState.Success ?: run {
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: run {
             retry()
             return
         }
@@ -3335,7 +3335,7 @@ class PlayerViewModel : ViewModel() {
      * 在当前画质下切换到下一个 CDN
      */
     fun switchCdn() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
 
         if (playbackCdnFallbackState.usesCdnRewrite) {
             fallbackFromCdnRewrite(reason = "player_error")
@@ -3388,7 +3388,7 @@ class PlayerViewModel : ViewModel() {
      *  切换到指定 CDN 线路
      */
     fun switchCdnTo(index: Int) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         
         if (index < 0 || index >= current.cdnCount) return
         if (index == current.currentCdnIndex) {
@@ -3434,11 +3434,11 @@ class PlayerViewModel : ViewModel() {
     /**
      * [修复] 从缓存恢复 UI 状态，避免在返回前台时重复请求网络导致错误
      */
-    fun restoreUiState(state: PlayerUiState.Success) {
+    fun restoreUiState(state: VideoPlaybackUiState.Success) {
         // 只有当前是非成功状态，或者虽然是成功状态但 BVID 不同时，才允许恢复
         // 这样可以避免覆盖当前可能更新的状态
-        if (_uiState.value !is PlayerUiState.Success || 
-            (_uiState.value as? PlayerUiState.Success)?.info?.bvid != state.info.bvid) {
+        if (_uiState.value !is VideoPlaybackUiState.Success || 
+            (_uiState.value as? VideoPlaybackUiState.Success)?.info?.bvid != state.info.bvid) {
             
             Logger.d("PlayerVM", "♻️ Restoring UI state from cache: ${state.info.title}")
             _uiState.value = state
@@ -3459,12 +3459,12 @@ class PlayerViewModel : ViewModel() {
     // ========== Interaction ==========
     
     fun toggleFollow() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         viewModelScope.launch {
             interactionUseCase.toggleFollow(current.info.owner.mid, current.isFollowing)
                 .onSuccess {
                     _uiState.update { state ->
-                        if (state is PlayerUiState.Success) {
+                        if (state is VideoPlaybackUiState.Success) {
                             val newSet = state.followingMids.toMutableSet()
                             if (it) newSet.add(state.info.owner.mid) else newSet.remove(state.info.owner.mid)
                             state.copy(isFollowing = it, followingMids = newSet)
@@ -3487,7 +3487,7 @@ class PlayerViewModel : ViewModel() {
                 .onSuccess { isFollowing ->
                     // 更新全局关注列表 cache
                     _uiState.update { state ->
-                        if (state is PlayerUiState.Success) {
+                        if (state is VideoPlaybackUiState.Success) {
                             val newSet = state.followingMids.toMutableSet()
                             if (isFollowing) newSet.add(mid) else newSet.remove(mid)
                             
@@ -3507,7 +3507,7 @@ class PlayerViewModel : ViewModel() {
     }
     
     fun toggleFavorite() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         viewModelScope.launch {
             interactionUseCase.toggleFavorite(
                 aid = current.info.aid,
@@ -3515,7 +3515,7 @@ class PlayerViewModel : ViewModel() {
                 bvid = current.info.bvid
             ).onSuccess { favorited ->
                 _uiState.update { state ->
-                    if (state is PlayerUiState.Success) {
+                    if (state is VideoPlaybackUiState.Success) {
                         val updatedFavoriteCount = (state.info.stat.favorite + if (favorited) 1 else -1)
                             .coerceAtLeast(0)
                         state.copy(
@@ -3543,7 +3543,7 @@ class PlayerViewModel : ViewModel() {
     }
     
     fun toggleLike() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         toggleLikeForVideo(
             aid = current.info.aid,
             bvid = current.info.bvid,
@@ -3561,7 +3561,7 @@ class PlayerViewModel : ViewModel() {
         viewModelScope.launch {
             interactionUseCase.toggleLike(aid, currentlyLiked, bvid)
                 .onSuccess { liked ->
-                    val current = _uiState.value as? PlayerUiState.Success
+                    val current = _uiState.value as? VideoPlaybackUiState.Success
                     if (current != null && current.info.aid == aid && current.info.bvid == bvid) {
                         val newStat = current.info.stat.copy(
                             like = (current.info.stat.like + if (liked) 1 else -1).coerceAtLeast(0)
@@ -3586,7 +3586,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun markVideoNotInterested() {
-        val current = _uiState.value as? PlayerUiState.Success
+        val current = _uiState.value as? VideoPlaybackUiState.Success
         if (current == null) {
             toast("视频未加载")
             return
@@ -3606,7 +3606,7 @@ class PlayerViewModel : ViewModel() {
             )
             TodayWatchFeedbackStore.saveSnapshot(context, snapshot)
             Logger.d(
-                "PlayerViewModel",
+                "VideoPlaybackViewModel",
                 "Recorded not interested feedback: bvid=${current.info.bvid}, mid=${current.info.owner.mid}"
             )
             withContext(Dispatchers.Main) {
@@ -3641,7 +3641,7 @@ class PlayerViewModel : ViewModel() {
     val composerDrafts = _composerDrafts.asStateFlow()
 
     private fun ensureComposerDraftVideo() {
-        val videoId = (_uiState.value as? PlayerUiState.Success)?.info?.bvid.orEmpty()
+        val videoId = (_uiState.value as? VideoPlaybackUiState.Success)?.info?.bvid.orEmpty()
         if (_composerDrafts.value.videoId != videoId) {
             _composerDrafts.value = VideoComposerDraftState(videoId = videoId)
         }
@@ -3659,14 +3659,14 @@ class PlayerViewModel : ViewModel() {
                 .onSuccess { 
                     _emotePackages.value = it 
                     isEmotesLoaded = true
-                    android.util.Log.d("PlayerViewModel", "📦 Emotes loaded: ${it.size} packages")
+                    android.util.Log.d("VideoPlaybackViewModel", "📦 Emotes loaded: ${it.size} packages")
                 }
-                .onFailure { Logger.e("PlayerViewModel", "Failed to load emotes", it) }
+                .onFailure { Logger.e("VideoPlaybackViewModel", "Failed to load emotes", it) }
         }
     }
     
     fun showCommentInputDialog() {
-        android.util.Log.d("PlayerViewModel", "📝 showCommentInputDialog called")
+        android.util.Log.d("VideoPlaybackViewModel", "📝 showCommentInputDialog called")
         ensureComposerDraftVideo()
         _showCommentDialog.value = true
         // 懒加载表情包
@@ -3693,7 +3693,7 @@ class PlayerViewModel : ViewModel() {
     val isSendingDanmaku = _isSendingDanmaku.asStateFlow()
     
     fun showDanmakuSendDialog(): Boolean {
-        val current = _uiState.value as? PlayerUiState.Success
+        val current = _uiState.value as? VideoPlaybackUiState.Success
         if (current?.isLoggedIn != true) {
             viewModelScope.launch {
                 toast(
@@ -3747,7 +3747,7 @@ class PlayerViewModel : ViewModel() {
         fontSize: Int = 25,
         attentionCommand: Boolean = false
     ) {
-        val current = _uiState.value as? PlayerUiState.Success ?: run {
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: run {
             viewModelScope.launch { toast("视频未加载") }
             return
         }
@@ -4069,7 +4069,7 @@ class PlayerViewModel : ViewModel() {
         if (inputMessage != null) {
             _commentInput.value = inputMessage
         }
-        val current = _uiState.value as? PlayerUiState.Success
+        val current = _uiState.value as? VideoPlaybackUiState.Success
         val sendAid = resolveCommentSendTargetAid(
             requestedAid = targetAid,
             currentAid = current?.info?.aid
@@ -4223,7 +4223,7 @@ class PlayerViewModel : ViewModel() {
 
     fun setAudioQuality(audioQuality: Int) {
         _audioQualityPreference.value = audioQuality // Optimistic update
-        com.android.purebilibili.core.util.Logger.d("PlayerViewModel", "🎵 setAudioQuality called with: $audioQuality")
+        com.android.purebilibili.core.util.Logger.d("VideoPlaybackViewModel", "🎵 setAudioQuality called with: $audioQuality")
         //  [调试] 显示 Toast 提示
         val label = when(audioQuality) {
             -1 -> "自动"
@@ -4246,7 +4246,7 @@ class PlayerViewModel : ViewModel() {
     
     //  稍后再看
     fun toggleWatchLater() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         viewModelScope.launch {
             interactionUseCase.toggleWatchLater(current.info.aid, current.isInWatchLater, currentBvid)
                 .onSuccess { inWatchLater ->
@@ -4298,7 +4298,7 @@ class PlayerViewModel : ViewModel() {
 
             withContext(Dispatchers.Main) {
                 _uiState.update { state ->
-                    val success = state as? PlayerUiState.Success ?: return@update state
+                    val success = state as? VideoPlaybackUiState.Success ?: return@update state
                     if (success.info.bvid != bvid) return@update state
 
                     val mergedFollowingMids = success.followingMids.toMutableSet()
@@ -4328,7 +4328,7 @@ class PlayerViewModel : ViewModel() {
     fun ensureFollowStatus(mid: Long, force: Boolean = false) {
         if (mid == 0L) return
 
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (!current.isLoggedIn) return
         if (!force && current.followingMids.contains(mid)) return
 
@@ -4346,7 +4346,7 @@ class PlayerViewModel : ViewModel() {
                     val isFollowing = response.data.attribute == 2 || response.data.attribute == 6
 
                     _uiState.update { state ->
-                        if (state is PlayerUiState.Success) {
+                        if (state is VideoPlaybackUiState.Success) {
                             val newSet = state.followingMids.toMutableSet()
                             if (isFollowing) newSet.add(mid) else newSet.remove(mid)
                             // 刷新当前状态
@@ -4378,7 +4378,7 @@ class PlayerViewModel : ViewModel() {
 
         if (cacheValid) {
             _uiState.update { state ->
-                if (state is PlayerUiState.Success && state.followingMids != cachedFollowingMids) {
+                if (state is VideoPlaybackUiState.Success && state.followingMids != cachedFollowingMids) {
                     state.copy(followingMids = cachedFollowingMids)
                 } else {
                     state
@@ -4418,7 +4418,7 @@ class PlayerViewModel : ViewModel() {
                 hasFollowingCache = true
                 
                 // 更新 UI 状态
-                val current = _uiState.value as? PlayerUiState.Success ?: return@launch
+                val current = _uiState.value as? VideoPlaybackUiState.Success ?: return@launch
                 _uiState.value = current.copy(followingMids = allMids)
                 Logger.d("PlayerVM", " Loaded ${allMids.size} following mids")
             } catch (e: Exception) {
@@ -4434,7 +4434,7 @@ class PlayerViewModel : ViewModel() {
      *  保存封面到相册
      */
     fun saveCover(context: android.content.Context) {
-        val current = _uiState.value as? PlayerUiState.Success
+        val current = _uiState.value as? VideoPlaybackUiState.Success
         val coverUrl = current?.info?.pic ?: return
         val title = current.info.title
         
@@ -4449,7 +4449,7 @@ class PlayerViewModel : ViewModel() {
      *  下载音频
      */
     fun downloadAudio(context: android.content.Context) {
-        val current = _uiState.value as? PlayerUiState.Success ?: run {
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: run {
             toast("无法获取视频信息")
             return
         }
@@ -4491,7 +4491,7 @@ class PlayerViewModel : ViewModel() {
         viewModelScope.launch {
             VideoRepository.getCreatorCardStats(ownerMid).onSuccess { stats ->
                 _uiState.update { current ->
-                    if (current is PlayerUiState.Success && current.info.bvid == bvid) {
+                    if (current is VideoPlaybackUiState.Success && current.info.bvid == bvid) {
                         current.copy(
                             ownerFollowerCount = stats.followerCount,
                             ownerVideoCount = stats.videoCount
@@ -4510,7 +4510,7 @@ class PlayerViewModel : ViewModel() {
                 val response = com.android.purebilibili.core.network.NetworkModule.api.getVideoTags(bvid)
                 if (response.code == 0 && response.data != null) {
                     _uiState.update { current ->
-                        if (current is PlayerUiState.Success) {
+                        if (current is VideoPlaybackUiState.Success) {
                             current.copy(videoTags = response.data)
                         } else current
                     }
@@ -4529,7 +4529,7 @@ class PlayerViewModel : ViewModel() {
                 val videoshotData = VideoRepository.getVideoshot(bvid, cid)
                 if (videoshotData != null && videoshotData.isValid) {
                     _uiState.update { current ->
-                        if (current is PlayerUiState.Success &&
+                        if (current is VideoPlaybackUiState.Success &&
                             shouldApplyVideoshotResult(
                                 currentState = current,
                                 videoshotBvid = bvid,
@@ -4566,7 +4566,7 @@ class PlayerViewModel : ViewModel() {
                     } ?: false
                     if (!enabled) {
                         _uiState.update { current ->
-                            if (current is PlayerUiState.Success) {
+                            if (current is VideoPlaybackUiState.Success) {
                                 current.copy(onlineCount = "")
                             } else current
                         }
@@ -4583,7 +4583,7 @@ class PlayerViewModel : ViewModel() {
                         if (response.code == 0 && response.data != null) {
                             val onlineText = "${response.data.total}人正在看"
                             _uiState.update { current ->
-                                if (current is PlayerUiState.Success) {
+                                if (current is VideoPlaybackUiState.Success) {
                                     current.copy(onlineCount = onlineText)
                                 } else current
                             }
@@ -4629,7 +4629,7 @@ class PlayerViewModel : ViewModel() {
                         return@onSuccess
                     }
 
-                    val currentState = _uiState.value as? PlayerUiState.Success
+                    val currentState = _uiState.value as? VideoPlaybackUiState.Success
                     if (currentState == null ||
                         currentState.info.bvid != bvid ||
                         currentState.info.cid != cid
@@ -4685,7 +4685,7 @@ class PlayerViewModel : ViewModel() {
                     // 2. 处理 BGM 信息
                     if (data.bgmInfo != null) {
                         _uiState.update { current ->
-                            if (current is PlayerUiState.Success) {
+                            if (current is VideoPlaybackUiState.Success) {
                                 current.copy(bgmInfo = data.bgmInfo)
                             } else current
                         }
@@ -4699,7 +4699,7 @@ class PlayerViewModel : ViewModel() {
                             Logger.w("PlayerVM", "gRPC BGM result: ${bgmList.size} entries for aid=$grpcAid")
                             if (bgmList.isNotEmpty()) {
                                 _uiState.update { current ->
-                                    if (current is PlayerUiState.Success) {
+                                    if (current is VideoPlaybackUiState.Success) {
                                         current.copy(bgmInfoList = bgmList)
                                     } else current
                                 }
@@ -4724,7 +4724,7 @@ class PlayerViewModel : ViewModel() {
 
                     // 4. 互动剧情图
                     interactiveGraphVersion = data.interaction?.graphVersion ?: 0L
-                    val current = _uiState.value as? PlayerUiState.Success
+                    val current = _uiState.value as? VideoPlaybackUiState.Success
                     val shouldEnableInteractive = current != null &&
                         current.info.bvid == bvid &&
                         current.info.isSteinGate == 1 &&
@@ -4787,7 +4787,7 @@ class PlayerViewModel : ViewModel() {
             subtitleLoadToken += 1
         }
         _uiState.update { current ->
-            if (current is PlayerUiState.Success &&
+            if (current is VideoPlaybackUiState.Success &&
                 current.info.bvid == bvid &&
                 current.info.cid == cid
             ) {
@@ -4832,7 +4832,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun selectSubtitleTrack(trackKey: String) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val normalizedTrackKey = trackKey.trim()
         if (normalizedTrackKey.isBlank() || current.subtitleTracks.isEmpty()) return
         if (current.subtitleOwnerBvid != current.info.bvid || current.subtitleOwnerCid != current.info.cid) return
@@ -4857,7 +4857,7 @@ class PlayerViewModel : ViewModel() {
         precomputedTracks: List<SubtitleTrackMeta>? = null,
         selectedPrimaryTrackKey: String? = null
     ) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (current.info.bvid != bvid || current.info.cid != cid) return
         if (!shouldApplyPlayerInfoResult(
                 activeRequestToken = currentLoadRequestToken,
@@ -4925,7 +4925,7 @@ class PlayerViewModel : ViewModel() {
         }
 
         _uiState.update { state ->
-            if (state is PlayerUiState.Success &&
+            if (state is VideoPlaybackUiState.Success &&
                 state.info.bvid == bvid &&
                 state.info.cid == cid
             ) {
@@ -5058,7 +5058,7 @@ class PlayerViewModel : ViewModel() {
             }
 
             _uiState.update { state ->
-                if (state is PlayerUiState.Success &&
+                if (state is VideoPlaybackUiState.Success &&
                     state.info.bvid == bvid &&
                     state.info.cid == cid
                 ) {
@@ -5091,7 +5091,7 @@ class PlayerViewModel : ViewModel() {
             )
 
             _uiState.update { state ->
-                val primaryMismatchReason = if (state is PlayerUiState.Success) {
+                val primaryMismatchReason = if (state is VideoPlaybackUiState.Success) {
                     resolveSubtitleTrackBindingMismatchReason(
                         expectedTrackKey = primaryTrackKey,
                         currentTrackKey = state.subtitlePrimaryTrackKey,
@@ -5101,7 +5101,7 @@ class PlayerViewModel : ViewModel() {
                 } else {
                     "ui-not-success"
                 }
-                val secondaryMismatchReason = if (state is PlayerUiState.Success) {
+                val secondaryMismatchReason = if (state is VideoPlaybackUiState.Success) {
                     resolveSubtitleTrackBindingMismatchReason(
                         expectedTrackKey = secondaryTrackKey,
                         currentTrackKey = state.subtitleSecondaryTrackKey,
@@ -5111,7 +5111,7 @@ class PlayerViewModel : ViewModel() {
                 } else {
                     "ui-not-success"
                 }
-                if (state is PlayerUiState.Success &&
+                if (state is VideoPlaybackUiState.Success &&
                     state.info.bvid == bvid &&
                     state.info.cid == cid &&
                     primaryMismatchReason == null &&
@@ -5134,7 +5134,7 @@ class PlayerViewModel : ViewModel() {
                         subtitleSecondaryCues = subtitleDecision.secondaryCues
                     )
                 } else {
-                    if (state is PlayerUiState.Success &&
+                    if (state is VideoPlaybackUiState.Success &&
                         state.info.bvid == bvid &&
                         state.info.cid == cid
                     ) {
@@ -5161,7 +5161,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private suspend fun loadInteractiveEdgeInfo(edgeId: Long?) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (current.info.isSteinGate != 1 || interactiveGraphVersion <= 0L) {
             clearInteractiveChoiceRuntime()
             return
@@ -5179,7 +5179,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun processInteractiveEdgeData(
-        current: PlayerUiState.Success,
+        current: VideoPlaybackUiState.Success,
         data: InteractEdgeInfoData
     ) {
         interactiveCurrentEdgeId = data.edgeId.takeIf { it > 0L } ?: interactiveCurrentEdgeId
@@ -5317,7 +5317,7 @@ class PlayerViewModel : ViewModel() {
 
         interactiveQuestionMonitorJob = viewModelScope.launch {
             while (true) {
-                val current = _uiState.value as? PlayerUiState.Success ?: return@launch
+                val current = _uiState.value as? VideoPlaybackUiState.Success ?: return@launch
                 if (current.info.cid != currentCid) return@launch
                 val currentPosition = playbackUseCase.getCurrentPosition().coerceAtLeast(0L)
                 if (shouldTriggerInteractiveQuestion(currentPosition, triggerMs)) {
@@ -5384,7 +5384,7 @@ class PlayerViewModel : ViewModel() {
             val loadingPrompt = initialAiSummaryPromptState()
             _uiState.update { current ->
                 if (
-                    current is PlayerUiState.Success &&
+                    current is VideoPlaybackUiState.Success &&
                     current.info.bvid == bvid &&
                     current.aiSummary?.modelResult == null
                 ) {
@@ -5415,7 +5415,7 @@ class PlayerViewModel : ViewModel() {
                                 com.android.purebilibili.data.repository.AiSummaryFetchStatus.AVAILABLE &&
                                 response.data != null -> {
                                 _uiState.update { current ->
-                                    if (current is PlayerUiState.Success && current.info.bvid == bvid) {
+                                    if (current is VideoPlaybackUiState.Success && current.info.bvid == bvid) {
                                         current.copy(
                                             aiSummary = response.data,
                                             aiSummaryPrompt = null
@@ -5434,7 +5434,7 @@ class PlayerViewModel : ViewModel() {
                             ) && diagnosis.shouldRetryLater -> {
                                 val prompt = resolveAiSummaryPromptState(diagnosis)
                                 _uiState.update { current ->
-                                    if (current is PlayerUiState.Success && current.info.bvid == bvid) {
+                                    if (current is VideoPlaybackUiState.Success && current.info.bvid == bvid) {
                                         current.copy(aiSummaryPrompt = prompt)
                                     } else current
                                 }
@@ -5453,7 +5453,7 @@ class PlayerViewModel : ViewModel() {
                                 com.android.purebilibili.data.repository.AiSummaryFetchStatus.QUEUED -> {
                                 val prompt = queuedAiSummaryPendingPromptState()
                                 _uiState.update { current ->
-                                    if (current is PlayerUiState.Success && current.info.bvid == bvid) {
+                                    if (current is VideoPlaybackUiState.Success && current.info.bvid == bvid) {
                                         current.copy(aiSummaryPrompt = prompt)
                                     } else current
                                 }
@@ -5466,7 +5466,7 @@ class PlayerViewModel : ViewModel() {
                             else -> {
                                 val prompt = resolveAiSummaryPromptState(diagnosis)
                                 _uiState.update { current ->
-                                    if (current is PlayerUiState.Success && current.info.bvid == bvid) {
+                                    if (current is VideoPlaybackUiState.Success && current.info.bvid == bvid) {
                                         current.copy(aiSummaryPrompt = prompt)
                                     } else current
                                 }
@@ -5494,7 +5494,7 @@ class PlayerViewModel : ViewModel() {
                         }
                         val prompt = resolveAiSummaryPromptState(diagnosis)
                         _uiState.update { current ->
-                            if (current is PlayerUiState.Success && current.info.bvid == bvid) {
+                            if (current is VideoPlaybackUiState.Success && current.info.bvid == bvid) {
                                 current.copy(aiSummaryPrompt = prompt)
                             } else current
                         }
@@ -5510,7 +5510,7 @@ class PlayerViewModel : ViewModel() {
 
                     queuedRetryCount += 1
                     delay(nextDelayMs)
-                    val currentSuccess = _uiState.value as? PlayerUiState.Success
+                    val currentSuccess = _uiState.value as? VideoPlaybackUiState.Success
                     if (
                         currentSuccess?.info?.bvid != bvid ||
                         currentSuccess.info.cid != cid ||
@@ -5537,7 +5537,7 @@ class PlayerViewModel : ViewModel() {
         videoNoteJob?.cancel()
         videoNoteJob = viewModelScope.launch {
             _uiState.update { state ->
-                val success = state as? PlayerUiState.Success ?: return@update state
+                val success = state as? VideoPlaybackUiState.Success ?: return@update state
                 if (success.info.bvid != loadedBvid) return@update state
                 success.copy(
                     videoNoteState = success.videoNoteState.copy(
@@ -5551,7 +5551,7 @@ class PlayerViewModel : ViewModel() {
             VideoNoteRepository.getVideoNoteSnapshot(loadedAid)
                 .onSuccess { snapshot ->
                     _uiState.update { state ->
-                        val success = state as? PlayerUiState.Success ?: return@update state
+                        val success = state as? VideoPlaybackUiState.Success ?: return@update state
                         if (success.info.bvid != loadedBvid || success.info.aid != loadedAid) return@update state
                         val privateNote = snapshot.privateNote
                         val privateDocument = privateNote?.let {
@@ -5585,7 +5585,7 @@ class PlayerViewModel : ViewModel() {
                 }
                 .onFailure { throwable ->
                     _uiState.update { state ->
-                        val success = state as? PlayerUiState.Success ?: return@update state
+                        val success = state as? VideoPlaybackUiState.Success ?: return@update state
                         if (success.info.bvid != loadedBvid || success.info.aid != loadedAid) return@update state
                         success.copy(
                             videoNoteState = success.videoNoteState.copy(
@@ -5599,7 +5599,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun retryVideoNote() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val videoNoteEnabled = appContext?.let {
             com.android.purebilibili.core.store.SettingsManager.getVideoNoteEnabledSync(it)
         } ?: true
@@ -5608,7 +5608,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun openVideoNoteEditor() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (current.videoNoteState.forbidNoteEntrance) return
         val noteState = current.videoNoteState
         val document = resolveVideoNoteEditableDocument(
@@ -5616,7 +5616,7 @@ class PlayerViewModel : ViewModel() {
             defaultTitle = current.info.title
         )
         _uiState.update { state ->
-            val success = state as? PlayerUiState.Success ?: return@update state
+            val success = state as? VideoPlaybackUiState.Success ?: return@update state
             success.copy(
                 videoNoteState = success.videoNoteState.copy(
                     editorVisible = true,
@@ -5631,20 +5631,20 @@ class PlayerViewModel : ViewModel() {
 
     fun closeVideoNoteEditor() {
         _uiState.update { state ->
-            val success = state as? PlayerUiState.Success ?: return@update state
+            val success = state as? VideoPlaybackUiState.Success ?: return@update state
             success.copy(videoNoteState = success.videoNoteState.copy(editorVisible = false))
         }
     }
 
     fun updateVideoNoteEditorDocument(document: VideoNoteEditorDocument) {
         _uiState.update { state ->
-            val success = state as? PlayerUiState.Success ?: return@update state
+            val success = state as? VideoPlaybackUiState.Success ?: return@update state
             success.copy(videoNoteState = success.videoNoteState.copy(editorDocument = document))
         }
     }
 
     fun insertCurrentPlaybackTimestampIntoNote() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val positionSeconds = ((exoPlayer?.currentPosition ?: 0L) / 1000L).coerceAtLeast(0L)
         val pageIndex = current.info.pages.indexOfFirst { it.cid == current.info.cid }.coerceAtLeast(0)
         val timestamp = VideoNoteBlock.Timestamp(
@@ -5660,7 +5660,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun createVideoNoteDraftFromAiSummary() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val aiSummary = current.aiSummary ?: return
         val pageIndex = current.info.pages.indexOfFirst { it.cid == current.info.cid }.coerceAtLeast(0)
         val draft = buildVideoNoteDraftFromAiSummary(
@@ -5672,7 +5672,7 @@ class PlayerViewModel : ViewModel() {
             existingDocument = current.videoNoteState.privateNoteDocument
         )
         _uiState.update { state ->
-            val success = state as? PlayerUiState.Success ?: return@update state
+            val success = state as? VideoPlaybackUiState.Success ?: return@update state
             success.copy(
                 videoNoteState = success.videoNoteState.copy(
                     editorVisible = true,
@@ -5688,7 +5688,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun saveVideoNote(updatedDocument: VideoNoteEditorDocument? = null) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val noteState = current.videoNoteState
         if (noteState.saving || noteState.forbidNoteEntrance) return
         val sourceDocument = updatedDocument ?: noteState.editorDocument
@@ -5698,13 +5698,13 @@ class PlayerViewModel : ViewModel() {
         val encoded = VideoNoteContentCodec.encode(document)
         if (encoded.contentLength <= 0) {
             _uiState.update { state ->
-                val success = state as? PlayerUiState.Success ?: return@update state
+                val success = state as? VideoPlaybackUiState.Success ?: return@update state
                 success.copy(videoNoteState = success.videoNoteState.copy(errorMessage = "先写一点内容再保存。"))
             }
             return
         }
         _uiState.update { state ->
-            val success = state as? PlayerUiState.Success ?: return@update state
+            val success = state as? VideoPlaybackUiState.Success ?: return@update state
             success.copy(videoNoteState = success.videoNoteState.copy(saving = true, errorMessage = null))
         }
         viewModelScope.launch {
@@ -5720,7 +5720,7 @@ class PlayerViewModel : ViewModel() {
                 )
             ).onSuccess { noteId ->
                 _uiState.update { state ->
-                    val success = state as? PlayerUiState.Success ?: return@update state
+                    val success = state as? VideoPlaybackUiState.Success ?: return@update state
                     if (success.info.bvid != current.info.bvid) return@update state
                     success.copy(
                         videoNoteState = success.videoNoteState.copy(
@@ -5738,7 +5738,7 @@ class PlayerViewModel : ViewModel() {
                 }
             }.onFailure { throwable ->
                 _uiState.update { state ->
-                    val success = state as? PlayerUiState.Success ?: return@update state
+                    val success = state as? VideoPlaybackUiState.Success ?: return@update state
                     success.copy(
                         videoNoteState = success.videoNoteState.copy(
                             saving = false,
@@ -5751,18 +5751,18 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun deleteVideoNote() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val noteId = current.videoNoteState.privateNoteId ?: return
         if (current.videoNoteState.deleting) return
         _uiState.update { state ->
-            val success = state as? PlayerUiState.Success ?: return@update state
+            val success = state as? VideoPlaybackUiState.Success ?: return@update state
             success.copy(videoNoteState = success.videoNoteState.copy(deleting = true, errorMessage = null))
         }
         viewModelScope.launch {
             VideoNoteRepository.deletePrivateNote(aid = current.info.aid, noteId = noteId)
                 .onSuccess {
                     _uiState.update { state ->
-                        val success = state as? PlayerUiState.Success ?: return@update state
+                        val success = state as? VideoPlaybackUiState.Success ?: return@update state
                         if (success.info.bvid != current.info.bvid) return@update state
                         success.copy(
                             videoNoteState = success.videoNoteState.copy(
@@ -5778,7 +5778,7 @@ class PlayerViewModel : ViewModel() {
                 }
                 .onFailure { throwable ->
                     _uiState.update { state ->
-                        val success = state as? PlayerUiState.Success ?: return@update state
+                        val success = state as? VideoPlaybackUiState.Success ?: return@update state
                         success.copy(
                             videoNoteState = success.videoNoteState.copy(
                                 deleting = false,
@@ -5791,7 +5791,7 @@ class PlayerViewModel : ViewModel() {
     }
     
     fun openCoinDialog() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (current.coinCount >= 2) { toast("\u5df2\u6295\u6ee12\u4e2a\u786c\u5e01"); return }
         _coinDialogVisible.value = true
         fetchUserCoins()
@@ -5800,7 +5800,7 @@ class PlayerViewModel : ViewModel() {
     fun closeCoinDialog() { _coinDialogVisible.value = false }
     
     fun doCoin(count: Int, alsoLike: Boolean) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         _coinDialogVisible.value = false
         viewModelScope.launch {
             interactionUseCase.doCoin(current.info.aid, count, alsoLike, currentBvid)
@@ -5821,7 +5821,7 @@ class PlayerViewModel : ViewModel() {
     }
     
     fun doTripleAction() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         doTripleActionForVideo(
             aid = current.info.aid,
             bvid = current.info.bvid,
@@ -5853,7 +5853,7 @@ class PlayerViewModel : ViewModel() {
                         coinFailureMessage = result.coinMessage,
                         favoriteSuccess = result.favoriteSuccess
                     )
-                    val current = _uiState.value as? PlayerUiState.Success
+                    val current = _uiState.value as? VideoPlaybackUiState.Success
                     if (current != null && current.info.aid == aid && current.info.bvid == bvid) {
                         _uiState.value = current.copy(
                             isLiked = visualState.isLiked,
@@ -5897,7 +5897,7 @@ class PlayerViewModel : ViewModel() {
     val showDownloadDialog = _showDownloadDialog.asStateFlow()
     
     fun openDownloadDialog() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         _showDownloadDialog.value = true
     }
     
@@ -5906,7 +5906,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun resolveDownloadQualityDescription(
-        current: PlayerUiState.Success,
+        current: VideoPlaybackUiState.Success,
         qualityId: Int
     ): String {
         return current.qualityLabels.getOrNull(
@@ -5931,7 +5931,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private suspend fun buildDownloadTaskForTarget(
-        current: PlayerUiState.Success,
+        current: VideoPlaybackUiState.Success,
         targetBvid: String,
         targetCid: Long,
         targetTitle: String,
@@ -6013,7 +6013,7 @@ class PlayerViewModel : ViewModel() {
         qualityId: Int,
         options: com.android.purebilibili.feature.download.DownloadOptions = com.android.purebilibili.feature.download.DownloadOptions()
     ) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         _showDownloadDialog.value = false
         
         viewModelScope.launch {
@@ -6052,7 +6052,7 @@ class PlayerViewModel : ViewModel() {
         options: com.android.purebilibili.feature.download.DownloadOptions = com.android.purebilibili.feature.download.DownloadOptions(),
         candidates: List<com.android.purebilibili.feature.download.BatchDownloadCandidate>
     ) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         _showDownloadDialog.value = false
 
         viewModelScope.launch {
@@ -6111,13 +6111,13 @@ class PlayerViewModel : ViewModel() {
         playbackTransitionMonitorJob?.cancel()
         playbackTransitionMonitorJob = viewModelScope.launch {
             while (true) {
-                val current = _uiState.value as? PlayerUiState.Success ?: return@launch
+                val current = _uiState.value as? VideoPlaybackUiState.Success ?: return@launch
                 val pendingPositionMs = current.pendingPlaybackTransitionPositionMs ?: return@launch
                 if (pendingPositionMs != targetPositionMs) return@launch
                 val playerPositionMs = playbackUseCase.getCurrentPosition().coerceAtLeast(0L)
                 if (!shouldHoldPlaybackResumeTransitionPosition(playerPositionMs, targetPositionMs)) {
                     _uiState.update { state ->
-                        val success = state as? PlayerUiState.Success ?: return@update state
+                        val success = state as? VideoPlaybackUiState.Success ?: return@update state
                         if (success.pendingPlaybackTransitionPositionMs != targetPositionMs) {
                             state
                         } else {
@@ -6132,7 +6132,7 @@ class PlayerViewModel : ViewModel() {
     }
     
     fun changeQuality(qualityId: Int) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         if (current.isQualitySwitching) {
             toast("正在切换中...", PlayerToastPresentation.CenteredHighlight)
             return
@@ -6375,7 +6375,7 @@ class PlayerViewModel : ViewModel() {
     // ========== Page Switch ==========
     
     fun switchPage(pageIndex: Int, ignoreSavedProgress: Boolean = false) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val page = current.info.pages.getOrNull(pageIndex) ?: return
         if (page.cid == currentCid) { toast("\u5df2\u662f\u5f53\u524d\u5206P"); return }
         playbackCoordinator.dismissResumeSuggestion()
@@ -6500,7 +6500,7 @@ class PlayerViewModel : ViewModel() {
     fun continueResumePlaybackSuggestion() {
         val suggestion = playbackCoordinator.consumeResumeSuggestion() ?: return
 
-        val current = _uiState.value as? PlayerUiState.Success
+        val current = _uiState.value as? VideoPlaybackUiState.Success
         if (current != null &&
             current.info.bvid == suggestion.targetBvid &&
             current.info.pages.isNotEmpty()
@@ -6554,7 +6554,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private suspend fun switchToInteractiveCid(targetCid: Long, targetEdgeId: Long? = null): Boolean {
-        val current = _uiState.value as? PlayerUiState.Success ?: return false
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return false
         if (targetCid <= 0L) return false
         if (targetCid == currentCid) {
             val edgeId = targetEdgeId?.takeIf { it > 0L } ?: interactiveCurrentEdgeId.takeIf { it > 0L }
@@ -6687,7 +6687,7 @@ class PlayerViewModel : ViewModel() {
         if (!shouldShowOnlineCount) {
             onlineCountJob?.cancel()
             _uiState.update { current ->
-                if (current is PlayerUiState.Success) {
+                if (current is VideoPlaybackUiState.Success) {
                     current.copy(onlineCount = "")
                 } else current
             }
@@ -6702,7 +6702,7 @@ class PlayerViewModel : ViewModel() {
             .forEach { (delayMs, tasks) ->
                 viewModelScope.launch {
                     delay(delayMs)
-                    val currentSuccess = _uiState.value as? PlayerUiState.Success ?: return@launch
+                    val currentSuccess = _uiState.value as? VideoPlaybackUiState.Success ?: return@launch
                     if (currentSuccess.info.bvid != loadedBvid || currentSuccess.info.cid != loadedCid) {
                         return@launch
                     }
@@ -7024,7 +7024,7 @@ class PlayerViewModel : ViewModel() {
             val reported = VideoRepository.reportPlayHeartbeat(
                 bvid = currentBvid,
                 cid = currentCid,
-                aid = (_uiState.value as? PlayerUiState.Success)?.info?.aid ?: 0L,
+                aid = (_uiState.value as? VideoPlaybackUiState.Success)?.info?.aid ?: 0L,
                 playedTime = snapshot.playedTimeSec,
                 realPlayedTime = snapshot.realPlayedTimeSec,
                 startTsSec = heartbeatSessionStartTsSec
@@ -7237,7 +7237,7 @@ class PlayerViewModel : ViewModel() {
             cdnFallbackState = nextState
         )
         _uiState.update { current ->
-            if (current is PlayerUiState.Success) {
+            if (current is VideoPlaybackUiState.Success) {
                 val fallbackIndex = current.allVideoUrls.indexOf(fallbackVideoUrl)
                     .takeIf { it >= 0 }
                     ?: current.currentCdnIndex
@@ -7263,7 +7263,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     private fun recordCurrentCdnHealthEvent(event: CdnHealthEvent) {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val plugin = PluginManager.getEnabledPlugins(PlaybackCdnPlugin::class).firstOrNull() ?: return
         plugin.recordPlaybackCdnEvent(current.playUrl, event)
         val diagnostics = plugin.buildPlaybackCdnDiagnostics(
@@ -7276,7 +7276,7 @@ class PlayerViewModel : ViewModel() {
     }
 
     fun probeCurrentCdnCandidates() {
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val plugin = PluginManager.getEnabledPlugins(PlaybackCdnPlugin::class).firstOrNull() ?: run {
             viewModelScope.launch { toast("CDN 优选插件未启用") }
             return
@@ -7294,7 +7294,7 @@ class PlayerViewModel : ViewModel() {
                 )
             }
             _uiState.update { state ->
-                if (state is PlayerUiState.Success) {
+                if (state is VideoPlaybackUiState.Success) {
                     state.copy(
                         cdnLineDiagnostics = diagnostics,
                         isCdnProbing = false
@@ -7342,7 +7342,7 @@ class PlayerViewModel : ViewModel() {
         _qualitySwitchFailureDialog.value = dialogState
     }
     
-    fun restoreFromCache(cachedState: PlayerUiState.Success, startPosition: Long = -1L) {
+    fun restoreFromCache(cachedState: VideoPlaybackUiState.Success, startPosition: Long = -1L) {
         currentBvid = cachedState.info.bvid
         currentCid = cachedState.info.cid
         _uiState.value = if (startPosition >= 0) cachedState.copy(startPosition = startPosition) else cachedState
@@ -7365,7 +7365,7 @@ class PlayerViewModel : ViewModel() {
                     val reported = VideoRepository.reportPlayHeartbeat(
                         bvid = currentBvid,
                         cid = currentCid,
-                        aid = (_uiState.value as? PlayerUiState.Success)?.info?.aid ?: 0L,
+                        aid = (_uiState.value as? VideoPlaybackUiState.Success)?.info?.aid ?: 0L,
                         playedTime = 0L,
                         realPlayedTime = 0L,
                         startTsSec = heartbeatSessionStartTsSec
@@ -7397,7 +7397,7 @@ class PlayerViewModel : ViewModel() {
 
     private fun recordCreatorWatchProgressSnapshot() {
         val context = appContext ?: return
-        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val current = _uiState.value as? VideoPlaybackUiState.Success ?: return
         val mid = current.info.owner.mid
         if (mid <= 0L) return
 

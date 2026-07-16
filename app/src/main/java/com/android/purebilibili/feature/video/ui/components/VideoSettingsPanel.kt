@@ -185,7 +185,7 @@ fun VideoSettingsPanel(
     onProbeCdnCandidates: () -> Unit = {},
 
     // [New] Codec & Audio Quality
-    // Passed from PlayerViewModel/SettingsManager
+    // Passed from VideoPlaybackViewModel/SettingsManager
     currentCodec: String = "hev1", 
     onCodecChange: (String) -> Unit = {},
     currentSecondCodec: String = "avc1",

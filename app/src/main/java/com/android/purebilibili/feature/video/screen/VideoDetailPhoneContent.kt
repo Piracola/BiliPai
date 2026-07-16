@@ -43,8 +43,8 @@ import com.android.purebilibili.feature.video.ui.components.resolveBottomInputBa
 import com.android.purebilibili.feature.video.ui.components.shouldUseFloatingLiquidBottomInputBar
 import com.android.purebilibili.feature.video.usecase.seekPlayerFromUserAction
 import com.android.purebilibili.feature.video.viewmodel.CommentUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
 import com.android.purebilibili.feature.video.player.PlaylistItem
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -58,10 +58,10 @@ import kotlinx.coroutines.launch
 
 @Composable
 internal fun VideoDetailPhoneSuccessContentLayer(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     commentState: CommentUiState,
     commentMemberDecorationsEnabled: Boolean,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     commentViewModel: VideoCommentViewModel,
     context: Context,
     sortPreferenceScope: CoroutineScope,

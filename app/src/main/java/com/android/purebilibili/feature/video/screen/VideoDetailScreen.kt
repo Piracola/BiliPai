@@ -118,8 +118,8 @@ import com.android.purebilibili.feature.video.ui.components.CollectionRow
 import com.android.purebilibili.feature.video.ui.components.CollectionSheet
 import com.android.purebilibili.feature.video.ui.components.PagesSelector
 // Imports for moved classes
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
 import com.android.purebilibili.feature.video.viewmodel.QualitySwitchFailureDialogState
 import com.android.purebilibili.feature.video.viewmodel.CommentUiState
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
@@ -1056,11 +1056,11 @@ private fun PortraitInlineVideoPlayerHost(
     inlinePlayerScale: Float,
     context: Context,
     playerState: VideoPlayerState,
-    uiState: PlayerUiState,
+    uiState: VideoPlaybackUiState,
     isPipMode: Boolean,
     transitionEnabled: Boolean,
     onToggleFullscreen: () -> Unit,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     onBack: () -> Unit,
     onHomeClick: () -> Unit,
     videoPlayerSectionTarget: VideoPlayerSectionTarget,
@@ -1088,7 +1088,7 @@ private fun PortraitInlineVideoPlayerHost(
     subtitleDisplayModePreferenceOverride: SubtitleDisplayMode?,
     onSubtitleDisplayModePreferenceOverrideChange: (SubtitleDisplayMode) -> Unit
 ) {
-    val successState = uiState as? PlayerUiState.Success
+    val successState = uiState as? VideoPlaybackUiState.Success
 
     Box(
         modifier = modifier
@@ -1205,7 +1205,7 @@ fun VideoDetailScreen(
     miniPlayerManager: MiniPlayerManager? = null,
     isInPipMode: Boolean = false,
     isVisible: Boolean = true,
-    viewModel: PlayerViewModel = viewModel(),
+    viewModel: VideoPlaybackViewModel = viewModel(),
     commentViewModel: VideoCommentViewModel = viewModel(),
     onBgmClick: (BgmInfo) -> Unit = {}
 ) {
@@ -1327,7 +1327,7 @@ fun VideoDetailScreen(
         val normalizedBvid = targetBvid.trim()
         if (normalizedBvid.isBlank()) return
         val safeCid = targetCid.coerceAtLeast(0L)
-        val success = uiState as? PlayerUiState.Success
+        val success = uiState as? VideoPlaybackUiState.Success
         if (success?.info?.bvid == normalizedBvid && (safeCid <= 0L || success.info.cid == safeCid)) {
             return
         }
@@ -1342,7 +1342,7 @@ fun VideoDetailScreen(
 
     val navigateToRelatedVideo = remember(onVideoClick, miniPlayerManager, uiState, currentBvid) {
         { targetBvid: String, options: android.os.Bundle? ->
-            val success = uiState as? PlayerUiState.Success
+            val success = uiState as? VideoPlaybackUiState.Success
             val explicitCid = options?.getLong(VIDEO_NAV_TARGET_CID_KEY) ?: 0L
             val resolvedCid = resolveNavigationTargetCid(
                 targetBvid = targetBvid,
@@ -1520,7 +1520,7 @@ fun VideoDetailScreen(
         CommentSortMode.fromApiMode(commentDefaultSortMode)
     }
     LaunchedEffect(commentFraudDetectionEnabled, uiState) {
-        val success = uiState as? PlayerUiState.Success ?: return@LaunchedEffect
+        val success = uiState as? VideoPlaybackUiState.Success ?: return@LaunchedEffect
         viewModel.commentSentEvent.collect { reply ->
             commentViewModel.onExternalCommentSent(
                 aid = success.info.aid,
@@ -1751,7 +1751,7 @@ fun VideoDetailScreen(
         if (shouldAutoEnterAudioModeFromRoute(
                 startAudioFromRoute = startAudioFromRoute,
                 hasAutoEnteredAudioMode = hasAutoEnteredAudioMode,
-                isVideoLoadSuccess = uiState is PlayerUiState.Success
+                isVideoLoadSuccess = uiState is VideoPlaybackUiState.Success
             )
         ) {
             hasAutoEnteredAudioMode = true
@@ -2494,7 +2494,7 @@ fun VideoDetailScreen(
         systemMuted || playerState.player.volume <= 0f
     }
     val subtitlePreferenceSession = remember(uiState, currentBvid, subtitleAutoPreference, subtitleAutoModeMuted) {
-        val success = uiState as? PlayerUiState.Success
+        val success = uiState as? VideoPlaybackUiState.Success
         if (success == null) {
             resolveSubtitlePreferenceSession(
                 bvid = currentBvid,
@@ -2546,7 +2546,7 @@ fun VideoDetailScreen(
     var hasAppliedInitialPageSwitch by remember(currentBvid, cid) { mutableStateOf(false) }
     LaunchedEffect(uiState, currentBvid, cid, hasAppliedInitialPageSwitch) {
         if (hasAppliedInitialPageSwitch) return@LaunchedEffect
-        val success = uiState as? PlayerUiState.Success ?: return@LaunchedEffect
+        val success = uiState as? VideoPlaybackUiState.Success ?: return@LaunchedEffect
         if (success.info.bvid != currentBvid) return@LaunchedEffect
 
         val targetPageIndex = resolveInitialPageIndex(
@@ -2753,13 +2753,13 @@ fun VideoDetailScreen(
     val allowStandalonePortraitExperience = portraitExperienceEnabled &&
         !useOfficialInlinePortraitDetailExperience
     val isCurrentRouteVideoLoaded = remember(uiState, currentBvid) {
-        val success = uiState as? PlayerUiState.Success
+        val success = uiState as? VideoPlaybackUiState.Success
         success?.info?.bvid == currentBvid
     }
     val enterPortraitFullscreen = {
         if (shouldActivatePortraitFullscreenState(portraitExperienceEnabled)) {
-            portraitSyncSnapshotBvid = (uiState as? PlayerUiState.Success)?.info?.bvid
-            portraitSyncSnapshotCid = (uiState as? PlayerUiState.Success)?.info?.cid ?: 0L
+            portraitSyncSnapshotBvid = (uiState as? VideoPlaybackUiState.Success)?.info?.bvid
+            portraitSyncSnapshotCid = (uiState as? VideoPlaybackUiState.Success)?.info?.cid ?: 0L
             portraitSyncSnapshotPositionMs = playerState.player.currentPosition.coerceAtLeast(0L)
             hasPendingPortraitSync = false
             isPortraitFullscreen = true
@@ -2799,7 +2799,7 @@ fun VideoDetailScreen(
 
     val tryApplyPortraitProgressSync = remember(playerState, viewModel) {
         { snapshotBvid: String?, snapshotPositionMs: Long ->
-            val currentSuccess = viewModel.uiState.value as? PlayerUiState.Success
+            val currentSuccess = viewModel.uiState.value as? VideoPlaybackUiState.Success
             val currentBvid = currentSuccess?.info?.bvid
             val currentCid = currentSuccess?.info?.cid ?: 0L
             if (!com.android.purebilibili.feature.video.ui.pager.shouldApplyPortraitProgressSync(
@@ -2843,8 +2843,8 @@ fun VideoDetailScreen(
                 playerState.player.volume = 0f
                 playerState.player.playWhenReady = false
             }
-            portraitSyncSnapshotBvid = (uiState as? PlayerUiState.Success)?.info?.bvid
-            portraitSyncSnapshotCid = (uiState as? PlayerUiState.Success)?.info?.cid ?: 0L
+            portraitSyncSnapshotBvid = (uiState as? VideoPlaybackUiState.Success)?.info?.bvid
+            portraitSyncSnapshotCid = (uiState as? VideoPlaybackUiState.Success)?.info?.cid ?: 0L
             portraitSyncSnapshotPositionMs = playerState.player.currentPosition.coerceAtLeast(0L)
             hasPendingPortraitSync = shouldPauseMainPlayer
         } else {
@@ -2920,7 +2920,7 @@ fun VideoDetailScreen(
 
     LaunchedEffect(uiState, currentBvid, currentBvidCid, isPortraitFullscreen, bvid, isVisible) {
         if (!isVisible) return@LaunchedEffect
-        val success = uiState as? PlayerUiState.Success ?: return@LaunchedEffect
+        val success = uiState as? VideoPlaybackUiState.Success ?: return@LaunchedEffect
         if (!shouldSyncMainPlayerToInternalBvid(
                 isPortraitFullscreen = isPortraitFullscreen,
                 routeBvid = bvid,
@@ -2962,7 +2962,7 @@ fun VideoDetailScreen(
             )
 
             // 1. 将当前播放器信息传递给小窗管理器
-            val info = uiState as? PlayerUiState.Success
+            val info = uiState as? VideoPlaybackUiState.Success
             manager.setVideoInfo(
                 bvid = currentBvid,
                 title = info?.info?.title ?: "",
@@ -2991,9 +2991,9 @@ fun VideoDetailScreen(
 
     //  核心修改：初始化评论 & 媒体中心信息
     LaunchedEffect(uiState, isVisible) {
-        if (uiState is PlayerUiState.Success) {
-            val info = (uiState as PlayerUiState.Success).info
-            val success = uiState as PlayerUiState.Success
+        if (uiState is VideoPlaybackUiState.Success) {
+            val info = (uiState as VideoPlaybackUiState.Success).info
+            val success = uiState as VideoPlaybackUiState.Success
 
             // 初始化评论（传入 UP 主 mid 用于筛选）- 保持在主线程
             commentViewModel.init(
@@ -3045,7 +3045,7 @@ fun VideoDetailScreen(
             } else if (miniPlayerManager == null) {
                 android.util.Log.w("VideoDetailScreen", " miniPlayerManager 是 null!")
             }
-        } else if (uiState is PlayerUiState.Loading) {
+        } else if (uiState is VideoPlaybackUiState.Loading) {
             playerState.updateMediaMetadata(
                 title = "加载中...",
                 artist = "",
@@ -3148,7 +3148,7 @@ fun VideoDetailScreen(
         )
     }
 
-    val uiSuccessState = uiState as? PlayerUiState.Success
+    val uiSuccessState = uiState as? VideoPlaybackUiState.Success
     val videoPlayerSectionTarget = remember(bvid, coverUrl, currentBvid) {
         resolveVideoPlayerSectionTarget(
             routeBvid = bvid,
@@ -3234,9 +3234,9 @@ fun VideoDetailScreen(
                     //  [新增] 重载视频
                     onReloadVideo = { viewModel.reloadVideo() },
                     //  [新增] CDN 线路切换
-                    cdnCount = (uiState as? PlayerUiState.Success)?.cdnCount ?: 1,
-                    cdnLineDiagnostics = (uiState as? PlayerUiState.Success)?.cdnLineDiagnostics.orEmpty(),
-                    isCdnProbing = (uiState as? PlayerUiState.Success)?.isCdnProbing ?: false,
+                    cdnCount = (uiState as? VideoPlaybackUiState.Success)?.cdnCount ?: 1,
+                    cdnLineDiagnostics = (uiState as? VideoPlaybackUiState.Success)?.cdnLineDiagnostics.orEmpty(),
+                    isCdnProbing = (uiState as? VideoPlaybackUiState.Success)?.isCdnProbing ?: false,
                     onSwitchCdn = { viewModel.switchCdn() },
                     onSwitchCdnTo = { viewModel.switchCdnTo(it) },
                     onProbeCdnCandidates = { viewModel.probeCurrentCdnCandidates() },
@@ -3265,7 +3265,7 @@ fun VideoDetailScreen(
                     onSleepTimerChange = { viewModel.setSleepTimer(it) },
 
                     // 🖼️ [新增] 视频预览图数据
-                        videoshotData = (uiState as? PlayerUiState.Success)?.videoshotData,
+                        videoshotData = (uiState as? VideoPlaybackUiState.Success)?.videoshotData,
 
                     // 📖 [新增] 视频章节数据
                         viewPoints = viewPoints,
@@ -3296,12 +3296,12 @@ fun VideoDetailScreen(
                     onDownloadAudio = { viewModel.downloadAudio(context) },
 
                     // [新增] 侧边栏抽屉数据与交互
-                    relatedVideos = (uiState as? PlayerUiState.Success)?.related ?: emptyList(),
-                    ugcSeason = (uiState as? PlayerUiState.Success)?.info?.ugc_season,
-                    isFollowed = (uiState as? PlayerUiState.Success)?.isFollowing ?: false,
-                    isLiked = (uiState as? PlayerUiState.Success)?.isLiked ?: false,
-                    isCoined = (uiState as? PlayerUiState.Success)?.coinCount?.let { it > 0 } ?: false,
-                    isFavorited = (uiState as? PlayerUiState.Success)?.isFavorited ?: false,
+                    relatedVideos = (uiState as? VideoPlaybackUiState.Success)?.related ?: emptyList(),
+                    ugcSeason = (uiState as? VideoPlaybackUiState.Success)?.info?.ugc_season,
+                    isFollowed = (uiState as? VideoPlaybackUiState.Success)?.isFollowing ?: false,
+                    isLiked = (uiState as? VideoPlaybackUiState.Success)?.isLiked ?: false,
+                    isCoined = (uiState as? VideoPlaybackUiState.Success)?.coinCount?.let { it > 0 } ?: false,
+                    isFavorited = (uiState as? VideoPlaybackUiState.Success)?.isFavorited ?: false,
                     onToggleFollow = { viewModel.toggleFollow() },
                     onToggleLike = { viewModel.toggleLike() },
                     onDislike = { viewModel.markVideoNotInterested() },
@@ -3857,8 +3857,8 @@ fun VideoDetailScreen(
                                 // .nestedScroll(nestedScrollConnection) // [Remove] 移除嵌套滚动，确保 Tabs 正常滑动
                         ) {
                             when (uiState) {
-                                is PlayerUiState.Loading -> {
-                                    val loadingState = uiState as PlayerUiState.Loading
+                                is VideoPlaybackUiState.Loading -> {
+                                    val loadingState = uiState as VideoPlaybackUiState.Loading
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         //  显示重试进度
                                         if (loadingState.retryAttempt > 0) {
@@ -3883,8 +3883,8 @@ fun VideoDetailScreen(
                                     }
                                 }
 
-                                is PlayerUiState.Success -> {
-                                    val success = uiState as PlayerUiState.Success
+                                is VideoPlaybackUiState.Success -> {
+                                    val success = uiState as VideoPlaybackUiState.Success
                                     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
                                     VideoDetailPhoneSuccessContentLayer(
                                         success = success,
@@ -3940,8 +3940,8 @@ fun VideoDetailScreen(
                                     )
                             } // End of Success block
 
-                                is PlayerUiState.Error -> {
-                                    val errorState = uiState as PlayerUiState.Error
+                                is VideoPlaybackUiState.Error -> {
+                                    val errorState = uiState as VideoPlaybackUiState.Error
                                     Box(
                                         modifier = Modifier.fillMaxSize(),
                                         contentAlignment = Alignment.Center
@@ -4035,14 +4035,14 @@ fun VideoDetailScreen(
             portraitExperienceEnabled = portraitExperienceEnabled,
             isPortraitFullscreen = isPortraitFullscreen,
             useOfficialInlinePortraitDetailExperience = useOfficialInlinePortraitDetailExperience,
-            hasPlayableState = uiState is PlayerUiState.Success || uiState is PlayerUiState.Loading
+            hasPlayableState = uiState is VideoPlaybackUiState.Success || uiState is VideoPlaybackUiState.Loading
         )
 
         // 缓存上一个成功状态以在 Loading 时使用
-        var cachedSuccess by remember { mutableStateOf<PlayerUiState.Success?>(null) }
+        var cachedSuccess by remember { mutableStateOf<VideoPlaybackUiState.Success?>(null) }
         LaunchedEffect(uiState) {
-            if (uiState is PlayerUiState.Success) {
-                cachedSuccess = uiState as PlayerUiState.Success
+            if (uiState is VideoPlaybackUiState.Success) {
+                cachedSuccess = uiState as VideoPlaybackUiState.Success
             }
         }
 
@@ -4050,12 +4050,12 @@ fun VideoDetailScreen(
 
         // 获取当前或缓存的成功状态
         val success = when {
-            uiState is PlayerUiState.Success -> uiState as PlayerUiState.Success
-            uiState is PlayerUiState.Loading && cachedSuccess != null -> cachedSuccess!!
+            uiState is VideoPlaybackUiState.Success -> uiState as VideoPlaybackUiState.Success
+            uiState is VideoPlaybackUiState.Loading && cachedSuccess != null -> cachedSuccess!!
             else -> null
         }
 
-        val isLoadingNewVideo = uiState is PlayerUiState.Loading
+        val isLoadingNewVideo = uiState is VideoPlaybackUiState.Loading
 
         // Diagnostic Log
         LaunchedEffect(isPortraitFullscreen, showPortraitFullscreen, success) {
@@ -4165,7 +4165,7 @@ fun VideoDetailScreen(
                         val anchorBvid = portraitPendingSelectionBvid
                             ?: pendingMainReloadBvidAfterPortrait
                             ?: portraitSyncSnapshotBvid
-                            ?: (uiState as? PlayerUiState.Success)?.info?.bvid
+                            ?: (uiState as? VideoPlaybackUiState.Success)?.info?.bvid
                         if (!anchorBvid.isNullOrBlank()) {
                             currentBvid = anchorBvid
                             currentBvidCid = if (anchorBvid == portraitSyncSnapshotBvid) {
@@ -4217,7 +4217,7 @@ fun VideoDetailScreen(
 
         //  [新增] 投币对话框
         val coinDialogVisible by viewModel.coinDialogVisible.collectAsStateWithLifecycle()
-        val currentCoinCount = (uiState as? PlayerUiState.Success)?.coinCount ?: 0
+        val currentCoinCount = (uiState as? VideoPlaybackUiState.Success)?.coinCount ?: 0
         val userBalance by viewModel.userCoinBalance.collectAsStateWithLifecycle()
         CoinDialog(
             visible = coinDialogVisible,
@@ -4379,7 +4379,7 @@ fun VideoDetailScreen(
 
         //  [新增] 下载选项菜单 & 画质选择
         val showDownloadDialog by viewModel.showDownloadDialog.collectAsStateWithLifecycle()
-        val successForDownload = uiState as? PlayerUiState.Success
+        val successForDownload = uiState as? VideoPlaybackUiState.Success
         val downloadTasks by com.android.purebilibili.feature.download.DownloadManager.tasks.collectAsStateWithLifecycle()
 
         // 本地状态控制画质选择弹窗
@@ -4641,7 +4641,7 @@ fun VideoDetailScreen(
             )
         }
 
-        val successState = uiState as? PlayerUiState.Success
+        val successState = uiState as? VideoPlaybackUiState.Success
         DetachedVideoCommentThreadHost(
             visible = shouldShowDetachedVideoCommentThreadHost(useTabletLayout = useTabletLayout),
             successState = successState,
@@ -4802,7 +4802,7 @@ fun VideoDetailScreen(
 
 @Composable
 private fun VideoDetailFollowGroupDialog(
-    viewModel: PlayerViewModel
+    viewModel: VideoPlaybackViewModel
 ) {
     val followGroupDialogVisible by viewModel.followGroupDialogVisible.collectAsStateWithLifecycle(
         context = kotlin.coroutines.EmptyCoroutineContext
@@ -4908,7 +4908,7 @@ private fun VideoDetailFollowGroupDialog(
 
 @Composable
 private fun VideoDetailPlaybackEndedDialog(
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     player: Player
 ) {
     val showPlaybackEndedDialog by viewModel.showPlaybackEndedDialog.collectAsStateWithLifecycle(
@@ -4978,7 +4978,7 @@ private fun VideoDetailPlaybackEndedDialog(
 @Composable
 private fun VideoDetailQualitySwitchFailureDialog(
     context: Context,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     qualitySwitchFailureDialog: QualitySwitchFailureDialogState?,
     qualitySwitchFailureDialogEnabled: Boolean,
     qualitySwitchFailureDialogOnceEnabled: Boolean,
@@ -5089,7 +5089,7 @@ private fun VideoDetailQualitySwitchFailureDialog(
 @Composable
 private fun VideoDetailDanmakuContextMenu(
     context: Context,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     activeDanmakuBlockRulesRaw: String,
     activeDanmakuScope: com.android.purebilibili.core.store.DanmakuSettingsScope,
     sortPreferenceScope: CoroutineScope
@@ -5945,11 +5945,11 @@ private fun readSystemAutoRotateEnabled(context: Context): Boolean {
 @Composable
 private fun DetachedVideoCommentThreadHost(
     visible: Boolean,
-    successState: PlayerUiState.Success?,
+    successState: VideoPlaybackUiState.Success?,
     commentState: CommentUiState,
     commentViewModel: VideoCommentViewModel,
     forceInitialize: Boolean,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     onUpClick: (Long) -> Unit,
     onNavigateToRelatedVideo: (String) -> Unit,
     onSearchKeywordClick: (String) -> Unit,

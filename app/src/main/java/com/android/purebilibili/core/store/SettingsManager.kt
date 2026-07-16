@@ -1533,7 +1533,7 @@ object SettingsManager {
             .edit().putBoolean("auto_play_enabled", value).apply()
     }
     
-    // 🔧 [修复] 同步读取自动播放设置（用于 PlayerViewModel）
+    // 🔧 [修复] 同步读取自动播放设置（用于 VideoPlaybackViewModel）
     fun getAutoPlaySync(context: Context): Boolean {
         return context.getSharedPreferences("auto_play_cache", Context.MODE_PRIVATE)
             .getBoolean("auto_play_enabled", true)  // 默认开启
@@ -4436,7 +4436,7 @@ object SettingsManager {
         com.android.purebilibili.core.util.Logger.d("SettingsManager", " 流量画质已设置: $value (写入成功: $success)")
     }
     
-    //  同步读取画质设置（用于 PlayerViewModel）
+    //  同步读取画质设置（用于 VideoPlaybackViewModel）
     fun getWifiQualitySync(context: Context): Int {
         return context.getSharedPreferences("quality_settings", Context.MODE_PRIVATE)
             .getInt("wifi_quality", 80)

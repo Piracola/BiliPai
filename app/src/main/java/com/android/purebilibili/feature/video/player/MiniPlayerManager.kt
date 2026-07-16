@@ -59,7 +59,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
 import com.android.purebilibili.feature.video.VideoActivity
 import com.android.purebilibili.core.lifecycle.BackgroundManager
 import com.android.purebilibili.feature.video.danmaku.DanmakuManager
@@ -1126,7 +1126,7 @@ class MiniPlayerManager private constructor(private val context: Context) :
         private set
     
     //  [新增] 缓存的视频详情页 UI 状态，用于从小窗返回时恢复
-    var cachedUiState: PlayerUiState.Success? = null
+    var cachedUiState: VideoPlaybackUiState.Success? = null
         private set
     
     //  [新增] 小窗入场方向：true=从左边进入，false=从右边进入
@@ -1148,13 +1148,13 @@ class MiniPlayerManager private constructor(private val context: Context) :
     private var cachedArtworkBitmap: Bitmap? = null
     
     //  [新增] 缓存 UI 状态
-    fun cacheUiState(state: PlayerUiState.Success) {
+    fun cacheUiState(state: VideoPlaybackUiState.Success) {
         cachedUiState = state
         com.android.purebilibili.core.util.Logger.d(TAG, " 缓存 UI 状态: ${state.info.title}")
     }
     
     //  [新增] 获取并清除缓存的 UI 状态
-    fun consumeCachedUiState(): PlayerUiState.Success? {
+    fun consumeCachedUiState(): VideoPlaybackUiState.Success? {
         val state = cachedUiState
         // 不清除缓存，允许多次复用
         return state
@@ -2356,7 +2356,7 @@ class MiniPlayerManager private constructor(private val context: Context) :
      */
     fun getPlayMode(): PlayMode = PlaylistManager.playMode.value
     
-    // 回调函数（由 PlayerViewModel 设置）
+    // 回调函数（由 VideoPlaybackViewModel 设置）
     var onNavigateNextCallback: (() -> Boolean)? = null
     var onNavigatePreviousCallback: (() -> Boolean)? = null
     var onHasNextNavigationCallback: (() -> Boolean)? = null

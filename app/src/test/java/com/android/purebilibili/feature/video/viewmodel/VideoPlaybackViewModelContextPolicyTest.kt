@@ -4,7 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class PlayerViewModelContextPolicyTest {
+class VideoPlaybackViewModelContextPolicyTest {
 
     @Test
     fun `should bootstrap player context when local context missing but app context exists`() {

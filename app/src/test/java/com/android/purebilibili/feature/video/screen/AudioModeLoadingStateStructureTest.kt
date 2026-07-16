@@ -11,7 +11,7 @@ class AudioModeLoadingStateStructureTest {
         val source = loadSource()
         val screen = source.substringAfter("fun AudioModeScreen(")
 
-        assertTrue(screen.contains("PlayerUiState.Error"))
+        assertTrue(screen.contains("VideoPlaybackUiState.Error"))
         assertTrue(screen.contains("viewModel.retry()"))
         assertTrue(screen.contains("onBack = onBack"))
         assertTrue(screen.contains("正在加载音频"))

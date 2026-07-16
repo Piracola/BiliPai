@@ -14,7 +14,7 @@ import com.android.purebilibili.feature.audio.player.MusicQueueItemUi
 import com.android.purebilibili.feature.audio.viewmodel.MusicUiState
 import com.android.purebilibili.feature.audio.viewmodel.MusicViewModel
 import com.android.purebilibili.feature.video.screen.AudioModeScreen
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 
 /** AU 音频入口。播放器由 MiniPlayerManager 持有，离开页面后继续播放。 */
 @Composable
@@ -42,7 +42,7 @@ internal fun MusicDetailScreen(
     cid: Long,
     onBack: () -> Unit,
     onVideoModeClick: (String, Long) -> Unit,
-    playerViewModel: PlayerViewModel = viewModel()
+    playerViewModel: VideoPlaybackViewModel = viewModel()
 ) {
     AudioModeScreen(
         viewModel = playerViewModel,

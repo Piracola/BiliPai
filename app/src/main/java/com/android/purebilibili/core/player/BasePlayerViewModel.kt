@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 /**
  * 播放器基类 ViewModel
  * 
- * 提供 PlayerViewModel 和 BangumiPlayerViewModel 共用的功能：
+ * 提供 VideoPlaybackViewModel 和 BangumiPlayerViewModel 共用的功能：
  * 1. ExoPlayer 管理
  * 2. 空降助手 (SponsorBlock) 逻辑
  * 3. DASH 视频播放

@@ -100,8 +100,8 @@ class AudioModePlayModeStructureTest {
     )
 
     private fun playerViewModelSource(): String = loadSource(
-        "src/main/java/com/android/purebilibili/feature/video/viewmodel/PlayerViewModel.kt",
-        "app/src/main/java/com/android/purebilibili/feature/video/viewmodel/PlayerViewModel.kt"
+        "src/main/java/com/android/purebilibili/feature/video/viewmodel/VideoPlaybackViewModel.kt",
+        "app/src/main/java/com/android/purebilibili/feature/video/viewmodel/VideoPlaybackViewModel.kt"
     )
 
     private fun loadSource(vararg paths: String): String {

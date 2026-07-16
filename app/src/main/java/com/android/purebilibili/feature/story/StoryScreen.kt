@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.util.UnstableApi
 import com.android.purebilibili.feature.video.ui.pager.PortraitVideoPager
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 
 @UnstableApi
 @Composable
@@ -31,7 +31,7 @@ fun StoryScreen(
     seedCover: String = "",
     seedTitle: String = "",
     viewModel: StoryViewModel = viewModel(),
-    playerViewModel: PlayerViewModel = viewModel(),
+    playerViewModel: VideoPlaybackViewModel = viewModel(),
     isActive: Boolean = true,
     onBack: () -> Unit,
     onVideoClick: (String, Long, String) -> Unit = { _, _, _ -> },

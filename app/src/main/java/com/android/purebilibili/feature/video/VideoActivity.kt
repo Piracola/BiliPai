@@ -25,8 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 // Imports for moved classes
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
 
 
 private const val TAG = "BiliPlayerActivity"
@@ -40,7 +40,7 @@ private const val CONTROL_TYPE_PAUSE = 2
 
 class VideoActivity : ComponentActivity() {
 
-    private val viewModel: PlayerViewModel by viewModels()
+    private val viewModel: VideoPlaybackViewModel by viewModels()
     private var isFullscreen by mutableStateOf(false)
     private var isInPipMode by mutableStateOf(false)
     
@@ -208,7 +208,7 @@ class VideoActivity : ComponentActivity() {
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && shouldEnterPip) {
             val state = viewModel.uiState.value
-            if (state is PlayerUiState.Success) {
+            if (state is VideoPlaybackUiState.Success) {
                 enterPictureInPictureMode(buildPipParams(true))
             }
         }

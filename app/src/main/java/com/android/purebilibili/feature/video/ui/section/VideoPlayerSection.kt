@@ -12,7 +12,7 @@ import com.android.purebilibili.feature.video.danmaku.filterVisibleCommandDanmak
 import com.android.purebilibili.feature.video.danmaku.configureAsPassiveDanmakuOverlay
 import com.android.purebilibili.feature.video.player.MiniPlayerManager
 import com.android.purebilibili.feature.video.state.VideoPlayerState
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
 import com.android.purebilibili.feature.video.ui.overlay.FullscreenDoubleTapAction
 import com.android.purebilibili.feature.video.ui.overlay.VideoPlayerOverlay
 import com.android.purebilibili.feature.video.ui.overlay.SubtitleControlCallbacks
@@ -341,7 +341,7 @@ private fun GesturePercentValue(
 @Composable
 fun VideoPlayerSection(
     playerState: VideoPlayerState,
-    uiState: PlayerUiState,
+    uiState: VideoPlaybackUiState,
     isFullscreen: Boolean,
     isInPipMode: Boolean,
     transitionEnabled: Boolean = true,
@@ -489,7 +489,7 @@ fun VideoPlayerSection(
         )
     }
     val gestureSeekFallbackDurationMs = remember(uiState) {
-        (uiState as? PlayerUiState.Success)?.videoDurationMs ?: 0L
+        (uiState as? VideoPlaybackUiState.Success)?.videoDurationMs ?: 0L
     }
     val pbpRidgeSamples = remember(pbpProgressData, gestureSeekFallbackDurationMs) {
         pbpProgressData
@@ -886,7 +886,7 @@ fun VideoPlayerSection(
     // 进度手势相关状态
     var seekTargetTime by remember { mutableLongStateOf(0L) }
     var startPosition by remember { mutableLongStateOf(0L) }
-    val currentSeekSessionCid = (uiState as? PlayerUiState.Success)?.info?.cid ?: 0L
+    val currentSeekSessionCid = (uiState as? VideoPlaybackUiState.Success)?.info?.cid ?: 0L
     var sharedSeekSession by remember(bvid, currentSeekSessionCid) {
         mutableStateOf(
             syncPlaybackSeekSession(
@@ -1938,7 +1938,7 @@ fun VideoPlayerSection(
             )
         val danmakuBlockRulesRaw = danmakuSettings.blockRulesRaw
         val danmakuBlockRules = danmakuSettings.blockRules
-        val isLoggedIn = (uiState as? PlayerUiState.Success)?.isLoggedIn == true
+        val isLoggedIn = (uiState as? VideoPlaybackUiState.Success)?.isLoggedIn == true
         val danmakuCloudSyncEnabled by com.android.purebilibili.core.store.SettingsManager
             .getDanmakuCloudSyncEnabled(context)
             .collectAsStateWithLifecycle(initialValue = true)
@@ -2022,8 +2022,8 @@ fun VideoPlayerSection(
         }
 
         //  当视频/开关状态变化时更新弹幕加载策略
-        val cid = (uiState as? PlayerUiState.Success)?.info?.cid ?: 0L
-        val aid = (uiState as? PlayerUiState.Success)?.info?.aid ?: 0L
+        val cid = (uiState as? VideoPlaybackUiState.Success)?.info?.cid ?: 0L
+        val aid = (uiState as? VideoPlaybackUiState.Success)?.info?.aid ?: 0L
         val danmakuDurationHintMs = playerState.player.duration.takeIf { it > 0 } ?: 0L
         val danmakuLoadPolicy = remember(cid, danmakuEnabled) {
             resolveVideoPlayerDanmakuLoadPolicy(
@@ -2649,7 +2649,7 @@ fun VideoPlayerSection(
     
     // 4. 封面图 (Cover Image) - 始终在第一帧渲染前显示
     // 统一优先使用入口卡片封面，保证从各类列表进入详情时封面与入口一致。
-    val detailCoverUrl = (uiState as? PlayerUiState.Success)?.info?.pic.orEmpty()
+    val detailCoverUrl = (uiState as? VideoPlaybackUiState.Success)?.info?.pic.orEmpty()
     val rawCoverUrl = resolvePreferredVideoCoverUrl(
         entryCoverUrl = coverUrl,
         detailCoverUrl = detailCoverUrl,
@@ -3106,41 +3106,41 @@ fun VideoPlayerSection(
         val subtitleFeatureEnabled = isSubtitleFeatureEnabledForUser()
         val subtitleBelongsToCurrentVideo = remember(uiState, subtitleFeatureEnabled) {
             if (!subtitleFeatureEnabled) return@remember false
-            val success = uiState as? PlayerUiState.Success ?: return@remember false
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember false
             success.subtitleOwnerBvid == success.info.bvid &&
                 success.subtitleOwnerCid == success.info.cid &&
                 success.info.cid > 0L
         }
         val subtitlePrimaryAvailable = remember(uiState, subtitleFeatureEnabled) {
             if (!subtitleFeatureEnabled) return@remember false
-            val success = uiState as? PlayerUiState.Success ?: return@remember false
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember false
             subtitleBelongsToCurrentVideo && success.subtitlePrimaryCues.isNotEmpty()
         }
         val subtitleSecondaryAvailable = remember(uiState, subtitleFeatureEnabled) {
             if (!subtitleFeatureEnabled) return@remember false
-            val success = uiState as? PlayerUiState.Success ?: return@remember false
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember false
             subtitleBelongsToCurrentVideo && success.subtitleSecondaryCues.isNotEmpty()
         }
         val subtitlePrimaryTrackBound = remember(uiState, subtitleFeatureEnabled) {
             if (!subtitleFeatureEnabled) return@remember false
-            val success = uiState as? PlayerUiState.Success ?: return@remember false
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember false
             subtitleBelongsToCurrentVideo &&
                 (!success.subtitlePrimaryTrackKey.isNullOrBlank() || !success.subtitlePrimaryLanguage.isNullOrBlank())
         }
         val subtitleSecondaryTrackBound = remember(uiState, subtitleFeatureEnabled) {
             if (!subtitleFeatureEnabled) return@remember false
-            val success = uiState as? PlayerUiState.Success ?: return@remember false
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember false
             subtitleBelongsToCurrentVideo &&
                 (!success.subtitleSecondaryTrackKey.isNullOrBlank() || !success.subtitleSecondaryLanguage.isNullOrBlank())
         }
         val subtitlePrimaryLikelyAi = remember(uiState, subtitleFeatureEnabled) {
             if (!subtitleFeatureEnabled) return@remember false
-            val success = uiState as? PlayerUiState.Success ?: return@remember false
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember false
             subtitleBelongsToCurrentVideo && success.subtitlePrimaryLikelyAi
         }
         val subtitleSecondaryLikelyAi = remember(uiState, subtitleFeatureEnabled) {
             if (!subtitleFeatureEnabled) return@remember false
-            val success = uiState as? PlayerUiState.Success ?: return@remember false
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember false
             subtitleBelongsToCurrentVideo && success.subtitleSecondaryLikelyAi
         }
         val subtitleControlAvailability = remember(
@@ -3169,7 +3169,7 @@ fun VideoPlayerSection(
             audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) <= 0
         }.getOrDefault(false) || playerState.player.volume <= 0f
         val subtitleToggleKey = remember(uiState, bvid, subtitleAutoPreference) {
-            val success = uiState as? PlayerUiState.Success
+            val success = uiState as? VideoPlaybackUiState.Success
             if (success == null) {
                 "no-subtitle"
             } else {
@@ -3231,7 +3231,7 @@ fun VideoPlayerSection(
         }
         val subtitleOverlayEnabled = subtitleFeatureEnabled && subtitleDisplayMode != SubtitleDisplayMode.OFF
         val subtitlePrimaryLabel = remember(uiState) {
-            val success = uiState as? PlayerUiState.Success
+            val success = uiState as? VideoPlaybackUiState.Success
             val selectedTrack = success?.subtitleTracks?.firstOrNull {
                 it.trackKey == success.subtitlePrimaryTrackKey
             }
@@ -3246,7 +3246,7 @@ fun VideoPlayerSection(
             )
         }
         val subtitleSecondaryLabel = remember(uiState) {
-            val success = uiState as? PlayerUiState.Success
+            val success = uiState as? VideoPlaybackUiState.Success
             val selectedTrack = success?.subtitleTracks?.firstOrNull {
                 it.trackKey == success.subtitleSecondaryTrackKey
             }
@@ -3261,7 +3261,7 @@ fun VideoPlayerSection(
             )
         }
         val subtitleTrackOptions = remember(uiState) {
-            val success = uiState as? PlayerUiState.Success ?: return@remember emptyList()
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember emptyList()
             if (success.subtitleOwnerBvid != success.info.bvid || success.subtitleOwnerCid != success.info.cid) {
                 return@remember emptyList()
             }
@@ -3279,7 +3279,7 @@ fun VideoPlayerSection(
         }
         val subtitlePrimaryText = remember(uiState, subtitleFeatureEnabled, subtitlePositionMs, subtitleDisplayMode) {
             if (!subtitleFeatureEnabled) return@remember null
-            val success = uiState as? PlayerUiState.Success ?: return@remember null
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember null
             if (success.subtitleOwnerBvid != success.info.bvid || success.subtitleOwnerCid != success.info.cid) {
                 return@remember null
             }
@@ -3288,7 +3288,7 @@ fun VideoPlayerSection(
         }
         val subtitleSecondaryText = remember(uiState, subtitleFeatureEnabled, subtitlePositionMs, subtitleDisplayMode) {
             if (!subtitleFeatureEnabled) return@remember null
-            val success = uiState as? PlayerUiState.Success ?: return@remember null
+            val success = uiState as? VideoPlaybackUiState.Success ?: return@remember null
             if (success.subtitleOwnerBvid != success.info.bvid || success.subtitleOwnerCid != success.info.cid) {
                 return@remember null
             }
@@ -3297,7 +3297,7 @@ fun VideoPlayerSection(
         }
         if (!isInPipMode &&
             !isAudioOnly &&
-            uiState is PlayerUiState.Success &&
+            uiState is VideoPlaybackUiState.Success &&
             !suppressSubtitleOverlay &&
             subtitleOverlayEnabled &&
             (subtitlePrimaryText != null || subtitleSecondaryText != null)
@@ -3876,7 +3876,7 @@ fun VideoPlayerSection(
             }
         }
 
-        if (uiState is PlayerUiState.Success && !isInPipMode) {
+        if (uiState is VideoPlaybackUiState.Success && !isInPipMode) {
             val currentPageIndex = uiState.info.pages.indexOfFirst { it.cid == uiState.info.cid }.coerceAtLeast(0)
             val displayedQualityId = resolveDisplayedQualityId(
                 currentQuality = uiState.currentQuality,

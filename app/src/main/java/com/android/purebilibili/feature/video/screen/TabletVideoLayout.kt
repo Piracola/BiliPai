@@ -43,8 +43,8 @@ import com.android.purebilibili.feature.video.ui.section.VideoPlayerSection
 import com.android.purebilibili.feature.video.ui.section.VideoTitleWithDesc
 import com.android.purebilibili.feature.video.usecase.seekPlayerFromUserAction
 import com.android.purebilibili.feature.video.viewmodel.CommentUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -74,9 +74,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun TabletVideoLayout(
     playerState: VideoPlayerState,
-    uiState: PlayerUiState,
+    uiState: VideoPlaybackUiState,
     commentState: CommentUiState,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     commentViewModel: VideoCommentViewModel,
     configuration: Configuration,
     isVerticalVideo: Boolean,
@@ -206,9 +206,9 @@ fun TabletVideoLayout(
                             coverUrl = coverUrl,
                             onDoubleTapLike = { viewModel.toggleLike() },
                             onReloadVideo = { viewModel.reloadVideo() },
-                            cdnCount = (uiState as? PlayerUiState.Success)?.cdnCount ?: 1,
-                            cdnLineDiagnostics = (uiState as? PlayerUiState.Success)?.cdnLineDiagnostics.orEmpty(),
-                            isCdnProbing = (uiState as? PlayerUiState.Success)?.isCdnProbing ?: false,
+                            cdnCount = (uiState as? VideoPlaybackUiState.Success)?.cdnCount ?: 1,
+                            cdnLineDiagnostics = (uiState as? VideoPlaybackUiState.Success)?.cdnLineDiagnostics.orEmpty(),
+                            isCdnProbing = (uiState as? VideoPlaybackUiState.Success)?.isCdnProbing ?: false,
                             onSwitchCdn = { viewModel.switchCdn() },
                             onSwitchCdnTo = { viewModel.switchCdnTo(it) },
                             onProbeCdnCandidates = { viewModel.probeCurrentCdnCandidates() },
@@ -219,7 +219,7 @@ fun TabletVideoLayout(
                             },
                             sleepTimerMinutes = sleepTimerMinutes,
                             onSleepTimerChange = { viewModel.setSleepTimer(it) },
-                            videoshotData = (uiState as? PlayerUiState.Success)?.videoshotData,
+                            videoshotData = (uiState as? VideoPlaybackUiState.Success)?.videoshotData,
                             viewPoints = viewPoints,
                             isVerticalVideo = isVerticalVideo,
                             onPortraitFullscreen = { playerState.setPortraitFullscreen(true) },
@@ -246,7 +246,7 @@ fun TabletVideoLayout(
                 }
                 
                 // 📜 视频信息区域（可滚动）
-                if (uiState is PlayerUiState.Success) {
+                if (uiState is VideoPlaybackUiState.Success) {
                     val success = uiState
                     val currentPageIndex = success.info.pages.indexOfFirst { it.cid == success.info.cid }.coerceAtLeast(0)
                     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
@@ -289,7 +289,7 @@ fun TabletVideoLayout(
         },
         secondaryContent = {
             // 📝 右侧：评论 / 相关推荐
-            if (uiState is PlayerUiState.Success) {
+            if (uiState is VideoPlaybackUiState.Success) {
                 val success = uiState
                 
                 TabletSecondaryContent(
@@ -321,10 +321,10 @@ fun TabletVideoLayout(
  */
 @Composable
 private fun TabletSecondaryContent(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     commentState: CommentUiState,
     commentViewModel: VideoCommentViewModel,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     playerState: VideoPlayerState,
     onUpClick: (Long) -> Unit,
     paneMode: TabletSecondaryPaneMode,

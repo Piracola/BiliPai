@@ -3,8 +3,8 @@ package com.android.purebilibili.feature.video.state
 
 import com.android.purebilibili.feature.video.player.MiniPlayerManager
 import com.android.purebilibili.feature.video.VideoActivity
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -754,7 +754,7 @@ class VideoPlayerState(
 @Composable
 fun rememberVideoPlayerState(
     context: Context,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     bvid: String,
     cid: Long = 0L,
     fallbackResumePositionMs: Long = 0L,
@@ -923,8 +923,8 @@ fun rememberVideoPlayerState(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(uiState) {
-        if (uiState is PlayerUiState.Success) {
-            val info = (uiState as PlayerUiState.Success).info
+        if (uiState is VideoPlaybackUiState.Success) {
+            val info = (uiState as VideoPlaybackUiState.Success).info
             holder.updateMediaMetadata(info.title, info.owner.name, info.pic)
         }
     }
@@ -1119,7 +1119,7 @@ fun rememberVideoPlayerState(
                 )
 
                 val currentState = viewModel.uiState.value
-                val hasCdnAlternatives = currentState is com.android.purebilibili.feature.video.viewmodel.PlayerUiState.Success 
+                val hasCdnAlternatives = currentState is com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState.Success 
                     && currentState.cdnCount > 1
 
                 val action = decidePlayerErrorRecovery(

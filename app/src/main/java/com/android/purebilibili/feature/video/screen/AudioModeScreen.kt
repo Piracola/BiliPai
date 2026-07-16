@@ -46,8 +46,8 @@ import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.theme.UiPreset
 import com.android.purebilibili.feature.video.player.PlayMode
 import com.android.purebilibili.feature.video.state.rememberVideoPlayerState
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 
 internal fun resolveAudioPlayModeLabel(mode: PlayMode): String = when (mode) {
     PlayMode.SEQUENTIAL -> "顺序播放"
@@ -163,7 +163,7 @@ private fun enterAudioModePip(activity: Activity?) {
 
 @Composable
 fun AudioModeScreen(
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     onBack: () -> Unit,
     onVideoModeClick: (String, Long) -> Unit,
     isInPipMode: Boolean = false,
@@ -179,12 +179,12 @@ fun AudioModeScreen(
         initialValue = HomeSettings(),
         context = kotlin.coroutines.EmptyCoroutineContext
     )
-    var cachedSuccessState by remember { mutableStateOf<PlayerUiState.Success?>(null) }
+    var cachedSuccessState by remember { mutableStateOf<VideoPlaybackUiState.Success?>(null) }
 
     LaunchedEffect(uiState) {
-        if (uiState is PlayerUiState.Success) cachedSuccessState = uiState as PlayerUiState.Success
+        if (uiState is VideoPlaybackUiState.Success) cachedSuccessState = uiState as VideoPlaybackUiState.Success
     }
-    val displayState = (uiState as? PlayerUiState.Success) ?: cachedSuccessState
+    val displayState = (uiState as? VideoPlaybackUiState.Success) ?: cachedSuccessState
     val shouldCreateStandalonePlayer = remember(initialBvid) {
         shouldCreateAudioModeStandalonePlayer(
             hasPlayer = viewModel.currentPlayer != null,
@@ -247,7 +247,7 @@ fun AudioModeScreen(
 
 @Composable
 private fun AudioModeInitialState(
-    state: PlayerUiState,
+    state: VideoPlaybackUiState,
     title: String,
     onBack: () -> Unit,
     onRetry: () -> Unit
@@ -268,7 +268,7 @@ private fun AudioModeInitialState(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             when (state) {
-                is PlayerUiState.Error -> {
+                is VideoPlaybackUiState.Error -> {
                     Text("音频加载失败", style = MaterialTheme.typography.headlineSmall)
                     Text(state.msg, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (state.canRetry) {

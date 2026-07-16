@@ -137,8 +137,8 @@ import com.android.purebilibili.feature.video.ui.section.resolveLongPressPlaybac
 import com.android.purebilibili.feature.video.ui.section.rebindPlayerSurfaceIfNeeded
 import com.android.purebilibili.feature.video.ui.section.shouldKickPlaybackAfterSurfaceRecovery
 import com.android.purebilibili.feature.video.viewmodel.PlaybackEndAction
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
 import com.android.purebilibili.feature.video.viewmodel.resolvePlaybackCompletionRepeatMode
 import com.android.purebilibili.feature.video.viewmodel.resolvePlaybackEndAction
@@ -194,7 +194,7 @@ fun PortraitVideoPager(
     onBack: () -> Unit,
     onHomeClick: () -> Unit = onBack,
     onVideoChange: (String) -> Unit,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     sharedPlayer: ExoPlayer? = null,
     initialStartPositionMs: Long = 0L,
     onProgressUpdate: (String, Long, Long) -> Unit = { _, _, _ -> },
@@ -1151,7 +1151,7 @@ private fun VideoPageItem(
     isCurrentPage: Boolean,
     onBack: () -> Unit,
     onHomeClick: () -> Unit,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     commentViewModel: VideoCommentViewModel,
     exoPlayer: ExoPlayer,
     currentPlayingBvid: String?, // [新增]
@@ -2056,8 +2056,8 @@ private fun VideoPageItem(
 
         // Overlay & Interaction
     val currentUiState = viewModel.uiState.collectAsStateWithLifecycle().value
-    val isCurrentModelVideo = (currentUiState as? PlayerUiState.Success)?.info?.bvid == bvid
-    val currentSuccess = currentUiState as? PlayerUiState.Success
+    val isCurrentModelVideo = (currentUiState as? VideoPlaybackUiState.Success)?.info?.bvid == bvid
+    val currentSuccess = currentUiState as? VideoPlaybackUiState.Success
     var portraitInteractionOverride by remember(bvid) {
         mutableStateOf(PortraitVideoInteractionOverride())
     }
@@ -2070,7 +2070,7 @@ private fun VideoPageItem(
         sharedState = currentSuccess,
         localOverride = portraitInteractionOverride
     )
-    val isFollowing = (currentUiState as? PlayerUiState.Success)?.followingMids?.contains(authorMid) == true
+    val isFollowing = (currentUiState as? VideoPlaybackUiState.Success)?.followingMids?.contains(authorMid) == true
     val fallbackDetailInfo = when (item) {
         is ViewInfo -> item
         is RelatedVideo -> toViewInfoForPortraitDetail(item)
@@ -2536,7 +2536,7 @@ internal fun resolvePortraitFavoriteAction(): PortraitFavoriteAction {
 internal fun resolvePortraitVideoInteractionUiState(
     targetBvid: String,
     fallbackStat: Stat,
-    sharedState: PlayerUiState.Success?,
+    sharedState: VideoPlaybackUiState.Success?,
     localOverride: PortraitVideoInteractionOverride? = null
 ): PortraitVideoInteractionUiState {
     val currentSharedState = sharedState?.takeIf { it.info.bvid == targetBvid }

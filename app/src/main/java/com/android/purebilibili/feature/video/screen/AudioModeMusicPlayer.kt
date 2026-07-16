@@ -30,8 +30,8 @@ import com.android.purebilibili.feature.audio.viewmodel.MusicViewModel
 import com.android.purebilibili.feature.video.player.PlaylistManager
 import com.android.purebilibili.feature.video.ui.components.CollectionSheet
 import com.android.purebilibili.feature.video.ui.components.PagesSelector
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -75,8 +75,8 @@ internal fun resolveAudioModeLyricMetadata(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AudioModeMusicPlayer(
-    viewModel: PlayerViewModel,
-    successState: PlayerUiState.Success?,
+    viewModel: VideoPlaybackViewModel,
+    successState: VideoPlaybackUiState.Success?,
     player: Player?,
     onBack: () -> Unit,
     onVideoModeClick: (String, Long) -> Unit,

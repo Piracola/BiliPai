@@ -129,8 +129,8 @@ import com.android.purebilibili.feature.video.ui.section.VideoNoteDeleteConfirmD
 import com.android.purebilibili.feature.video.ui.section.VideoNoteEditorSheet
 import com.android.purebilibili.feature.video.ui.section.shouldShowAiSummaryEntry
 import com.android.purebilibili.feature.video.viewmodel.CommentUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
-import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 import com.android.purebilibili.feature.video.viewmodel.SubReplyUiState
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
 import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
@@ -140,9 +140,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun TabletCinemaLayout(
     playerState: VideoPlayerState,
-    uiState: PlayerUiState,
+    uiState: VideoPlaybackUiState,
     commentState: CommentUiState,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     commentViewModel: VideoCommentViewModel,
     configuration: Configuration,
     isVerticalVideo: Boolean,
@@ -192,7 +192,7 @@ fun TabletCinemaLayout(
             commentWidthPreset = tabletCommentPanelWidthPreset
         )
     }
-    val success = uiState as? PlayerUiState.Success
+    val success = uiState as? VideoPlaybackUiState.Success
     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
     val initialCurtainState = remember(configuration.screenWidthDp) {
         resolveInitialCurtainState(configuration.screenWidthDp).name
@@ -374,8 +374,8 @@ fun TabletCinemaLayout(
 @Composable
 private fun CinemaStagePlayer(
     playerState: VideoPlayerState,
-    uiState: PlayerUiState,
-    viewModel: PlayerViewModel,
+    uiState: VideoPlaybackUiState,
+    viewModel: VideoPlaybackViewModel,
     onBack: () -> Unit,
     onHomeClick: () -> Unit,
     bvid: String,
@@ -404,7 +404,7 @@ private fun CinemaStagePlayer(
     predictiveBackCancelRecoveryGeneration: Int
 ) {
     val context = LocalContext.current
-    val success = uiState as? PlayerUiState.Success
+    val success = uiState as? VideoPlaybackUiState.Success
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val playerContainerModifier = if (
@@ -515,7 +515,7 @@ private fun CinemaStagePlayer(
 
 @Composable
 private fun CinemaMetaPanel(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     downloadProgress: Float,
     modifier: Modifier = Modifier,
     onFollowClick: () -> Unit,
@@ -755,7 +755,7 @@ private fun CinemaMetaPanel(
 
 @Composable
 private fun CinemaMetaActions(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     downloadProgress: Float,
     context: android.content.Context,
     onFavoriteClick: () -> Unit,
@@ -794,7 +794,7 @@ private fun CinemaMetaActions(
 
 @Composable
 private fun CinemaMetaUpInfo(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     onFollowClick: () -> Unit,
     onUpClick: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -812,7 +812,7 @@ private fun CinemaMetaUpInfo(
 
 @Composable
 private fun CinemaVideoIntroSection(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     onBgmClick: (BgmInfo) -> Unit = {},
     onOpenBilibiliLink: ((String) -> Unit)? = null,
     onRelatedVideoClick: (String, android.os.Bundle?) -> Unit = { _, _ -> },
@@ -898,10 +898,10 @@ private fun CinemaSideCurtain(
     pagerState: PagerState,
     onToggle: () -> Unit,
     onTabSelected: (Int) -> Unit,
-    success: PlayerUiState.Success?,
+    success: VideoPlaybackUiState.Success?,
     commentState: CommentUiState,
     commentViewModel: VideoCommentViewModel,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     playerState: VideoPlayerState,
     onUpClick: (Long) -> Unit,
     onRelatedVideoClick: (String, android.os.Bundle?) -> Unit,
@@ -1069,11 +1069,11 @@ private fun CinemaSideCurtain(
 
 @Composable
 private fun CinemaCommentsPane(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     commentState: CommentUiState,
     subReplyState: SubReplyUiState,
     commentViewModel: VideoCommentViewModel,
-    viewModel: PlayerViewModel,
+    viewModel: VideoPlaybackViewModel,
     playerState: VideoPlayerState,
     onUpClick: (Long) -> Unit,
     context: android.content.Context,
@@ -1332,7 +1332,7 @@ private fun CinemaCommentsPane(
 
 @Composable
 private fun CinemaRelatedPane(
-    success: PlayerUiState.Success,
+    success: VideoPlaybackUiState.Success,
     onRelatedVideoClick: (String, android.os.Bundle?) -> Unit,
     context: android.content.Context,
     showUpBadge: Boolean
