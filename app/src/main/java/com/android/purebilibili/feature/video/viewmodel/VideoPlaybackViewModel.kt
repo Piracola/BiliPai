@@ -1959,6 +1959,8 @@ class VideoPlaybackViewModel : ViewModel() {
 
                 val behavior = com.android.purebilibili.core.store.SettingsManager
                     .getPlaybackCompletionBehaviorSync(context)
+                // 与 UI/Flow 同源策略对齐后，再写回 ExoPlayer，避免残留 REPEAT_MODE_ONE。
+                exoPlayer?.repeatMode = resolvePlaybackCompletionRepeatMode(behavior)
                 val (hasNextPage, hasNextSeasonEpisode, _) = resolveCurrentNextAvailability()
                 val action = playbackCoordinator.resolvePlaybackEnded(
                     behavior = behavior,

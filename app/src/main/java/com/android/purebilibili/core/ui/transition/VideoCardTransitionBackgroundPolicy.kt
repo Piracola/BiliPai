@@ -19,16 +19,16 @@ import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.navigation.isVideoCardReturnTargetRoute
 import kotlin.math.roundToInt
 
-// 景深标定（对齐 iOS App 开合观感）：
-// - 背景下沉 5%（0.95），保留层次但避免整页被用力压缩的僵硬感
-// - 峰值 blur 24px：靠 scale+scrim 补深度，降低整页实时模糊 GPU 成本
+// 景深标定（Hero 氛围，非完整 App 开合）：
+// - 背景下沉 2.5%（0.975），层次轻、落位不弹
+// - 峰值 blur 20px：冻结层上进度驱动 BlurEffect（动态模糊观感，避免 live 重录掉帧）
 // - 压暗全程保留（含 HELD），避免打开完成后景深断裂
-private const val VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_PX = 24f
+private const val VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_PX = 20f
 private const val VIDEO_CARD_TRANSITION_BLUR_QUANTUM_PX = 1f
 private const val VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA_DARK = 0.22f
 private const val VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA_LIGHT = 0.11f
 private const val VIDEO_CARD_TRANSITION_LIGHT_REDUCED_OPENING_SCRIM_ALPHA = 0.07f
-private const val VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION = 0.05f
+private const val VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION = 0.025f
 private val VIDEO_CARD_TRANSITION_LIGHT_SCRIM_TINT = Color(0xFF8E8E93)
 
 // 开场与返回时长由共享元素速度设置提供；取消仍固定为短恢复动画。
@@ -92,7 +92,10 @@ internal fun resolveVideoCardTransitionContentScale(
     if (phase == VideoCardTransitionBackgroundPhase.IDLE || motionTier == MotionTier.Reduced) {
         return 1f
     }
-    val depthProgress = resolveVideoCardTransitionDepthProgress(progress)
+    val depthProgress = resolveVideoCardTransitionDepthProgress(
+        progress = progress,
+        phase = phase,
+    )
     return 1f - VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION * depthProgress
 }
 
@@ -105,7 +108,11 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
     sdkInt: Int = Build.VERSION.SDK_INT,
 ): VideoCardTransitionBackgroundFrame {
     val clamped = progress.coerceIn(0f, 1f)
-    val blurStrength = resolveVideoCardTransitionBlurStrength(clamped)
+    val depthProgress = resolveVideoCardTransitionDepthProgress(
+        progress = clamped,
+        phase = phase,
+    )
+    val blurStrength = resolveVideoCardTransitionBlurStrength(depthProgress)
     // 低端/省电/无障碍减弱动画(Reduced)时跳过整帧 GPU 实时模糊与景深缩放，仅保留 scrim。
     val rawBlurRadiusPx = if (
         phase != VideoCardTransitionBackgroundPhase.IDLE &&
@@ -124,7 +131,7 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
             VideoCardTransitionBackgroundPhase.HELD,
             VideoCardTransitionBackgroundPhase.RETURNING ->
                 resolveVideoCardTransitionScrimAlpha(
-                    progress = clamped,
+                    progress = depthProgress,
                     isLightBackground = isLightBackground,
                     motionTier = motionTier,
                 )
@@ -376,11 +383,25 @@ private class VideoCardTransitionSnapshotLayerState {
 }
 
 /**
+ * 是否对来源页做每帧 live 重录。
+ *
+ * 真机 gfxinfo：OPENING/RETURNING 全页 live 重录+模糊会把 p90/p99 拉到百毫秒级
+ *（Slow UI thread / Slow issue draw commands）。默认关闭 live，改用冻结层 +
+ * 进度驱动 BlurEffect——仍是动态模糊观感，成本可控。
+ */
+internal fun shouldLiveRecordVideoCardTransitionSnapshot(
+    phase: VideoCardTransitionBackgroundPhase,
+    @Suppress("UNUSED_PARAMETER") progress: Float,
+): Boolean {
+    return false
+}
+
+/**
  * 卡片开合景深：
- * - OPENING 首帧 record 来源页 display list，随后冻结
- * - 过渡期间只对冻结层做 scale + 量化 BlurEffect + scrim（跟手/进度仍动态）
- * - HELD/RETURNING 复用同一冻结层；IDLE 释放并恢复普通绘制
- * - Reduced / API 31 以下：不模糊，仅 scrim（与 [resolveVideoCardTransitionBackgroundFrame] 一致）
+ * - OPENING：录 1～2 帧后冻结，BlurEffect/scale 跟进度（动态模糊观感）
+ * - HELD / RETURNING：复用冻结层，不每帧重录 feed
+ * - IDLE：释放并恢复普通绘制
+ * - Reduced / API 31 以下：不模糊，仅 scrim
  */
 @Composable
 internal fun Modifier.videoCardTransitionBackgroundEffect(
@@ -406,8 +427,7 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
         }
         when (phase) {
             VideoCardTransitionBackgroundPhase.OPENING -> {
-                // 多等 1～2 帧：首页源卡封面在 OPENING 已 alpha=0，再 record 可减少
-                // 「冻结层清晰封面 + shared overlay」双重渲染。
+                // 多等 1～2 帧再冻结：减少源卡封面与 overlay 双影。
                 snapshotState.freezeRecording = false
                 snapshotState.hasRecordedContent = false
                 withFrameNanos { }
@@ -431,11 +451,22 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
         }
     }
 
+    val liveRecordingActive = useSnapshotBlur &&
+        shouldLiveRecordVideoCardTransitionSnapshot(
+            phase = phase,
+            progress = progressProvider(),
+        )
+    VideoCardTransitionLiveBlurHitchLogger(
+        phaseProvider = phaseProvider,
+        liveRecordingActive = liveRecordingActive,
+    )
+
     return this.drawWithContent {
         val activePhase = phaseProvider()
+        val activeProgress = progressProvider()
         val activeMotionTier = motionTierProvider()
         val frame = snapshotState.frameCache.resolve(
-            progress = progressProvider(),
+            progress = activeProgress,
             phase = activePhase,
             motionTier = activeMotionTier,
             isLightBackground = isLightBackgroundProvider(),
@@ -460,7 +491,7 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
             return@drawWithContent
         }
 
-        // 未冻结或尚未成功 record：重新录制来源页；冻结后跳过 feed 重绘。
+        // 未冻结或尚未成功 record：录制来源页；冻结后只更新 blur/scale，不再重绘 feed。
         if (!snapshotState.freezeRecording || !snapshotState.hasRecordedContent) {
             contentLayer.record {
                 this@drawWithContent.drawContent()
@@ -499,15 +530,20 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
 }
 
 /**
- * 景深直接使用导航共享进度。曲线由唯一的过渡 spec 提供，这里不再二次 easing。
+ * 景深进度与导航共享 progress 同源；曲线只由 Animatable 的 Continuity 提供，
+ * 这里不再二次 remapping，避免「先快后慢再提前掐断」的叠曲线。
  */
-internal fun resolveVideoCardTransitionDepthProgress(progress: Float): Float {
+internal fun resolveVideoCardTransitionDepthProgress(
+    progress: Float,
+    @Suppress("UNUSED_PARAMETER") phase: VideoCardTransitionBackgroundPhase =
+        VideoCardTransitionBackgroundPhase.OPENING,
+): Float {
     return progress.coerceIn(0f, 1f)
 }
 
 private fun resolveVideoCardTransitionBlurStrength(progress: Float): Float {
     // 与景深进度同源：模糊与背景下沉同步建立，避免“先糊后沉”的分层错位。
-    return resolveVideoCardTransitionDepthProgress(progress)
+    return progress.coerceIn(0f, 1f)
 }
 
 private fun quantizeVideoCardTransitionBlurRadius(radiusPx: Float): Float {

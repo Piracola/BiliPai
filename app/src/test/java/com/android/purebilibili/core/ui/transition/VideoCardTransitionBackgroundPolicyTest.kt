@@ -101,11 +101,11 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(24f, frame.blurRadiusPx)
+        assertEquals(20f, frame.blurRadiusPx)
         assertEquals(0f, frame.blurRadiusPx % 1f)
         assertEquals(0.22f, frame.scrimAlpha)
         assertFalse(frame.useLightScrimTint)
-        assertEquals(0.95f, frame.contentScale, 0.0001f)
+        assertEquals(0.975f, frame.contentScale, 0.0001f)
     }
 
     @Test
@@ -117,7 +117,7 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(24f, frame.blurRadiusPx)
+        assertEquals(20f, frame.blurRadiusPx)
         assertEquals(0.11f, frame.scrimAlpha)
         assertTrue(frame.useLightScrimTint)
     }
@@ -171,16 +171,16 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(24f, start.blurRadiusPx)
-        assertEquals(12f, middle.blurRadiusPx)
+        assertEquals(20f, start.blurRadiusPx)
+        assertEquals(10f, middle.blurRadiusPx)
         assertTrue(middle.blurRadiusPx in 1f..<start.blurRadiusPx)
         assertEquals(0f, end.blurRadiusPx)
         assertTrue(start.scrimAlpha > middle.scrimAlpha)
         assertTrue(middle.scrimAlpha > 0f)
         assertEquals(0f, end.scrimAlpha)
-        // 景深直接跟随唯一主进度，不再叠加第二条 easing。
-        assertEquals(0.95f, start.contentScale, 0.0001f)
-        assertEquals(0.975f, middle.contentScale, 0.0001f)
+        // 景深与共享 progress 同源，不再二次 soft-clear remapping。
+        assertEquals(0.975f, start.contentScale, 0.0001f)
+        assertEquals(0.9875f, middle.contentScale, 0.0001f)
         assertEquals(1f, end.contentScale)
     }
 
@@ -204,10 +204,10 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(24f, frame.blurRadiusPx)
+        assertEquals(20f, frame.blurRadiusPx)
         // HELD 保留与满进度开场一致的压暗，避免详情停留时景深断裂。
         assertEquals(0.22f, frame.scrimAlpha)
-        assertEquals(0.95f, frame.contentScale, 0.0001f)
+        assertEquals(0.975f, frame.contentScale, 0.0001f)
     }
 
     @Test
@@ -225,8 +225,8 @@ class VideoCardTransitionBackgroundPolicyTest {
             isGestureRestoreInProgress = true,
         )
 
-        assertEquals(0.95f, openingScale, 0.0001f)
-        assertEquals(0.975f, restoreScale, 0.0001f)
+        assertEquals(0.975f, openingScale, 0.0001f)
+        assertEquals(0.9875f, restoreScale, 0.0001f)
     }
 
     @Test
@@ -262,7 +262,7 @@ class VideoCardTransitionBackgroundPolicyTest {
     }
 
     @Test
-    fun lowProgressReturningFrameKeepsFadingBackgroundEffect() {
+    fun midReturnProgressStillKeepsFadingBackgroundEffect() {
         val frame = resolveVideoCardTransitionBackgroundFrame(
             progress = 0.25f,
             phase = VideoCardTransitionBackgroundPhase.RETURNING,
@@ -271,7 +271,41 @@ class VideoCardTransitionBackgroundPolicyTest {
 
         assertTrue(frame.blurRadiusPx > 0f)
         assertTrue(frame.scrimAlpha > 0f)
-        assertEquals(0.9875f, frame.contentScale, 0.0001f)
+        assertEquals(0.99375f, frame.contentScale, 0.0001f)
+    }
+
+    @Test
+    fun snapshotRecording_staysFrozenForAllActivePhases_toProtectFrameBudget() {
+        assertFalse(
+            shouldLiveRecordVideoCardTransitionSnapshot(
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+                progress = 0.5f,
+            )
+        )
+        assertFalse(
+            shouldLiveRecordVideoCardTransitionSnapshot(
+                phase = VideoCardTransitionBackgroundPhase.RETURNING,
+                progress = 0.8f,
+            )
+        )
+        assertFalse(
+            shouldLiveRecordVideoCardTransitionSnapshot(
+                phase = VideoCardTransitionBackgroundPhase.RETURNING,
+                progress = 0.1f,
+            )
+        )
+        assertFalse(
+            shouldLiveRecordVideoCardTransitionSnapshot(
+                phase = VideoCardTransitionBackgroundPhase.HELD,
+                progress = 1f,
+            )
+        )
+        assertFalse(
+            shouldLiveRecordVideoCardTransitionSnapshot(
+                phase = VideoCardTransitionBackgroundPhase.IDLE,
+                progress = 0f,
+            )
+        )
     }
 
     @Test

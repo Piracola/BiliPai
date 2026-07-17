@@ -20,6 +20,40 @@ class VideoDetailReturnCoverPolicyTest {
     }
 
     @Test
+    fun `related detail return suppresses enter fade flash while keeping exit fade available`() {
+        assertTrue(
+            shouldSuppressVideoDetailEnterFadeAfterBackPreview(
+                wasKeptAsBackPreview = true,
+                keepLoadedContentForBackPreview = false,
+            )
+        )
+        assertFalse(
+            shouldSuppressVideoDetailEnterFadeAfterBackPreview(
+                wasKeptAsBackPreview = false,
+                keepLoadedContentForBackPreview = false,
+            )
+        )
+        assertEquals(
+            1f,
+            resolveVideoDetailReturnContentAlpha(
+                transitionProgress = 0.2f,
+                isCommittedCardReturn = false,
+                holdFullyOpaqueAfterBackPreview = true,
+            ),
+            0.0001f,
+        )
+        assertEquals(
+            0f,
+            resolveVideoDetailReturnContentAlpha(
+                transitionProgress = 0.2f,
+                isCommittedCardReturn = true,
+                holdFullyOpaqueAfterBackPreview = true,
+            ),
+            0.0001f,
+        )
+    }
+
+    @Test
     fun `normal card detail transition still animates secondary content`() {
         assertTrue(
             shouldUseVideoDetailRootTransitionProgress(
@@ -257,6 +291,26 @@ class VideoDetailReturnCoverPolicyTest {
                 isTransitionFinished = true,
                 isLeaving = true,
                 rootTransitionOwnsContentAlpha = false,
+            )
+        )
+    }
+
+    @Test
+    fun `related back preview keeps parent content mounted during return morph`() {
+        assertTrue(
+            shouldShowVideoDetailContent(
+                isTransitionFinished = false,
+                isLeaving = false,
+                rootTransitionOwnsContentAlpha = true,
+                keepContentVisibleAfterBackPreview = true,
+            )
+        )
+        assertFalse(
+            shouldShowVideoDetailContent(
+                isTransitionFinished = false,
+                isLeaving = true,
+                rootTransitionOwnsContentAlpha = false,
+                keepContentVisibleAfterBackPreview = true,
             )
         )
     }

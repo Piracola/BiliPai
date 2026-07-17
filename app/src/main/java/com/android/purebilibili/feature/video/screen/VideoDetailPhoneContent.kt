@@ -81,6 +81,7 @@ internal fun VideoDetailPhoneSuccessContentLayer(
     isTransitionFinished: Boolean,
     isLeaving: Boolean,
     rootTransitionOwnsContentAlpha: Boolean,
+    keepContentVisibleAfterBackPreview: Boolean = false,
     shouldShowExternalPlaylistQueueBar: Boolean,
     selectedVideoContentTabIndex: Int,
     useTabletLayout: Boolean,
@@ -130,14 +131,14 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                 val detailContentRevealEnter = fadeIn(
                     tween(
                         motionSpec.contentRevealFadeDurationMillis,
-                        easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedEnter
+                        easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.Continuity
                     )
                 )
                 val detailContentExitFade = fadeOut(
                     tween(
                         durationMillis = 180,
                         delayMillis = 60,
-                        easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedExit
+                        easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.Continuity
                     )
                 )
                 AnimatedVisibility(
@@ -145,6 +146,7 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                         isTransitionFinished = isTransitionFinished,
                         isLeaving = isLeaving,
                         rootTransitionOwnsContentAlpha = rootTransitionOwnsContentAlpha,
+                        keepContentVisibleAfterBackPreview = keepContentVisibleAfterBackPreview,
                     ),
                     enter = if (rootTransitionOwnsContentAlpha) {
                         EnterTransition.None

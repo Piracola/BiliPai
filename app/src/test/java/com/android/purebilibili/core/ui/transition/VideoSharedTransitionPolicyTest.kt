@@ -1,7 +1,8 @@
 package com.android.purebilibili.core.ui.transition
 
-import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.TweenSpec
 import androidx.compose.ui.geometry.Rect
+import com.android.purebilibili.core.ui.motion.AppMotionEasing
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,7 +13,7 @@ import kotlin.test.assertTrue
 class VideoSharedTransitionPolicyTest {
 
     @Test
-    fun videoSharedTransitionUsesHeroFadeCurveForEnterAndReturn() {
+    fun videoSharedTransitionUsesContinuityCurveForEnterAndReturnAlpha() {
         val motion = resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = "home",
             transitionEnabled = true
@@ -21,22 +22,28 @@ class VideoSharedTransitionPolicyTest {
         val returning = motion.returnAlphaEasing
 
         assertSame(enter, returning)
-        assertTrue(enter.transform(0.1f) in 0.02f..0.04f)
-        assertTrue(enter.transform(0.35f) in 0.49f..0.51f)
-        assertTrue(enter.transform(0.75f) in 0.95f..0.97f)
+        assertEquals(
+            AppMotionEasing.Continuity.transform(0.5f),
+            enter.transform(0.5f),
+            0.001f,
+        )
+        assertTrue(enter.transform(0.5f) > 0.7f)
     }
 
     @Test
-    fun videoSharedTransitionMapsDurationToBoundedHeroSpring() {
-        assertEquals(500f, resolveVideoSharedTransitionSpatialStiffness(280), 0.001f)
-        assertEquals(390.625f, resolveVideoSharedTransitionSpatialStiffness(320), 0.001f)
-        assertEquals(250f, resolveVideoSharedTransitionSpatialStiffness(400), 0.001f)
-        assertEquals(147.929f, resolveVideoSharedTransitionSpatialStiffness(520), 0.001f)
-        assertEquals(50f, resolveVideoSharedTransitionSpatialStiffness(900), 0.001f)
+    fun videoSharedTransitionSpatialEasing_isContinuityEaseOut() {
+        val easing = resolveVideoCardSharedTransitionSpatialEasing()
+        assertEquals(
+            AppMotionEasing.Continuity.transform(0.5f),
+            easing.transform(0.5f),
+            0.001f,
+        )
+        // 先快后慢：半程进度应明显超过线性 0.5
+        assertTrue(easing.transform(0.5f) > 0.7f)
     }
 
     @Test
-    fun videoSharedBoundsUseHeroSpringWithAQuieterReturnLanding() {
+    fun videoSharedBoundsUseContinuityOnEnterAndLinearOnReturn() {
         val motion = resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = "home",
             transitionEnabled = true
@@ -47,12 +54,23 @@ class VideoSharedTransitionPolicyTest {
         val enter = videoSharedElementBoundsTransformSpec(motion, cardBounds, detailBounds)
         val returning = videoSharedElementBoundsTransformSpec(motion, detailBounds, cardBounds)
 
-        assertTrue(enter is SpringSpec<*>)
-        assertTrue(returning is SpringSpec<*>)
-        assertEquals(0.79f, (enter as SpringSpec<*>).dampingRatio, 0.001f)
-        assertEquals(250f, enter.stiffness, 0.001f)
-        assertEquals(0.86f, (returning as SpringSpec<*>).dampingRatio, 0.001f)
-        assertEquals(enter.stiffness, returning.stiffness, 0.001f)
+        assertTrue(enter is TweenSpec<*>)
+        assertTrue(returning is TweenSpec<*>)
+        assertEquals(motion.durationMillis, (enter as TweenSpec<*>).durationMillis)
+        assertEquals(motion.durationMillis, (returning as TweenSpec<*>).durationMillis)
+        // 进场：Continuity 先快后慢
+        assertEquals(
+            AppMotionEasing.Continuity.transform(0.4f),
+            enter.easing.transform(0.4f),
+            0.001f,
+        )
+        // 返回：Linear，预测 seek / 快速打断与手指 1:1
+        assertEquals(0.4f, returning.easing.transform(0.4f), 0.001f)
+        assertEquals(
+            0.4f,
+            resolveVideoSharedElementSpatialEasing(detailBounds, cardBounds).transform(0.4f),
+            0.001f,
+        )
     }
 
     @Test
@@ -310,11 +328,22 @@ class VideoSharedTransitionPolicyTest {
         assertEquals(240, motion.contentDurationMillis)
         assertEquals(14, motion.contentSlideOffsetDp)
         assertEquals(0.985f, motion.contentInitialScale, 0.0001f)
-        assertEquals(0.79f, motion.enterSpatialDampingRatio, 0.001f)
-        assertEquals(0.86f, motion.returnSpatialDampingRatio, 0.001f)
-        assertEquals(250f, motion.spatialStiffness, 0.001f)
         assertSame(motion.enterAlphaEasing, motion.returnAlphaEasing)
-        assertTrue(motion.enterAlphaEasing.transform(0.35f) in 0.49f..0.51f)
+        assertEquals(
+            AppMotionEasing.Continuity.transform(0.35f),
+            motion.enterAlphaEasing.transform(0.35f),
+            0.001f,
+        )
+        assertEquals(
+            AppMotionEasing.Continuity.transform(0.5f),
+            resolveVideoCardSharedTransitionEnterEasing().transform(0.5f),
+            0.001f,
+        )
+        assertEquals(
+            AppMotionEasing.Continuity.transform(0.5f),
+            resolveVideoCardSharedTransitionReturnEasing().transform(0.5f),
+            0.001f,
+        )
     }
 
     @Test
@@ -392,7 +421,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoMetadataSharedTransitionMotion_usesCoverTimingButBoundsFinishEarlier() {
+    fun videoMetadataSharedTransitionMotion_matchesCoverTimeline() {
         val coverMotion = resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = "home",
             transitionEnabled = true
@@ -407,8 +436,10 @@ class VideoSharedTransitionPolicyTest {
         assertEquals(0, metadataMotion.contentDelayMillis)
         assertSame(coverMotion.enterAlphaEasing, metadataMotion.enterAlphaEasing)
         assertSame(coverMotion.returnAlphaEasing, metadataMotion.returnAlphaEasing)
-        assertEquals(288, resolveVideoMetadataSharedBoundsDurationMillis(metadataMotion))
-        assertTrue(resolveVideoMetadataSharedBoundsDurationMillis(metadataMotion) < metadataMotion.durationMillis)
+        assertEquals(
+            coverMotion.durationMillis,
+            resolveVideoMetadataSharedBoundsDurationMillis(metadataMotion),
+        )
     }
 
     @Test

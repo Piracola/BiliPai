@@ -1912,6 +1912,7 @@ fun VideoPlayerOverlay(
         if (showPlaybackOrderSheet) {
             PlaybackOrderSelectionSheet(
                 currentBehavior = playbackCompletionBehavior,
+                isFullscreen = isFullscreen,
                 onSelect = { behavior ->
                     scope.launch {
                         SettingsManager.setPlaybackCompletionBehavior(context, behavior)

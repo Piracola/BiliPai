@@ -228,9 +228,9 @@ class VideoCardScrollLiteVisualPolicyTest {
     }
 
     @Test
-    fun homeCardCover_staysVisibleForEveryReturnPath() {
-        // OPENING：冻结 record 时藏封面
-        assertTrue(
+    fun homeCardCover_neverHidesDuringShellMorph() {
+        // OPENING 也不再藏封面：快速返回打断时避免落位露出 surfaceVariant。
+        assertFalse(
             shouldHideHomeCardCoverDuringShellMorph(
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
@@ -239,7 +239,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 isVideoCardReturnGestureInProgress = false,
             )
         )
-        // 提交返回：目标卡片封面始终在落点下方待命，避免落位时露出占位色。
         assertFalse(
             shouldHideHomeCardCoverDuringShellMorph(
                 useCardContainerSharedBounds = true,
@@ -249,7 +248,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 isVideoCardReturnGestureInProgress = false,
             )
         )
-        // 返回 session 可能比 Compose shared transition 早一帧清理；此时仍必须让目标封面接手。
         assertFalse(
             shouldHideHomeCardCoverDuringShellMorph(
                 useCardContainerSharedBounds = true,
@@ -259,27 +257,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 isVideoCardReturnGestureInProgress = false,
             )
         )
-        // 落位后：源卡封面立即接手。
-        assertFalse(
-            shouldHideHomeCardCoverDuringShellMorph(
-                useCardContainerSharedBounds = true,
-                isSharedMorphSourceCard = true,
-                isReturningFromDetail = true,
-                transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.IDLE,
-                isVideoCardReturnGestureInProgress = false,
-            )
-        )
-        // 预测跟手（未 mark 返回 session）：来源页封面承担返回预览，不能露出占位色。
-        assertFalse(
-            shouldHideHomeCardCoverDuringShellMorph(
-                useCardContainerSharedBounds = true,
-                isSharedMorphSourceCard = true,
-                isReturningFromDetail = false,
-                transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.HELD,
-                isVideoCardReturnGestureInProgress = true,
-            )
-        )
-        // OPENING 被预测返回打断时同样优先显示封面。
         assertFalse(
             shouldHideHomeCardCoverDuringShellMorph(
                 useCardContainerSharedBounds = true,
@@ -287,16 +264,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 isReturningFromDetail = false,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.OPENING,
                 isVideoCardReturnGestureInProgress = true,
-            )
-        )
-        // 非源卡
-        assertFalse(
-            shouldHideHomeCardCoverDuringShellMorph(
-                useCardContainerSharedBounds = true,
-                isSharedMorphSourceCard = false,
-                isReturningFromDetail = false,
-                transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.OPENING,
-                isVideoCardReturnGestureInProgress = false,
             )
         )
     }

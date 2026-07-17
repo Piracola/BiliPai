@@ -57,6 +57,14 @@ class BiliPaiPredictiveBackAnimationPolicyTest {
     }
 
     @Test
+    fun sharedElementPredictivePop_pinsUnderlyingSourcePageAgainstHorizontalDrift() {
+        val source = sharedElementPredictiveBackSource()
+        assertTrue(source.contains("skipToLookaheadPosition()"))
+        assertTrue(source.contains("isUnderlyingSourcePage"))
+        assertTrue(source.contains("translationX = 0f"))
+    }
+
+    @Test
     fun classicCardRoute_usesNavigationDefaults() {
         val handler = resolveBiliPaiPredictiveBackAnimationHandler(
             routeTransition = BiliPaiNavRouteTransition.CLASSIC_CARD,

@@ -102,6 +102,7 @@ import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpe
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionDurationMillis
 import com.android.purebilibili.core.ui.transition.predictiveBackBackgroundEffect
+import com.android.purebilibili.core.ui.transition.pinSourcePageDuringSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldApplyPredictiveBackBlurToRoute
 import com.android.purebilibili.core.ui.transition.shouldApplyVideoCardTransitionBackgroundToRoute
 import com.android.purebilibili.core.ui.transition.videoCardTransitionBackgroundEffect
@@ -1371,7 +1372,9 @@ fun AppNavigation(
                             baseModifier
                                 .let { modifier ->
                                     if (shouldApplyBackground) {
-                                        modifier.videoCardTransitionBackgroundEffect(
+                                        modifier
+                                            .pinSourcePageDuringSharedTransition()
+                                            .videoCardTransitionBackgroundEffect(
                                             progressProvider = backgroundState.progressProvider,
                                             phaseProvider = backgroundState.phaseProvider,
                                             isGestureRestoreInProgressProvider = backgroundState.isGestureRestoreInProgressProvider,

@@ -34,7 +34,12 @@ internal fun rememberVideoDetailEntryTransitionFinished(
             return@LaunchedEffect
         }
 
-        finished = false
+        // 相关推荐返回会再次触发 shared/nav transition；若把 finished 打回 false，
+        // 父详情简介/相关列表会被 AnimatedVisibility 整块卸掉，表现为播放器下方黑屏重载。
+        if (finished) {
+            return@LaunchedEffect
+        }
+
         var hasObservedActiveTransition = false
 
         val timeoutJob = launch {

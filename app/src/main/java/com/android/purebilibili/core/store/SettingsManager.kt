@@ -1522,6 +1522,10 @@ object SettingsManager {
     private val KEY_EXTERNAL_PLAYLIST_AUTO_CONTINUE =
         booleanPreferencesKey("external_playlist_auto_continue")
     private const val CACHE_KEY_EXTERNAL_PLAYLIST_AUTO_CONTINUE = "external_playlist_auto_continue"
+    private const val CACHE_KEY_PLAYBACK_COMPLETION_BEHAVIOR = "playback_completion_behavior"
+
+    @Volatile
+    private var playbackCompletionBehaviorMemoryCache: Int? = null
 
     fun getAutoPlay(context: Context): Flow<Boolean> = context.settingsDataStore.data
         .map { preferences -> preferences[KEY_AUTO_PLAY] ?: true }
@@ -1558,32 +1562,69 @@ object SettingsManager {
     }
 
     fun getPlaybackCompletionBehavior(context: Context): Flow<PlaybackCompletionBehavior> =
-        context.settingsDataStore.data.map { preferences ->
-            val value = preferences[KEY_PLAYBACK_COMPLETION_BEHAVIOR]
-                ?: PlaybackCompletionBehavior.CONTINUE_CURRENT_LOGIC.value
-            PlaybackCompletionBehavior.fromValue(value)
-        }
+        context.settingsDataStore.data
+            .map { preferences ->
+                val value = preferences[KEY_PLAYBACK_COMPLETION_BEHAVIOR]
+                    ?: PlaybackCompletionBehavior.CONTINUE_CURRENT_LOGIC.value
+                PlaybackCompletionBehavior.fromValue(value)
+            }
+            .onEach { behavior ->
+                // Flow（UI）与 Sync（播完回调）对齐：缓存 + 回写 SP，修复「界面顺序播放、实际单循」.
+                rememberPlaybackCompletionBehavior(behavior)
+                healPlaybackCompletionSharedPreferences(context, behavior)
+            }
+            .distinctUntilChanged()
 
     suspend fun setPlaybackCompletionBehavior(
         context: Context,
         behavior: PlaybackCompletionBehavior
     ) {
+        rememberPlaybackCompletionBehavior(behavior)
         context.settingsDataStore.edit { preferences ->
             preferences[KEY_PLAYBACK_COMPLETION_BEHAVIOR] = behavior.value
         }
-        context.getSharedPreferences("auto_play_cache", Context.MODE_PRIVATE)
-            .edit()
-            .putInt("playback_completion_behavior", behavior.value)
-            .apply()
+        healPlaybackCompletionSharedPreferences(context, behavior)
     }
 
     fun getPlaybackCompletionBehaviorSync(context: Context): PlaybackCompletionBehavior {
-        val value = context.getSharedPreferences("auto_play_cache", Context.MODE_PRIVATE)
-            .getInt(
-                "playback_completion_behavior",
+        val prefs = context.getSharedPreferences("auto_play_cache", Context.MODE_PRIVATE)
+        val sharedPreferencesValue = if (prefs.contains(CACHE_KEY_PLAYBACK_COMPLETION_BEHAVIOR)) {
+            prefs.getInt(
+                CACHE_KEY_PLAYBACK_COMPLETION_BEHAVIOR,
                 PlaybackCompletionBehavior.CONTINUE_CURRENT_LOGIC.value
             )
-        return PlaybackCompletionBehavior.fromValue(value)
+        } else {
+            null
+        }
+        return resolvePlaybackCompletionBehaviorSyncSource(
+            memoryCacheValue = playbackCompletionBehaviorMemoryCache,
+            sharedPreferencesValue = sharedPreferencesValue,
+        )
+    }
+
+    private fun rememberPlaybackCompletionBehavior(behavior: PlaybackCompletionBehavior) {
+        playbackCompletionBehaviorMemoryCache = behavior.value
+    }
+
+    private fun healPlaybackCompletionSharedPreferences(
+        context: Context,
+        behavior: PlaybackCompletionBehavior,
+    ) {
+        val prefs = context.getSharedPreferences("auto_play_cache", Context.MODE_PRIVATE)
+        val current = if (prefs.contains(CACHE_KEY_PLAYBACK_COMPLETION_BEHAVIOR)) {
+            prefs.getInt(
+                CACHE_KEY_PLAYBACK_COMPLETION_BEHAVIOR,
+                PlaybackCompletionBehavior.CONTINUE_CURRENT_LOGIC.value
+            )
+        } else {
+            null
+        }
+        if (!shouldHealPlaybackCompletionSharedPreferences(behavior.value, current)) {
+            return
+        }
+        prefs.edit()
+            .putInt(CACHE_KEY_PLAYBACK_COMPLETION_BEHAVIOR, behavior.value)
+            .apply()
     }
 
     // --- HW Decode ---

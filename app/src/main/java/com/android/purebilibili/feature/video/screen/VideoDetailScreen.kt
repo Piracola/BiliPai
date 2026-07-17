@@ -364,8 +364,10 @@ internal fun resolveVideoDetailReturnPlayerAlpha(
 internal fun resolveVideoDetailReturnContentAlpha(
     transitionProgress: Float,
     isCommittedCardReturn: Boolean,
+    holdFullyOpaqueAfterBackPreview: Boolean = false,
 ): Float {
     if (isCommittedCardReturn) return 0f
+    if (holdFullyOpaqueAfterBackPreview) return 1f
     return transitionProgress.coerceIn(0f, 1f)
 }
 
@@ -386,6 +388,17 @@ internal fun shouldForceBackPreviewPlayerCover(
     return keepLoadedContentForBackPreview && !bindLivePlayerForBackPreview
 }
 
+/**
+ * 相关推荐「详情压详情」返回：父页刚从 back-preview 恢复时，
+ * 若立刻按进场过渡把内容 alpha 从 0 淡入，会整页闪一下（滚动位置仍在）。
+ */
+internal fun shouldSuppressVideoDetailEnterFadeAfterBackPreview(
+    wasKeptAsBackPreview: Boolean,
+    keepLoadedContentForBackPreview: Boolean,
+): Boolean {
+    return wasKeptAsBackPreview && !keepLoadedContentForBackPreview
+}
+
 internal fun shouldUseVideoDetailRootTransitionProgress(
     detailShellSharedBoundsEnabled: Boolean,
     hasAnimatedVisibilityScope: Boolean,
@@ -400,7 +413,9 @@ internal fun shouldShowVideoDetailContent(
     isTransitionFinished: Boolean,
     isLeaving: Boolean,
     rootTransitionOwnsContentAlpha: Boolean,
+    keepContentVisibleAfterBackPreview: Boolean = false,
 ): Boolean {
+    if (keepContentVisibleAfterBackPreview && !isLeaving) return true
     return isTransitionFinished && (!isLeaving || rootTransitionOwnsContentAlpha)
 }
 
@@ -1548,7 +1563,8 @@ fun VideoDetailScreen(
     // 但不再叠加二级 fadeIn/slide，避免与 sharedBounds 冲突。
     val shellSharedBoundsLikely = transitionEnabled && !sourceRouteForSharedElement.isNullOrBlank()
     val entryVisualEnabled = transitionEnabled && !deferVideoDetailEntryLoad && !shellSharedBoundsLikely
-    var isTransitionFinished by remember(deferVideoDetailEntryLoad, entryTransitionFinished, entryVisualEnabled) {
+    // 注意：不要把 entryTransitionFinished 放进 remember key，否则返回时 finished 回抖会重建状态并隐藏内容。
+    var isTransitionFinished by remember(deferVideoDetailEntryLoad, entryVisualEnabled, shellSharedBoundsLikely) {
         mutableStateOf(
             when {
                 deferVideoDetailEntryLoad -> entryTransitionFinished
@@ -1571,8 +1587,13 @@ fun VideoDetailScreen(
     ) {
         when {
             deferVideoDetailEntryLoad -> {
-                entryVisualProgress.snapTo(if (entryTransitionFinished) 1f else 0f)
-                isTransitionFinished = entryTransitionFinished
+                // 只允许 true 锁存：相关推荐返回的二次 morph 不得把内容区重新藏起来。
+                if (entryTransitionFinished) {
+                    entryVisualProgress.snapTo(1f)
+                    isTransitionFinished = true
+                } else if (!isTransitionFinished) {
+                    entryVisualProgress.snapTo(0f)
+                }
             }
 
             !transitionEnabled || shellSharedBoundsLikely -> {
@@ -1581,8 +1602,11 @@ fun VideoDetailScreen(
             }
 
             else -> {
+                if (isTransitionFinished) {
+                    entryVisualProgress.snapTo(1f)
+                    return@LaunchedEffect
+                }
                 entryVisualProgress.snapTo(0f)
-                isTransitionFinished = false
                 entryVisualProgress.animateTo(
                     targetValue = 1f,
                     animationSpec = tween(
@@ -1981,6 +2005,17 @@ fun VideoDetailScreen(
             fullDurationMillis = homeSharedTransitionMotionSpec.durationMillis,
         )
     }
+    // 相关推荐返回：父页曾作为 back-preview 保活过，内容不再跑进场淡入/卸载。
+    var wasKeptAsBackPreview by rememberSaveable(bvid) { mutableStateOf(false) }
+    SideEffect {
+        if (keepLoadedContentForBackPreview) {
+            wasKeptAsBackPreview = true
+        }
+    }
+    val suppressEnterFadeAfterBackPreview = shouldSuppressVideoDetailEnterFadeAfterBackPreview(
+        wasKeptAsBackPreview = wasKeptAsBackPreview,
+        keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
+    )
     val detailTransitionProgress = if (shouldUseVideoDetailRootTransitionProgress(
             detailShellSharedBoundsEnabled = detailShellSharedBoundsEnabled,
             hasAnimatedVisibilityScope = rootAnimatedVisibilityScope != null,
@@ -3972,6 +4007,8 @@ fun VideoDetailScreen(
                                     alpha = resolveVideoDetailReturnContentAlpha(
                                         transitionProgress = detailTransitionProgress.value,
                                         isCommittedCardReturn = isLeaving,
+                                        holdFullyOpaqueAfterBackPreview =
+                                            suppressEnterFadeAfterBackPreview && !isLeaving,
                                     )
                                 }
                                 // .nestedScroll(nestedScrollConnection) // [Remove] 移除嵌套滚动，确保 Tabs 正常滑动
@@ -4021,9 +4058,14 @@ fun VideoDetailScreen(
                                         playerState = playerState,
                                         motionSpec = motionSpec,
                                         hazeState = hazeState,
-                                        isTransitionFinished = isTransitionFinished,
+                                        isTransitionFinished = isTransitionFinished ||
+                                            keepLoadedContentForBackPreview ||
+                                            suppressEnterFadeAfterBackPreview,
                                         isLeaving = isLeaving,
                                         rootTransitionOwnsContentAlpha = detailShellSharedBoundsEnabled,
+                                        keepContentVisibleAfterBackPreview =
+                                            suppressEnterFadeAfterBackPreview ||
+                                                keepLoadedContentForBackPreview,
                                         shouldShowExternalPlaylistQueueBar = shouldShowExternalPlaylistQueueBar,
                                         selectedVideoContentTabIndex = selectedVideoContentTabIndex,
                                         useTabletLayout = useTabletLayout,

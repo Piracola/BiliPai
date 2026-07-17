@@ -44,9 +44,11 @@ class VideoDetailRouteSheetPolicyTest {
             assertEquals(28f, motion.initialCornerDp)
             assertTrue(motion.settleScaleDelta in 0f..0.002f)
             assertTrue(motion.settleTranslationDp in 0f..2f)
-            assertTrue(motion.enterEasing.transform(0.35f) in 0.60f..0.68f)
-            assertTrue(motion.enterEasing.transform(0.75f) in 0.95f..0.99f)
+            assertTrue(motion.enterEasing.transform(0.35f) in 0.85f..0.95f)
+            assertTrue(motion.enterEasing.transform(0.75f) in 0.98f..1.0f)
             assertTrue(motion.enterEasing === motion.returnEasing)
+            // Continuity：半程已明显超过线性，体现先快后慢
+            assertTrue(motion.enterEasing.transform(0.5f) > 0.7f)
         }
     }
 
