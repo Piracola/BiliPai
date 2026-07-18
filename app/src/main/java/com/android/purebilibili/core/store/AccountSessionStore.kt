@@ -16,6 +16,7 @@ data class StoredAccountSession(
     val csrf: String = "",
     val accessToken: String = "",
     val refreshToken: String = "",
+    val accessTokenPlatform: String = TokenManager.ACCESS_TOKEN_PLATFORM_TV,
     val buvid3: String = "",
     val isVip: Boolean = false,
     val vipLabel: String = "",
@@ -89,6 +90,7 @@ object AccountSessionStore {
             csrf = TokenManager.csrfCache.orEmpty(),
             accessToken = TokenManager.accessTokenCache.orEmpty(),
             refreshToken = TokenManager.refreshTokenCache.orEmpty(),
+            accessTokenPlatform = TokenManager.accessTokenPlatformCache,
             buvid3 = TokenManager.buvid3Cache.orEmpty(),
             isVip = navData?.vip?.status == 1 || TokenManager.isVipCache,
             vipLabel = navData?.vip?.label?.text.orEmpty().ifBlank { previous?.vipLabel.orEmpty() },
@@ -116,6 +118,7 @@ object AccountSessionStore {
             mid = target.mid,
             accessToken = target.accessToken,
             refreshToken = target.refreshToken,
+            accessTokenPlatform = target.accessTokenPlatform,
             buvid3 = target.buvid3,
             isVip = target.isVip
         )

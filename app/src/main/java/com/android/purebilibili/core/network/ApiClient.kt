@@ -1726,6 +1726,12 @@ interface PassportApi {
         @retrofit2.http.Field("validate") validate: String,    // 极验验证结果
         @retrofit2.http.Field("seccode") seccode: String       // 极验安全码
     ): SmsCodeResponse
+
+    @retrofit2.http.FormUrlEncoded
+    @retrofit2.http.POST("x/passport-login/sms/send")
+    suspend fun sendSmsCodeByApp(
+        @retrofit2.http.FieldMap params: Map<String, String>
+    ): SmsCodeResponse
     
     // 短信验证码登录
     @retrofit2.http.FormUrlEncoded
@@ -1739,6 +1745,12 @@ interface PassportApi {
         @retrofit2.http.Field("keep") keep: Int = 0,
         @retrofit2.http.Field("go_url") goUrl: String = "https://www.bilibili.com"
     ): Response<LoginResponse>  // 使用 Response 以获取 Set-Cookie
+
+    @retrofit2.http.FormUrlEncoded
+    @retrofit2.http.POST("x/passport-login/login/sms")
+    suspend fun loginBySmsApp(
+        @retrofit2.http.FieldMap params: Map<String, String>
+    ): Response<LoginResponse>
     
     // 获取 RSA 公钥 (密码登录用)
     @GET("x/passport-login/web/key")

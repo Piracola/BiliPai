@@ -42,7 +42,9 @@ class LoginPageUiRegressionTest {
                         onRequestSms = {},
                         onSubmitSms = {},
                         onRequestPassword = { _, _ -> },
-                        onImportCookie = {}
+                        onImportCookie = {},
+                        onContinueWithStandardSession = {},
+                        onAuthorizeHighQuality = {}
                     )
                 }
             }

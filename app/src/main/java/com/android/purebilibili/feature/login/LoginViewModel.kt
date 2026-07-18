@@ -25,6 +25,7 @@ sealed class LoginState {
     data class QrCode(val bitmap: Bitmap) : LoginState()
     data class Scanned(val bitmap: Bitmap) : LoginState()
     object Success : LoginState()
+    object HighQualityAuthorization : LoginState()
     data class Error(val msg: String) : LoginState()
     
     //  手机号登录状态
@@ -143,7 +144,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                                 }
 
                                 isPolling = false
-                                finishLogin("qrcode_web")
+                                finishLogin("qrcode_web", hasHighQualityCredential = false)
                             } else {
                                 _state.value = LoginState.Error("Cookie 解析失败")
                             }
@@ -259,13 +260,17 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 
                 Logger.d("LoginDebug", "发送短信验证码请求")
                 
-                val response = NetworkModule.passportApi.sendSmsCode(
-                    cid = countryCode,
-                    tel = phone,
+                val params = buildAndroidSmsSendParams(
+                    phone = phone,
+                    countryCode = countryCode,
                     token = captchaData.token,
                     challenge = currentChallenge,
                     validate = currentValidate,
-                    seccode = currentSeccode
+                    seccode = currentSeccode,
+                    timestampSeconds = com.android.purebilibili.core.network.AppSignUtils.getTimestamp()
+                )
+                val response = NetworkModule.passportApi.sendSmsCodeByApp(
+                    com.android.purebilibili.core.network.AppSignUtils.signForAndroidApi(params)
                 )
                 
                 if (response.code == 0 && response.data != null) {
@@ -291,18 +296,24 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _state.value = LoginState.Loading
                 Logger.d("LoginDebug", "短信验证码登录请求")
                 
-                val response = NetworkModule.passportApi.loginBySms(
-                    cid = currentCountryCode,
-                    tel = currentPhone,
+                val params = buildAndroidSmsLoginParams(
+                    phone = currentPhone,
+                    countryCode = currentCountryCode,
                     code = code,
-                    captchaKey = currentCaptchaKey
+                    captchaKey = currentCaptchaKey,
+                    timestampSeconds = com.android.purebilibili.core.network.AppSignUtils.getTimestamp()
+                )
+                val response = NetworkModule.passportApi.loginBySmsApp(
+                    com.android.purebilibili.core.network.AppSignUtils.signForAndroidApi(params)
                 )
                 
                 val body = response.body()
                 if (body?.code == 0) {
-                    // 解析 Cookie
-                    val cookies = response.headers().values("Set-Cookie")
-                    handleLoginCookies(cookies)
+                    handleLoginResponse(
+                        response = response,
+                        source = "phone",
+                        accessTokenPlatform = TokenManager.ACCESS_TOKEN_PLATFORM_ANDROID
+                    )
                 } else {
                     _state.value = LoginState.Error("登录失败: ${body?.message ?: "未知错误"}")
                 }
@@ -357,8 +368,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 
                 val body = response.body()
                 if (body?.code == 0) {
-                    val cookies = response.headers().values("Set-Cookie")
-                    handleLoginCookies(cookies)
+                    handleLoginResponse(response = response, source = "password")
                 } else {
                     _state.value = LoginState.Error("登录失败: ${body?.message ?: "未知错误"}")
                 }
@@ -372,36 +382,54 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 处理登录返回的 Cookie
      */
-    private suspend fun handleLoginCookies(cookies: List<String>) {
-        var sessData = ""
-        var biliJct = ""
-        
-        for (line in cookies) {
-            if (line.contains("SESSDATA")) {
-                sessData = line.split(";").firstOrNull { it.trim().startsWith("SESSDATA=") }
-                    ?.substringAfter("SESSDATA=") ?: ""
-            }
-            if (line.contains("bili_jct")) {
-                biliJct = line.split(";").firstOrNull { it.trim().startsWith("bili_jct=") }
-                    ?.substringAfter("bili_jct=") ?: ""
-            }
+    private suspend fun handleLoginResponse(
+        response: retrofit2.Response<com.android.purebilibili.data.model.response.LoginResponse>,
+        source: String,
+        accessTokenPlatform: String = TokenManager.ACCESS_TOKEN_PLATFORM_TV
+    ) {
+        val body = response.body() ?: run {
+            _state.value = LoginState.Error("登录响应为空")
+            return
         }
+        val cookies = response.headers().values("Set-Cookie")
+            .flatMap { it.split(";") }
+            .mapNotNull { item ->
+                item.trim().takeIf { it.contains('=') }?.let {
+                    it.substringBefore('=') to it.substringAfter('=')
+                }
+            }
+            .toMap()
+            .toMutableMap()
+        body.data?.cookieInfo?.cookies.orEmpty().forEach { cookie ->
+            cookies[cookie.name] = cookie.value
+        }
+
+        val sessData = cookies["SESSDATA"].orEmpty()
+        val biliJct = cookies["bili_jct"].orEmpty()
         
         if (sessData.isNotEmpty()) {
             completeLogin(
                 sessData = sessData,
                 csrf = biliJct,
-                source = "phone"
+                buvid3 = cookies["buvid3"].orEmpty(),
+                accessToken = body.data?.tokenInfo?.accessToken.orEmpty(),
+                refreshToken = body.data?.tokenInfo?.refreshToken.orEmpty(),
+                accessTokenPlatform = accessTokenPlatform,
+                source = source
             )
         } else {
             _state.value = LoginState.Error("Cookie 解析失败")
         }
     }
 
-    private suspend fun finishLogin(source: String) {
+    private suspend fun finishLogin(source: String, hasHighQualityCredential: Boolean) {
         syncCurrentAccountSession()
         withContext(Dispatchers.Main) {
-            _state.value = LoginState.Success
+            _state.value = if (hasHighQualityCredential) {
+                LoginState.Success
+            } else {
+                LoginState.HighQualityAuthorization
+            }
             com.android.purebilibili.core.util.AnalyticsHelper.logLogin(source)
             com.android.purebilibili.core.util.AnalyticsHelper.syncUserContext(
                 mid = TokenManager.midCache,
@@ -412,6 +440,10 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun continueWithStandardSession() {
+        _state.value = LoginState.Success
+    }
+
     private suspend fun completeLogin(
         sessData: String,
         csrf: String = "",
@@ -419,6 +451,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         mid: Long = 0L,
         accessToken: String = "",
         refreshToken: String = "",
+        accessTokenPlatform: String = TokenManager.ACCESS_TOKEN_PLATFORM_TV,
         source: String
     ) {
         TokenManager.saveCookies(getApplication(), sessData)
@@ -426,9 +459,16 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         if (buvid3.isNotBlank()) TokenManager.saveBuvid3(getApplication(), buvid3)
         if (mid > 0L) TokenManager.saveMid(getApplication(), mid)
         if (accessToken.isNotBlank()) {
-            TokenManager.saveAccessToken(getApplication(), accessToken, refreshToken)
+            TokenManager.saveAccessToken(
+                context = getApplication(),
+                accessToken = accessToken,
+                refreshToken = refreshToken,
+                platform = accessTokenPlatform
+            )
+        } else {
+            TokenManager.clearAccessToken(getApplication())
         }
-        finishLogin(source)
+        finishLogin(source, hasHighQualityCredential = accessToken.isNotBlank())
     }
 
     fun loginByCookie(rawCookieHeader: String) {

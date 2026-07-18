@@ -157,7 +157,9 @@ fun LoginScreen(
             captchaRequest = CaptchaRequest.Password(phone, password)
             viewModel.getCaptcha()
         },
-        onImportCookie = viewModel::loginByCookie
+        onImportCookie = viewModel::loginByCookie,
+        onContinueWithStandardSession = viewModel::continueWithStandardSession,
+        onAuthorizeHighQuality = { selectedMethod = LoginMethod.TV_QR }
     )
 }
 
@@ -173,6 +175,8 @@ internal fun LoginPage(
     onSubmitSms: (Int) -> Unit,
     onRequestPassword: (String, String) -> Unit,
     onImportCookie: (String) -> Unit,
+    onContinueWithStandardSession: () -> Unit,
+    onAuthorizeHighQuality: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -217,6 +221,14 @@ internal fun LoginPage(
                     }
                     item {
                         LoginStateMessage(state)
+                    }
+                    if (state is LoginState.HighQualityAuthorization) {
+                        item {
+                            HighQualityAuthorizationCard(
+                                onContinue = onContinueWithStandardSession,
+                                onAuthorize = onAuthorizeHighQuality
+                            )
+                        }
                     }
                     item {
                         when (selectedMethod) {
@@ -302,6 +314,40 @@ private fun LoginStateMessage(state: LoginState, modifier: Modifier = Modifier) 
             color = MaterialTheme.colorScheme.onErrorContainer,
             modifier = Modifier.padding(16.dp)
         )
+    }
+}
+
+@Composable
+private fun HighQualityAuthorizationCard(
+    onContinue: () -> Unit,
+    onAuthorize: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "基础登录已完成",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Text(
+                text = "当前登录未返回高画质播放凭据。扫码可补充 1080P60、4K、HDR 等画质所需授权。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Button(onClick = onAuthorize, modifier = Modifier.fillMaxWidth()) {
+                Text("扫码授权高画质")
+            }
+            OutlinedButton(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
+                Text("稍后使用")
+            }
+        }
     }
 }
 

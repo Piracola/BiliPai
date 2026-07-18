@@ -1692,9 +1692,10 @@ object VideoRepository {
             return null
         }
         
-        com.android.purebilibili.core.util.Logger.d("VideoRepo", " fetchPlayUrlWithAccessToken: bvid=$bvid, qn=$qn, accessToken=${accessToken.take(10)}..., retry=$allowRetry")
+        com.android.purebilibili.core.util.Logger.d("VideoRepo", " fetchPlayUrlWithAccessToken: bvid=$bvid, qn=$qn, retry=$allowRetry")
         
-        //  [Fix] Must use TV appkey because access_token was obtained via TV login
+        val tokenPlatform = com.android.purebilibili.core.store.TokenManager.accessTokenPlatformCache
+        val usesAndroidToken = tokenPlatform == com.android.purebilibili.core.store.TokenManager.ACCESS_TOKEN_PLATFORM_ANDROID
         val params = mapOf(
             "bvid" to bvid,
             "cid" to cid.toString(),
@@ -1703,10 +1704,10 @@ object VideoRepository {
             "fnver" to "0",
             "fourk" to "1",
             "access_key" to accessToken,
-            "appkey" to AppSignUtils.TV_APP_KEY,
+            "appkey" to if (usesAndroidToken) AppSignUtils.ANDROID_APP_KEY else AppSignUtils.TV_APP_KEY,
             "ts" to AppSignUtils.getTimestamp().toString(),
             "platform" to "android",
-            "mobi_app" to "android_tv_yst",
+            "mobi_app" to if (usesAndroidToken) "android" else "android_tv_yst",
             "device" to "android"
         ).toMutableMap()
         
@@ -1715,7 +1716,11 @@ object VideoRepository {
            params["lang"] = audioLang
         }
         
-        val signedParams = AppSignUtils.signForTvLogin(params)
+        val signedParams = if (usesAndroidToken) {
+            AppSignUtils.signForAndroidApi(params)
+        } else {
+            AppSignUtils.signForTvLogin(params)
+        }
         
         try {
             val response = api.getPlayUrlApp(signedParams)

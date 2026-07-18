@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.login
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.math.roundToInt
 
 class LoginPhonePolicyTest {
 
@@ -28,9 +29,8 @@ class LoginPhonePolicyTest {
             density = 3f
         )
 
-        assertTrue(spec.widthPx > 0)
-        assertTrue(spec.heightPx >= 900)
-        assertTrue(spec.heightPx <= (2400 * 0.92f).toInt())
+        assertEquals((1080 * 0.96f).roundToInt(), spec.widthPx)
+        assertEquals((2400 * 0.88f).roundToInt(), spec.heightPx)
         assertEquals(0.42f, spec.dimAmount)
     }
 }

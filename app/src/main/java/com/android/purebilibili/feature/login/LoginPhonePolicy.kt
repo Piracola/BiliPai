@@ -1,6 +1,5 @@
 package com.android.purebilibili.feature.login
 
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 data class PhoneRegion(
@@ -48,14 +47,8 @@ fun resolveCaptchaDialogLayoutPolicy(
     screenHeightPx: Int,
     density: Float
 ): CaptchaDialogLayoutPolicy {
-    val maxWidthPx = (420f * density).roundToInt()
-    val widthPx = min((screenWidthPx * 0.92f).roundToInt(), maxWidthPx).coerceAtLeast(1)
-
-    val minHeightPx = (360f * density).roundToInt()
-    val maxHeightPx = (screenHeightPx * 0.92f).roundToInt().coerceAtLeast(1)
-    val preferredHeightPx = (screenHeightPx * 0.62f).roundToInt()
-    val lowerBound = min(minHeightPx, maxHeightPx)
-    val heightPx = preferredHeightPx.coerceIn(lowerBound, maxHeightPx)
+    val widthPx = (screenWidthPx * 0.96f).roundToInt().coerceAtLeast(1)
+    val heightPx = (screenHeightPx * 0.88f).roundToInt().coerceAtLeast(1)
 
     return CaptchaDialogLayoutPolicy(
         widthPx = widthPx,
@@ -63,4 +56,3 @@ fun resolveCaptchaDialogLayoutPolicy(
         dimAmount = 0.42f
     )
 }
-

@@ -2,7 +2,7 @@ package com.android.purebilibili.feature.login
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
+import android.app.Dialog
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -32,7 +32,7 @@ class CaptchaManager(private val activity: Activity) {
     }
     
     private var webView: WebView? = null
-    private var dialog: AlertDialog? = null
+    private var dialog: Dialog? = null
     
     /**
      * 初始化并启动极验验证
@@ -82,7 +82,7 @@ class CaptchaManager(private val activity: Activity) {
                 addJavascriptInterface(object {
                     @JavascriptInterface
                     fun onCaptchaSuccess(validate: String, seccode: String, newChallenge: String) {
-                        Logger.d(TAG, "Captcha success via JS: validate=$validate, challenge=$newChallenge")
+                        Logger.d(TAG, "Captcha success via JS")
                         activity.runOnUiThread {
                             dialog?.dismiss()
                             //  使用验证后返回的新 challenge
@@ -120,13 +120,12 @@ class CaptchaManager(private val activity: Activity) {
                 null
             )
             
-            // 显示对话框 - 居中卡片样式，避免全屏空白
-            dialog = AlertDialog.Builder(activity)
-                .setView(webView)
-                .setOnCancelListener {
-                    onCancel()
-                }
-                .create()
+            dialog = Dialog(activity).apply {
+                requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+                setContentView(requireNotNull(webView))
+                setCanceledOnTouchOutside(true)
+                setOnCancelListener { onCancel() }
+            }
             
             dialog?.show()
             
@@ -139,6 +138,7 @@ class CaptchaManager(private val activity: Activity) {
                 setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                 setGravity(Gravity.CENTER)
                 setLayout(policy.widthPx, policy.heightPx)
+                decorView.setPadding(0, 0, 0, 0)
                 setDimAmount(policy.dimAmount)
                 setSoftInputMode(
                     WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN or
@@ -179,20 +179,23 @@ class CaptchaManager(private val activity: Activity) {
         html, body {
             width: 100%;
             min-height: 100%;
-            height: 100%;
             background: ${pageBg};
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
+        }
+        body {
+            padding: 16px 8px;
+            overflow-y: auto;
         }
         .container {
-            width: min(100%, 392px);
+            width: min(100%, 640px);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 16px 14px 18px;
+            padding: 24px 16px;
             background: ${cardBg};
             border-radius: 20px;
             border: 1px solid ${borderColor};
@@ -206,10 +209,10 @@ class CaptchaManager(private val activity: Activity) {
         }
         #captcha-container {
             width: 100%;
-            max-width: 360px;
+            max-width: 600px;
             background: ${panelBg};
             border-radius: 14px;
-            padding: 12px;
+            padding: 16px;
             border: 1px solid ${borderColor};
         }
         .loading {

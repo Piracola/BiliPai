@@ -80,7 +80,17 @@ data class LoginData(
     @SerialName("timestamp")
     val timestamp: Long = 0,
     @SerialName("cookie_info")
-    val cookieInfo: CookieInfo? = null
+    val cookieInfo: CookieInfo? = null,
+    @SerialName("token_info")
+    val tokenInfo: LoginTokenInfo? = null
+)
+
+@Serializable
+data class LoginTokenInfo(
+    @SerialName("access_token")
+    val accessToken: String = "",
+    @SerialName("refresh_token")
+    val refreshToken: String = ""
 )
 
 @Serializable
