@@ -73,12 +73,17 @@ class BiliPaiPredictiveBackAnimationPolicyTest {
     }
 
     @Test
-    fun classicCardRoute_defaultStyle_delegatesToNavEngineDefaults() {
-        val handler = resolveBiliPaiPredictiveBackAnimationHandler(
-            routeTransition = BiliPaiNavRouteTransition.CLASSIC_CARD,
-            style = BiliPaiPredictiveBackAnimationStyle.DEFAULT,
+    fun defaultPredictivePop_keepsTargetPageFullScreen() {
+        val source = defaultPredictiveBackSource()
+        val function = source.substringAfter(
+            "override fun AnimatedContentTransitionScope<Scene<BiliPaiNavKey>>.onPredictivePopTransitionSpec"
+        ).substringBefore(
+            "override fun AnimatedContentTransitionScope<Scene<BiliPaiNavKey>>.onPopTransitionSpec"
         )
-        assertTrue(handler is BiliPaiDefaultPredictiveBackAnimation)
+
+        assertTrue(function.contains("targetContentEnter = EnterTransition.None"))
+        assertTrue(function.contains("initialContentExit = slideOutHorizontally"))
+        assertFalse(function.contains("defaultPredictivePopTransitionSpec"))
     }
 
     @Test
@@ -194,6 +199,13 @@ class BiliPaiPredictiveBackAnimationPolicyTest {
         return listOf(
             File("app/src/main/java/com/android/purebilibili/navigation3/predictiveback/BiliPaiSharedElementPredictiveBackAnimation.kt"),
             File("src/main/java/com/android/purebilibili/navigation3/predictiveback/BiliPaiSharedElementPredictiveBackAnimation.kt")
+        ).first { it.exists() }.readText()
+    }
+
+    private fun defaultPredictiveBackSource(): String {
+        return listOf(
+            File("app/src/main/java/com/android/purebilibili/navigation3/predictiveback/BiliPaiDefaultPredictiveBackAnimation.kt"),
+            File("src/main/java/com/android/purebilibili/navigation3/predictiveback/BiliPaiDefaultPredictiveBackAnimation.kt")
         ).first { it.exists() }.readText()
     }
 
