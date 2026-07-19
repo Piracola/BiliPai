@@ -602,19 +602,23 @@ fun HomeScreen(
             return@LaunchedEffect
         }
         val count = refreshNewItemsCount ?: return@LaunchedEffect
-        if (currentCategory == HomeCategory.RECOMMEND && count > 0) {
-            val recommendGridState = gridStates[HomeCategory.RECOMMEND]
-            if (recommendGridState != null && shouldResetToTopAfterIncrementalRefresh(
+        if (count > 0) {
+            val targetGridState = when (currentCategory) {
+                HomeCategory.RECOMMEND -> gridStates[HomeCategory.RECOMMEND]
+                HomeCategory.FOLLOW -> gridStates[HomeCategory.FOLLOW]
+                else -> null
+            }
+            if (targetGridState != null && shouldResetToTopAfterIncrementalRefresh(
                     currentCategory = currentCategory,
                     newItemsCount = count,
                     isRefreshing = isRefreshing,
-                    firstVisibleItemIndex = recommendGridState.firstVisibleItemIndex,
-                    firstVisibleItemScrollOffset = recommendGridState.firstVisibleItemScrollOffset
+                    firstVisibleItemIndex = targetGridState.firstVisibleItemIndex,
+                    firstVisibleItemScrollOffset = targetGridState.firstVisibleItemScrollOffset
                 )
             ) {
                 // 等 PullToRefresh 释放手势后再回顶，避免在手势临界点抢占滚动。
                 yield()
-                recommendGridState.scrollToItem(0)
+                targetGridState.scrollToItem(0)
             }
         }
         refreshDeltaTipText = if (count > 0) "新增 $count 条内容" else "暂无新内容"
@@ -1499,11 +1503,7 @@ fun HomeScreen(
                         AdaptivePullToRefreshBox(
                             isRefreshing = isRefreshing && currentCategory == category,
                             onRefresh = {
-                                if (category == HomeCategory.FOLLOW) {
-                                    viewModel.refresh(category)
-                                } else {
-                                    viewModel.refresh()
-                                }
+                                viewModel.refresh(category)
                             },
                             state = pullRefreshState,
                             contentPadding = if (

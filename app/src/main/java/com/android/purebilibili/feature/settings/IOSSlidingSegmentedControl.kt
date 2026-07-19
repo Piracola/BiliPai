@@ -46,14 +46,35 @@ import top.yukonga.miuix.kmp.basic.TabRowDefaults as MiuixTabRowDefaults
 internal fun resolveMd3SegmentedLabelFontSizeSp(
     optionCount: Int,
     longestLabelLength: Int
+): Float = resolveSlidingSegmentedLabelFontSizeSp(
+    optionCount = optionCount,
+    longestLabelLength = longestLabelLength,
+)
+
+/**
+ * 设置页胶囊共用字号：选项多/文案长时下调，避免三套主题都出现省略号。
+ */
+internal fun resolveSlidingSegmentedLabelFontSizeSp(
+    optionCount: Int,
+    longestLabelLength: Int,
 ): Float {
     return when {
-        optionCount >= 5 -> 13f
-        optionCount >= 4 && longestLabelLength >= 6 -> 14f
-        optionCount >= 4 -> 15f
-        longestLabelLength >= 8 -> 14f
-        else -> 16f
+        optionCount >= 5 -> 12f
+        optionCount >= 4 && longestLabelLength >= 3 -> 12f
+        optionCount >= 4 -> 13f
+        optionCount >= 3 && longestLabelLength >= 4 -> 13f
+        longestLabelLength >= 7 -> 13f
+        longestLabelLength >= 5 -> 14f
+        else -> 15f
     }
+}
+
+/** 设置页胶囊始终拉满行宽；固定槽宽会裁切中文长标签。 */
+internal fun shouldFillMaxWidthSlidingSegmentedControl(
+    optionCount: Int,
+    longestLabelLength: Int,
+): Boolean {
+    return optionCount >= 2 || longestLabelLength >= 1
 }
 
 internal data class Md3SegmentedControlColorTokens(
@@ -90,14 +111,18 @@ internal fun resolveIosSlidingSegmentedControlChrome(
 
 internal fun resolveIosSlidingSegmentedControlRenderPolicy(
     itemCount: Int,
-    hasExternalBackdrop: Boolean
+    hasExternalBackdrop: Boolean,
+    longestLabelLength: Int = 0,
 ): IosSlidingSegmentedControlRenderPolicy {
     val compactChrome = resolveCompactCapsuleChromeSpec(UiPreset.IOS, AndroidNativeVariant.MATERIAL3)
     return IosSlidingSegmentedControlRenderPolicy(
         itemWidthDp = if (itemCount >= 4) 56 else 66,
         heightDp = compactChrome.primaryHeightDp,
         indicatorHeightDp = 30,
-        labelFontSizeSp = 13,
+        labelFontSizeSp = resolveSlidingSegmentedLabelFontSizeSp(
+            optionCount = itemCount,
+            longestLabelLength = longestLabelLength,
+        ).toInt(),
         liquidGlassEffectsEnabled = hasExternalBackdrop,
         tapPressRefractionEnabled = false
     )
@@ -282,7 +307,6 @@ private fun <T> Md3SegmentedControl(
                 selectedValue = selectedValue,
                 enabled = enabled,
                 colorTokens = colorTokens,
-                pillCornerRadius = pillCornerRadius,
                 modifier = modifier,
                 onSelectionChange = onSelectionChange
             )
@@ -340,7 +364,6 @@ private fun <T> MaterialMd3SegmentedControl(
     selectedValue: T,
     enabled: Boolean,
     colorTokens: Md3SegmentedControlColorTokens,
-    pillCornerRadius: Dp,
     modifier: Modifier = Modifier,
     onSelectionChange: (T) -> Unit
 ) {
@@ -353,48 +376,48 @@ private fun <T> MaterialMd3SegmentedControl(
             longestLabelLength = longestLabelLength
         ).sp
     }
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .adaptiveSquircleBackground(
-                color = colorTokens.outerContainerColor,
-                cornerRadius = pillCornerRadius
-            )
-            .padding(4.dp)
+    // 使用 MD3 规范 SegmentedButton：描边分段 + 选中填充，不再套一层 iOS 式外胶囊。
+    SingleChoiceSegmentedButtonRow(
+        modifier = modifier.fillMaxWidth()
     ) {
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            options.forEachIndexed { index, option ->
-                SegmentedButton(
-                    selected = option.value == selectedValue,
-                    onClick = { onSelectionChange(option.value) },
-                    enabled = enabled,
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = options.size
-                    ),
-                    colors = SegmentedButtonDefaults.colors(
-                        activeContainerColor = colorTokens.activeContainerColor,
-                        activeContentColor = colorTokens.activeContentColor,
-                        inactiveContainerColor = Color.Transparent,
-                        inactiveContentColor = colorTokens.inactiveContentColor,
-                        disabledActiveContainerColor = colorTokens.activeContainerColor.copy(alpha = 0.35f),
-                        disabledActiveContentColor = colorTokens.activeContentColor.copy(alpha = 0.55f),
-                        disabledInactiveContainerColor = Color.Transparent,
-                        disabledInactiveContentColor = colorTokens.inactiveContentColor.copy(alpha = 0.45f)
-                    ),
-                    modifier = Modifier.weight(1f),
-                    icon = {}
-                ) {
-                    Text(
-                        text = option.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelLarge.copy(fontSize = labelFontSize),
-                        fontWeight = FontWeight.SemiBold
-                    )
+        options.forEachIndexed { index, option ->
+            val selected = option.value == selectedValue
+            SegmentedButton(
+                selected = selected,
+                onClick = { onSelectionChange(option.value) },
+                enabled = enabled,
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = options.size
+                ),
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = colorTokens.activeContainerColor,
+                    activeContentColor = colorTokens.activeContentColor,
+                    inactiveContainerColor = Color.Transparent,
+                    inactiveContentColor = colorTokens.inactiveContentColor,
+                    disabledActiveContainerColor = colorTokens.activeContainerColor.copy(alpha = 0.35f),
+                    disabledActiveContentColor = colorTokens.activeContentColor.copy(alpha = 0.55f),
+                    disabledInactiveContainerColor = Color.Transparent,
+                    disabledInactiveContentColor = colorTokens.inactiveContentColor.copy(alpha = 0.45f)
+                ),
+                border = SegmentedButtonDefaults.borderStroke(
+                    color = MaterialTheme.colorScheme.outline
+                ),
+                modifier = Modifier.weight(1f),
+                icon = {
+                    // 选项较多时隐藏勾选图标，把横向空间留给标签，避免再被截断。
+                    if (options.size <= 3) {
+                        SegmentedButtonDefaults.Icon(active = selected)
+                    }
                 }
+            ) {
+                Text(
+                    text = option.label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = labelFontSize),
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
@@ -417,19 +440,18 @@ private fun <T> IOSSlidingSegmentedControlImpl(
     onSelectionChange: (T) -> Unit
 ) {
     val selectedIndex = resolveSelectionIndex(options = options, selectedValue = selectedValue)
+    val longestLabelLength = options.maxOfOrNull { it.label.length } ?: 0
     val renderPolicy = resolveIosSlidingSegmentedControlRenderPolicy(
         itemCount = options.size,
-        hasExternalBackdrop = backdrop != null
+        hasExternalBackdrop = backdrop != null,
+        longestLabelLength = longestLabelLength,
     )
     val usesDefaultBottomBarSizing =
         height == BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_HEIGHT_DP.dp &&
             indicatorHeight == BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_INDICATOR_HEIGHT_DP.dp &&
             labelFontSize == 14.sp
-    val resolvedItemWidth = if (usesDefaultBottomBarSizing) {
-        renderPolicy.itemWidthDp.dp
-    } else {
-        null
-    }
+    // 设置页默认尺寸：始终满宽均分，避免固定 56/66dp 槽宽裁切中英文标签。
+    val resolvedItemWidth = null
     val resolvedHeight = if (usesDefaultBottomBarSizing) renderPolicy.heightDp.dp else height
     val resolvedIndicatorHeight =
         if (usesDefaultBottomBarSizing) renderPolicy.indicatorHeightDp.dp else indicatorHeight
@@ -445,7 +467,7 @@ private fun <T> IOSSlidingSegmentedControlImpl(
                 onSelectionChange(option.value)
             }
         },
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         enabled = enabled,
         itemWidth = resolvedItemWidth,
         height = resolvedHeight,

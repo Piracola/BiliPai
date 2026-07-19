@@ -597,7 +597,9 @@ data class RichTextNode(
     val type: String = "", // TEXT, EMOJI, AT, TOPIC
     val text: String = "",
     val emoji: EmojiInfo? = null,
-    val jump_url: String? = null
+    val jump_url: String? = null,
+    /** AT 节点对应用户 mid；其它节点可能为空 */
+    val rid: String? = null
 )
 
 @Serializable

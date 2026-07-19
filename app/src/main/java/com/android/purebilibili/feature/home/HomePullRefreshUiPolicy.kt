@@ -75,9 +75,13 @@ internal fun shouldResetToTopAfterIncrementalRefresh(
     firstVisibleItemIndex: Int,
     firstVisibleItemScrollOffset: Int
 ): Boolean {
-    if (currentCategory != HomeCategory.RECOMMEND) return false
+    if (currentCategory != HomeCategory.RECOMMEND && currentCategory != HomeCategory.FOLLOW) {
+        return false
+    }
     if ((newItemsCount ?: 0) <= 0) return false
     if (isRefreshing) return false
+    // 关注流新内容是 prepend：LazyGrid 会按 key 锚住旧卡片，即使 index=0 也必须强制回顶。
+    if (currentCategory == HomeCategory.FOLLOW) return true
     return shouldResetToTopOnRefreshStart(
         firstVisibleItemIndex = firstVisibleItemIndex,
         firstVisibleItemScrollOffset = firstVisibleItemScrollOffset

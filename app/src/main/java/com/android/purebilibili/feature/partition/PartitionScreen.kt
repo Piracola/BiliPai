@@ -52,12 +52,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.android.purebilibili.core.ui.AdaptivePullToRefreshBox
 import com.android.purebilibili.core.ui.AdaptiveScaffold
 import com.android.purebilibili.core.ui.AdaptiveTopAppBar
 import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ContainerLevel
 import com.android.purebilibili.core.ui.CutePersonLoadingIndicator
+import com.android.purebilibili.core.util.resolveReplaceRefreshPage
 import com.android.purebilibili.core.ui.animation.DampedDragAnimationState
 import com.android.purebilibili.core.ui.animation.rememberDampedDragAnimationState
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
@@ -204,6 +206,7 @@ data class PartitionFeedUiState(
     val selectedPartition: PartitionCategory = partitionTabs.first(),
     val videos: List<VideoItem> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null
 )
 
@@ -216,7 +219,7 @@ class PartitionFeedViewModel : ViewModel() {
     private var requestGeneration = 0
 
     init {
-        loadSelectedPartition(reset = true)
+        loadSelectedPartition(mode = PartitionLoadMode.RESET)
     }
 
     fun selectPartition(partition: PartitionCategory) {
@@ -228,55 +231,103 @@ class PartitionFeedViewModel : ViewModel() {
                 error = null
             )
         }
-        loadSelectedPartition(reset = true)
+        loadSelectedPartition(mode = PartitionLoadMode.RESET)
     }
 
     fun loadMore() {
-        loadSelectedPartition(reset = false)
+        loadSelectedPartition(mode = PartitionLoadMode.APPEND)
     }
 
-    private fun loadSelectedPartition(reset: Boolean) {
-        if (_uiState.value.isLoading && !reset) return
-        if (!reset && !hasMore) return
+    fun refresh() {
+        if (_uiState.value.isRefreshing) return
+        loadSelectedPartition(mode = PartitionLoadMode.REPLACE_REFRESH)
+    }
 
-        if (reset) {
-            currentPage = 1
-            hasMore = true
+    private fun loadSelectedPartition(mode: PartitionLoadMode) {
+        val isRefresh = mode == PartitionLoadMode.REPLACE_REFRESH
+        val isReset = mode == PartitionLoadMode.RESET
+        if (_uiState.value.isLoading && !isReset && !isRefresh) return
+        if (mode == PartitionLoadMode.APPEND && !hasMore) return
+
+        val pageToFetch = when (mode) {
+            PartitionLoadMode.RESET -> 1
+            PartitionLoadMode.APPEND -> currentPage
+            PartitionLoadMode.REPLACE_REFRESH -> resolveReplaceRefreshPage(
+                nextLoadPage = currentPage,
+                hasMore = hasMore
+            )
+        }
+        if (isReset || isRefresh) {
+            if (isReset) {
+                currentPage = 1
+                hasMore = true
+            }
             requestGeneration++
         }
         val generation = requestGeneration
         val partition = _uiState.value.selectedPartition
+        val replaceList = isReset || isRefresh
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = !isRefresh,
+                    isRefreshing = isRefresh,
+                    error = null
+                )
+            }
             val result = if (partition.id == 0) {
-                VideoRepository.getPopularVideos(page = currentPage)
+                VideoRepository.getPopularVideos(page = pageToFetch)
             } else {
-                VideoRepository.getRegionVideos(tid = partition.id, page = currentPage)
+                VideoRepository.getRegionVideos(tid = partition.id, page = pageToFetch)
             }
             if (generation != requestGeneration) return@launch
 
             result
                 .onSuccess { newVideos ->
                     hasMore = newVideos.isNotEmpty()
+                    currentPage = if (newVideos.isNotEmpty()) {
+                        pageToFetch + 1
+                    } else if (isRefresh) {
+                        1
+                    } else {
+                        currentPage
+                    }
                     _uiState.update { state ->
+                        val nextVideos = when {
+                            isRefresh && newVideos.isEmpty() -> state.videos
+                            replaceList -> newVideos
+                            else -> state.videos + newVideos
+                        }
                         state.copy(
-                            videos = if (reset) newVideos else state.videos + newVideos,
-                            isLoading = false
+                            videos = nextVideos,
+                            isLoading = false,
+                            isRefreshing = false,
+                            error = if (nextVideos.isEmpty()) {
+                                if (isRefresh || isReset) "没有更多内容了" else state.error
+                            } else {
+                                null
+                            }
                         )
                     }
-                    if (newVideos.isNotEmpty()) currentPage++
                 }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             error = error.message ?: "加载失败"
                         )
                     }
                 }
         }
     }
+}
+
+private enum class PartitionLoadMode {
+    RESET,
+    APPEND,
+    REPLACE_REFRESH
 }
 
 /**
@@ -426,20 +477,26 @@ fun PartitionContent(
                 }
             )
 
-            PartitionVideoList(
-                state = state,
-                listState = listState,
+            AdaptivePullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = viewModel::refresh,
                 modifier = Modifier
                     .weight(1f)
-                    .graphicsLayer { translationX = sideRailVideoPushPx },
-                contentPadding = PaddingValues(
-                    start = 8.dp,
-                    top = topPadding + 8.dp,
-                    end = endPadding,
-                    bottom = bottomPadding
-                ),
-                onVideoClick = onVideoClick
-            )
+                    .graphicsLayer { translationX = sideRailVideoPushPx }
+            ) {
+                PartitionVideoList(
+                    state = state,
+                    listState = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = topPadding + 8.dp,
+                        end = endPadding,
+                        bottom = bottomPadding
+                    ),
+                    onVideoClick = onVideoClick
+                )
+            }
         }
     }
 }

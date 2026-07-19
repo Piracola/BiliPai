@@ -75,6 +75,182 @@ class HomeRefreshPolicyTest {
     }
 
     @Test
+    fun resolvePagedFeedPageToFetch_advancesOnManualRefreshForRegionStyleFeeds() {
+        assertEquals(
+            1,
+            resolvePagedFeedPageToFetch(
+                isLoadMore = false,
+                isManualRefresh = false,
+                currentPageIndex = 3,
+                advanceOnManualRefresh = true
+            )
+        )
+        assertEquals(
+            4,
+            resolvePagedFeedPageToFetch(
+                isLoadMore = false,
+                isManualRefresh = true,
+                currentPageIndex = 3,
+                advanceOnManualRefresh = true
+            )
+        )
+        assertEquals(
+            1,
+            resolvePagedFeedPageToFetch(
+                isLoadMore = false,
+                isManualRefresh = true,
+                currentPageIndex = 3,
+                advanceOnManualRefresh = false
+            )
+        )
+        assertEquals(
+            4,
+            resolvePagedFeedPageToFetch(
+                isLoadMore = true,
+                isManualRefresh = false,
+                currentPageIndex = 3,
+                advanceOnManualRefresh = true
+            )
+        )
+    }
+
+    @Test
+    fun shouldAdvancePagedFeedOnManualRefresh_forRegionAndPopularComprehensiveOnly() {
+        assertTrue(
+            shouldAdvancePagedFeedOnManualRefresh(
+                category = HomeCategory.GAME,
+                popularSubCategory = PopularSubCategory.COMPREHENSIVE
+            )
+        )
+        assertTrue(
+            shouldAdvancePagedFeedOnManualRefresh(
+                category = HomeCategory.POPULAR,
+                popularSubCategory = PopularSubCategory.COMPREHENSIVE
+            )
+        )
+        assertFalse(
+            shouldAdvancePagedFeedOnManualRefresh(
+                category = HomeCategory.POPULAR,
+                popularSubCategory = PopularSubCategory.RANKING
+            )
+        )
+        assertFalse(
+            shouldAdvancePagedFeedOnManualRefresh(
+                category = HomeCategory.RECOMMEND,
+                popularSubCategory = PopularSubCategory.COMPREHENSIVE
+            )
+        )
+        assertFalse(
+            shouldAdvancePagedFeedOnManualRefresh(
+                category = HomeCategory.FOLLOW,
+                popularSubCategory = PopularSubCategory.COMPREHENSIVE
+            )
+        )
+    }
+
+    @Test
+    fun resolvePagedFeedPageIndexAfterFetch_keepsAdvancedPageAndWrapsOnEmpty() {
+        assertEquals(
+            2,
+            resolvePagedFeedPageIndexAfterFetch(
+                isLoadMore = false,
+                isManualRefresh = true,
+                advanceOnManualRefresh = true,
+                pageToFetch = 2,
+                incomingCount = 8,
+                previousPageIndex = 1
+            )
+        )
+        assertEquals(
+            0,
+            resolvePagedFeedPageIndexAfterFetch(
+                isLoadMore = false,
+                isManualRefresh = true,
+                advanceOnManualRefresh = true,
+                pageToFetch = 5,
+                incomingCount = 0,
+                previousPageIndex = 4
+            )
+        )
+        assertEquals(
+            1,
+            resolvePagedFeedPageIndexAfterFetch(
+                isLoadMore = false,
+                isManualRefresh = true,
+                advanceOnManualRefresh = false,
+                pageToFetch = 1,
+                incomingCount = 8,
+                previousPageIndex = 3
+            )
+        )
+        assertEquals(
+            4,
+            resolvePagedFeedPageIndexAfterFetch(
+                isLoadMore = true,
+                isManualRefresh = false,
+                advanceOnManualRefresh = true,
+                pageToFetch = 4,
+                incomingCount = 8,
+                previousPageIndex = 3
+            )
+        )
+    }
+
+    @Test
+    fun shouldFallbackFollowIncrementalRefreshToFull_whenManualRefreshAddsNothing() {
+        assertTrue(
+            shouldFallbackFollowIncrementalRefreshToFull(
+                isManualRefresh = true,
+                isLoadMore = false,
+                incrementalRefreshEnabled = true,
+                addedCount = 0
+            )
+        )
+        assertFalse(
+            shouldFallbackFollowIncrementalRefreshToFull(
+                isManualRefresh = true,
+                isLoadMore = false,
+                incrementalRefreshEnabled = true,
+                addedCount = 3
+            )
+        )
+        assertFalse(
+            shouldFallbackFollowIncrementalRefreshToFull(
+                isManualRefresh = true,
+                isLoadMore = false,
+                incrementalRefreshEnabled = false,
+                addedCount = 0
+            )
+        )
+        assertFalse(
+            shouldFallbackFollowIncrementalRefreshToFull(
+                isManualRefresh = false,
+                isLoadMore = false,
+                incrementalRefreshEnabled = true,
+                addedCount = 0
+            )
+        )
+    }
+
+    @Test
+    fun resolveFollowRefreshAddedCount_countsOnlyKeysMissingFromPreviousList() {
+        assertEquals(
+            2,
+            resolveFollowRefreshAddedCount(
+                previousKeys = setOf("dyn:1", "dyn:2"),
+                refreshedKeys = listOf("dyn:3", "dyn:1", "dyn:4")
+            )
+        )
+        assertEquals(
+            0,
+            resolveFollowRefreshAddedCount(
+                previousKeys = setOf("dyn:1", "dyn:2"),
+                refreshedKeys = listOf("dyn:1", "dyn:2")
+            )
+        )
+    }
+
+    @Test
     fun shouldAdvanceRecommendFeedRequestIndex_whenRecommendRequestReturnedAnyValidVideo() {
         assertTrue(
             shouldAdvanceRecommendFeedRequestIndex(
@@ -134,6 +310,10 @@ class HomeRefreshPolicyTest {
             "新卡片到达后再处理回顶和新增提示"
         )
         assertTrue(source.indexOf("shouldResetToTopAfterIncrementalRefresh(") > source.indexOf("refreshNewItemsKey"))
+        assertTrue(
+            source.contains("HomeCategory.FOLLOW -> gridStates[HomeCategory.FOLLOW]"),
+            "关注流新增内容后也必须回顶，否则 prepend 会被 LazyGrid key 锚住旧卡片"
+        )
     }
 
     @Test

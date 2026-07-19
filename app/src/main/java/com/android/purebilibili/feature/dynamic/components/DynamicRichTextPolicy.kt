@@ -13,6 +13,7 @@ import com.android.purebilibili.data.model.response.DynamicDesc
 import com.android.purebilibili.data.model.response.RichTextNode
 
 internal const val DYNAMIC_RICH_TEXT_URL_TAG = "URL"
+internal const val DYNAMIC_RICH_TEXT_USER_TAG = "USER"
 
 internal enum class DynamicRichTextOpenMode {
     IN_APP,
@@ -58,7 +59,10 @@ internal fun resolveDynamicDescForImages(
         }.map { node ->
             node.copy(text = stripDynamicImagePlaceholders(node.text))
         }.filterNot { node ->
-            node.text.isBlank() && node.emoji == null && node.jump_url.isNullOrBlank()
+            node.text.isBlank() &&
+                node.emoji == null &&
+                node.jump_url.isNullOrBlank() &&
+                node.rid.isNullOrBlank()
         }
     )
 }
@@ -138,7 +142,14 @@ private fun AnnotatedString.Builder.appendDynamicRichTextNode(
             )
         }
 
-        nodeType == "AT" || nodeType == "TOPIC" -> {
+        nodeType == "AT" -> {
+            appendDynamicRichTextAtMention(
+                node = node,
+                primaryColor = primaryColor
+            )
+        }
+
+        nodeType == "TOPIC" -> {
             withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
                 append(node.text)
             }
@@ -152,6 +163,29 @@ private fun AnnotatedString.Builder.appendDynamicRichTextNode(
                 )
             }
         }
+    }
+}
+
+internal fun resolveDynamicRichTextUserMid(node: RichTextNode): Long? {
+    return node.rid
+        ?.trim()
+        ?.toLongOrNull()
+        ?.takeIf { it > 0L }
+}
+
+private fun AnnotatedString.Builder.appendDynamicRichTextAtMention(
+    node: RichTextNode,
+    primaryColor: Color
+) {
+    val mid = resolveDynamicRichTextUserMid(node)
+    if (mid != null) {
+        pushStringAnnotation(tag = DYNAMIC_RICH_TEXT_USER_TAG, annotation = mid.toString())
+    }
+    withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
+        append(node.text)
+    }
+    if (mid != null) {
+        pop()
     }
 }
 

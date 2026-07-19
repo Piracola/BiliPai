@@ -125,6 +125,19 @@ class HomePullRefreshUiPolicyTest {
     }
 
     @Test
+    fun `shouldResetToTopAfterIncrementalRefresh returns true for follow even at top`() {
+        assertTrue(
+            shouldResetToTopAfterIncrementalRefresh(
+                currentCategory = HomeCategory.FOLLOW,
+                newItemsCount = 2,
+                isRefreshing = false,
+                firstVisibleItemIndex = 0,
+                firstVisibleItemScrollOffset = 0
+            )
+        )
+    }
+
+    @Test
     fun `shouldResetToTopAfterIncrementalRefresh returns false while refreshing`() {
         assertFalse(
             shouldResetToTopAfterIncrementalRefresh(

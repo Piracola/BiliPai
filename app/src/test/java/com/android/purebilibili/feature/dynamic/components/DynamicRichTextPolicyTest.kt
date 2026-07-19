@@ -184,4 +184,70 @@ class DynamicRichTextPolicyTest {
 
         assertNull(mode)
     }
+
+    @Test
+    fun buildDynamicRichTextAnnotatedString_marksAtMentionWithUserAnnotation() {
+        val desc = DynamicDesc(
+            text = "@影视飓风 你好",
+            rich_text_nodes = listOf(
+                RichTextNode(
+                    type = "RICH_TEXT_NODE_TYPE_AT",
+                    text = "@影视飓风",
+                    rid = "946974"
+                ),
+                RichTextNode(type = "TEXT", text = " 你好")
+            )
+        )
+
+        val annotated = buildDynamicRichTextAnnotatedString(
+            desc = desc,
+            primaryColor = Color.Blue,
+            textColor = Color.Black
+        )
+
+        val annotation = annotated.getStringAnnotations(
+            tag = DYNAMIC_RICH_TEXT_USER_TAG,
+            start = 0,
+            end = annotated.length
+        ).firstOrNull()
+
+        assertNotNull(annotation)
+        assertEquals("946974", annotation.item)
+        assertEquals(0, annotation.start)
+        assertEquals("@影视飓风".length, annotation.end)
+    }
+
+    @Test
+    fun buildDynamicRichTextAnnotatedString_skipsUserAnnotationWhenAtRidMissing() {
+        val desc = DynamicDesc(
+            rich_text_nodes = listOf(
+                RichTextNode(type = "AT", text = "@匿名用户")
+            )
+        )
+
+        val annotated = buildDynamicRichTextAnnotatedString(
+            desc = desc,
+            primaryColor = Color.Blue,
+            textColor = Color.Black
+        )
+
+        assertTrue(
+            annotated.getStringAnnotations(
+                tag = DYNAMIC_RICH_TEXT_USER_TAG,
+                start = 0,
+                end = annotated.length
+            ).isEmpty()
+        )
+        assertEquals("@匿名用户", annotated.text)
+    }
+
+    @Test
+    fun resolveDynamicRichTextUserMid_parsesPositiveRid() {
+        assertEquals(
+            946974L,
+            resolveDynamicRichTextUserMid(RichTextNode(type = "AT", text = "@UP", rid = "946974"))
+        )
+        assertNull(resolveDynamicRichTextUserMid(RichTextNode(type = "AT", text = "@UP", rid = "0")))
+        assertNull(resolveDynamicRichTextUserMid(RichTextNode(type = "AT", text = "@UP")))
+    }
 }

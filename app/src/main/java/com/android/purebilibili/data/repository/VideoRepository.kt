@@ -1679,8 +1679,13 @@ object VideoRepository {
     fun init(context: android.content.Context) {
         applicationContext = context.applicationContext
         AppScope.ioScope.launch {
-            runCatching { ensureBuvid3FromSpi() }
-            runCatching { getWbiKeys() }
+            val feedApiType = SettingsManager.getFeedApiTypeSync(context)
+            // WEB 推荐流不依赖 buvid 预热；冷启动时跳过 SPI，把带宽留给首页 feed。
+            if (shouldPrimeBuvidForHomePreload(feedApiType)) {
+                runCatching { ensureBuvid3FromSpi() }
+            }
+            // 使用共享 WbiKeyManager（磁盘恢复已在启动任务中完成），避免再走私有 nav 链路。
+            runCatching { WbiKeyManager.getWbiKeys() }
         }
     }
 

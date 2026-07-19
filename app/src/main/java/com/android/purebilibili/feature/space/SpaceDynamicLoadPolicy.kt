@@ -92,7 +92,9 @@ private fun SpaceDynamicRichText.toDynamicRichTextNode(): RichTextNode {
                 size = emoji.size,
                 text = emoji.text
             )
-        }
+        },
+        jump_url = jump_url,
+        rid = rid
     )
 }
 

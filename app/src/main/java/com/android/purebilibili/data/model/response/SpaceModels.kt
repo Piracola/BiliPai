@@ -592,7 +592,10 @@ data class SpaceDynamicRichText(
     val type: String = "",  // RICH_TEXT_NODE_TYPE_TEXT, RICH_TEXT_NODE_TYPE_EMOJI 等
     val text: String = "",
     val orig_text: String = "",
-    val emoji: SpaceDynamicEmoji? = null
+    val emoji: SpaceDynamicEmoji? = null,
+    val jump_url: String? = null,
+    /** AT 节点对应用户 mid */
+    val rid: String? = null
 )
 
 @kotlinx.serialization.Serializable

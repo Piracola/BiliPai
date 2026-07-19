@@ -63,10 +63,13 @@ class HomeFeedScrollStatePersistenceStructureTest {
         val pagerPageSource = source
             .substringAfter("HorizontalPager(")
             .substringBefore("// Close HorizontalPager lambda")
+        val onRefreshSource = pagerPageSource
+            .substringAfter("onRefresh = {")
+            .substringBefore("},")
 
-        assertTrue(pagerPageSource.contains("if (category == HomeCategory.FOLLOW)"))
-        assertTrue(pagerPageSource.contains("viewModel.refresh(category)"))
-        assertTrue(pagerPageSource.contains("viewModel.refresh()"))
+        assertTrue(onRefreshSource.contains("viewModel.refresh(category)"))
+        assertFalse(onRefreshSource.contains("viewModel.refresh()"))
+        assertFalse(onRefreshSource.contains("if (category == HomeCategory.FOLLOW)"))
     }
 
     @Test

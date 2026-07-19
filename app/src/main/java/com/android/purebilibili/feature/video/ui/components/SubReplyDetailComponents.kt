@@ -123,6 +123,34 @@ internal data class SubReplyDetailListScrollResetKey(
     val firstConversationReplyId: Long?
 )
 
+internal data class SubReplyDetailSavedScrollPosition(
+    val index: Int,
+    val scrollOffset: Int,
+)
+
+internal enum class SubReplyDetailScrollRestoreAction {
+    SCROLL_TO_TOP,
+    RESTORE_SAVED,
+}
+
+internal fun resolveSubReplyDetailScrollRestoreAction(
+    previousConversationMode: Boolean?,
+    currentConversationMode: Boolean,
+    hasSavedPosition: Boolean,
+): SubReplyDetailScrollRestoreAction {
+    if (previousConversationMode == true && !currentConversationMode && hasSavedPosition) {
+        return SubReplyDetailScrollRestoreAction.RESTORE_SAVED
+    }
+    return SubReplyDetailScrollRestoreAction.SCROLL_TO_TOP
+}
+
+internal fun shouldSaveSubReplyDetailScrollBeforeConversationEnter(
+    previousConversationMode: Boolean?,
+    currentConversationMode: Boolean,
+): Boolean {
+    return previousConversationMode == false && currentConversationMode
+}
+
 internal data class SubReplyDetailRevealSpec(
     val delayMillis: Int,
     val durationMillis: Int,
@@ -446,6 +474,10 @@ internal fun SubReplyDetailContent(
     val listState = rememberLazyListState()
     var highlightedTargetId by remember(rootReply.rpid) { mutableStateOf(0L) }
     var conversationAnchor by remember(rootReply.rpid) { mutableStateOf<ReplyItem?>(null) }
+    var previousConversationMode by remember(rootReply.rpid) { mutableStateOf<Boolean?>(null) }
+    var savedListScroll by remember(rootReply.rpid) {
+        mutableStateOf<SubReplyDetailSavedScrollPosition?>(null)
+    }
     val visibleReplies = remember(subReplies, conversationAnchor, isConversationMode) {
         val anchor = conversationAnchor
         if (anchor == null || isConversationMode) {
@@ -475,6 +507,12 @@ internal fun SubReplyDetailContent(
             rootReplyId = rootReply.rpid,
             effectiveConversationMode = effectiveConversationMode,
             visibleReplies = visibleReplies
+        )
+    }
+    val captureListScrollForConversation: () -> Unit = {
+        savedListScroll = SubReplyDetailSavedScrollPosition(
+            index = listState.firstVisibleItemIndex,
+            scrollOffset = listState.firstVisibleItemScrollOffset,
         )
     }
     val listScrollMetrics by remember {
@@ -544,7 +582,39 @@ internal fun SubReplyDetailContent(
         if (shouldPrefetchShortList) onLoadMore()
     }
     LaunchedEffect(listScrollResetKey) {
-        listState.scrollToItem(0)
+        val previousMode = previousConversationMode
+        val currentMode = listScrollResetKey.conversationMode
+        when (
+            resolveSubReplyDetailScrollRestoreAction(
+                previousConversationMode = previousMode,
+                currentConversationMode = currentMode,
+                hasSavedPosition = savedListScroll != null,
+            )
+        ) {
+            SubReplyDetailScrollRestoreAction.RESTORE_SAVED -> {
+                val saved = savedListScroll
+                if (saved != null) {
+                    listState.scrollToItem(
+                        index = saved.index,
+                        scrollOffset = saved.scrollOffset,
+                    )
+                } else {
+                    listState.scrollToItem(0)
+                }
+            }
+            SubReplyDetailScrollRestoreAction.SCROLL_TO_TOP -> {
+                if (
+                    shouldSaveSubReplyDetailScrollBeforeConversationEnter(
+                        previousConversationMode = previousMode,
+                        currentConversationMode = currentMode,
+                    ) && savedListScroll == null
+                ) {
+                    captureListScrollForConversation()
+                }
+                listState.scrollToItem(0)
+            }
+        }
+        previousConversationMode = currentMode
     }
     LaunchedEffect(targetReplyId, visibleReplies, isLoading, isEnd) {
         if (targetReplyId <= 0L) {
@@ -753,6 +823,7 @@ internal fun SubReplyDetailContent(
                                 hasConversationHandler = true
                             ),
                             onConversationClick = {
+                                captureListScrollForConversation()
                                 if (onConversationClick != null) {
                                     onConversationClick(item)
                                 } else {

@@ -111,7 +111,7 @@ class PlaybackSettingsSelectionPolicyTest {
     @Test
     fun `md3 segmented labels should shrink for crowded language options`() {
         assertEquals(
-            14f,
+            12f,
             resolveMd3SegmentedLabelFontSizeSp(
                 optionCount = 4,
                 longestLabelLength = "English".length
@@ -119,7 +119,7 @@ class PlaybackSettingsSelectionPolicyTest {
             0.001f
         )
         assertEquals(
-            16f,
+            13f,
             resolveMd3SegmentedLabelFontSizeSp(
                 optionCount = 3,
                 longestLabelLength = "HEVC".length
@@ -135,13 +135,26 @@ class PlaybackSettingsSelectionPolicyTest {
         assertTrue(source.contains("labelFontSize: TextUnit = 14.sp"))
         assertFalse(source.contains("labelFontSize: TextUnit = 12.sp"))
         assertEquals(
-            13f,
+            12f,
             resolveMd3SegmentedLabelFontSizeSp(
                 optionCount = 5,
                 longestLabelLength = "跟随系统".length
             ),
             0.001f
         )
+    }
+
+    @Test
+    fun `material md3 segmented control drops outer capsule shell`() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/settings/IOSSlidingSegmentedControl.kt")
+        val materialBlock = source
+            .substringAfter("private fun <T> MaterialMd3SegmentedControl(")
+            .substringBefore("private fun <T> IOSSlidingSegmentedControlImpl(")
+
+        assertTrue(materialBlock.contains("SingleChoiceSegmentedButtonRow("))
+        assertTrue(materialBlock.contains("SegmentedButtonDefaults.borderStroke("))
+        assertFalse(materialBlock.contains("adaptiveSquircleBackground("))
+        assertFalse(materialBlock.contains("outerContainerColor"))
     }
 
     @Test

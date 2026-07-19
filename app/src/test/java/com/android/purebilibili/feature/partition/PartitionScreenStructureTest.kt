@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.partition
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.android.purebilibili.core.util.resolveReplaceRefreshPage
 import com.android.purebilibili.data.model.response.BangumiType
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -36,6 +37,17 @@ class PartitionScreenStructureTest {
         assertTrue(source.contains("resolvePartitionBangumiType(partition.id)"))
         assertTrue(source.contains("onBangumiClick(bangumiType)"))
         assertFalse(source.contains("LazyVerticalGrid("))
+        assertTrue(source.contains("AdaptivePullToRefreshBox("))
+        assertTrue(source.contains("onRefresh = viewModel::refresh"))
+        assertTrue(source.contains("fun refresh()"))
+        assertTrue(source.contains("resolveReplaceRefreshPage("))
+    }
+
+    @Test
+    fun `partition refresh advances page to surface other videos`() {
+        assertEquals(2, resolveReplaceRefreshPage(nextLoadPage = 2, hasMore = true))
+        assertEquals(1, resolveReplaceRefreshPage(nextLoadPage = 5, hasMore = false))
+        assertEquals(1, resolveReplaceRefreshPage(nextLoadPage = 0, hasMore = true))
     }
 
     @Test

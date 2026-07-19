@@ -1190,8 +1190,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             _uiState.value.categoryStates[currentCategory] ?: CategoryContent()
         }
-        // 获取当前页码 (如果是刷新则为0/1，加载更多则+1)
-        val pageToFetch = if (isLoadMore) currentCategoryState.pageIndex + 1 else 1 // Assuming 1-based pagination for simplicity in general, adjust per API
+        val advanceOnManualRefresh = shouldAdvancePagedFeedOnManualRefresh(
+            category = currentCategory,
+            popularSubCategory = popularSubCategory
+        )
+        // 分区/热门综合：手动刷新翻下一页换一批；其它分类仍回第 1 页
+        val pageToFetch = resolvePagedFeedPageToFetch(
+            isLoadMore = isLoadMore,
+            isManualRefresh = isManualRefresh,
+            currentPageIndex = currentCategoryState.pageIndex,
+            advanceOnManualRefresh = advanceOnManualRefresh
+        )
         val recommendRequestIndex = resolveRecommendFeedRequestIndex(
             isLoadMore = isLoadMore,
             isManualRefresh = isManualRefresh,
@@ -1288,7 +1297,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         liveRooms = emptyList<LiveRoom>().toImmutableList(),
                         isLoading = false,
                         error = null,
-                        pageIndex = if (isLoadMore) oldState.pageIndex + 1 else if (useIncrementalRecommendRefresh) oldState.pageIndex else 1,
+                        pageIndex = if (useIncrementalRecommendRefresh) {
+                            oldState.pageIndex
+                        } else {
+                            resolvePagedFeedPageIndexAfterFetch(
+                                isLoadMore = isLoadMore,
+                                isManualRefresh = isManualRefresh,
+                                advanceOnManualRefresh = advanceOnManualRefresh,
+                                pageToFetch = pageToFetch,
+                                incomingCount = incomingVideos.size,
+                                previousPageIndex = oldState.pageIndex
+                            )
+                        },
                         hasMore = if (currentCategory == HomeCategory.POPULAR) {
                             supportsPopularLoadMore(popularSubCategory)
                         } else {
@@ -1311,7 +1331,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     oldState.copy(
                         isLoading = false,
                         error = if (!isLoadMore && oldState.videos.isEmpty()) "没有更多内容了" else null,
-                        hasMore = false
+                        hasMore = false,
+                        pageIndex = resolvePagedFeedPageIndexAfterFetch(
+                            isLoadMore = isLoadMore,
+                            isManualRefresh = isManualRefresh,
+                            advanceOnManualRefresh = advanceOnManualRefresh,
+                            pageToFetch = pageToFetch,
+                            incomingCount = 0,
+                            previousPageIndex = oldState.pageIndex
+                        )
                     )
                  }
                  if (currentCategory == HomeCategory.POPULAR) {
@@ -1436,7 +1464,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             fetchUserInfo()
         }
         
-        val result = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
+        var result = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
             refresh = !isLoadMore,
             scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
             type = "video",
@@ -1445,54 +1473,25 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         
         if (isLoadMore) delay(100)
         var addedCount = 0
+        val useIncrementalMerge = !isLoadMore && incrementalTimelineRefreshEnabled
         result.onSuccess { items ->
-            //  将 DynamicItem 转换为首页卡片：
-            // - 仅保留可直接跳转的视频动态，避免与“动态”页图文流重复
-            val videos = items.mapNotNull { item ->
-                // Check if author is blocked
-                if ((item.modules.module_author?.mid ?: 0) in blockedMids) return@mapNotNull null
-
-                val archive = item.modules.module_dynamic?.major?.archive ?: return@mapNotNull null
-                if (!shouldIncludeHomeFollowDynamicInVideoFeed(archive.bvid)) {
-                    return@mapNotNull null
-                }
-
-                val resolvedAid = resolveDynamicArchiveAid(
-                    archiveAid = archive.aid,
-                    fallbackId = 0L
-                )
-                com.android.purebilibili.data.model.response.VideoItem(
-                    id = resolvedAid,
-                    bvid = archive.bvid,
-                    dynamicId = item.id_str.trim(),
-                    aid = resolvedAid,
-                    title = archive.title,
-                    pic = archive.cover,
-                    duration = parseDurationText(archive.duration_text),
-                    owner = com.android.purebilibili.data.model.response.Owner(
-                        mid = item.modules.module_author?.mid ?: 0,
-                        name = item.modules.module_author?.name ?: "",
-                        face = item.modules.module_author?.face ?: ""
-                    ),
-                    stat = com.android.purebilibili.data.model.response.Stat(
-                        view = parseStatText(archive.stat.play),
-                        danmaku = parseStatText(archive.stat.danmaku)
-                    )
-                )
-            }
-            
+            val videos = mapHomeFollowDynamicItemsToVideos(items)
             updateCategoryState(HomeCategory.FOLLOW) { oldState ->
                 val oldSize = oldState.videos.size
+                val previousKeys = oldState.videos.map(::videoItemKey).toSet()
                 val mergedVideos = when {
                     isLoadMore -> appendDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
-                    incrementalTimelineRefreshEnabled -> prependDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
+                    useIncrementalMerge -> prependDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
                     else -> videos.toImmutableList()
                 }
                 if (isManualRefresh && !isLoadMore) {
-                    addedCount = if (incrementalTimelineRefreshEnabled) {
+                    addedCount = if (useIncrementalMerge) {
                         (mergedVideos.size - oldSize).coerceAtLeast(0)
                     } else {
-                        videos.size
+                        resolveFollowRefreshAddedCount(
+                            previousKeys = previousKeys,
+                            refreshedKeys = videos.map(::videoItemKey)
+                        )
                     }
                 }
                 oldState.copy(
@@ -1514,7 +1513,79 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+
+        if (shouldFallbackFollowIncrementalRefreshToFull(
+                isManualRefresh = isManualRefresh,
+                isLoadMore = isLoadMore,
+                incrementalRefreshEnabled = incrementalTimelineRefreshEnabled,
+                addedCount = addedCount
+            )
+        ) {
+            // 增量无新内容时回退整表刷新，避免下拉后列表看起来完全没变
+            result = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
+                refresh = true,
+                scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
+                type = "video",
+                incrementalRefresh = false
+            )
+            result.onSuccess { items ->
+                val videos = mapHomeFollowDynamicItemsToVideos(items)
+                updateCategoryState(HomeCategory.FOLLOW) { oldState ->
+                    val previousKeys = oldState.videos.map(::videoItemKey).toSet()
+                    addedCount = resolveFollowRefreshAddedCount(
+                        previousKeys = previousKeys,
+                        refreshedKeys = videos.map(::videoItemKey)
+                    )
+                    oldState.copy(
+                        videos = videos.toImmutableList(),
+                        liveRooms = emptyList<LiveRoom>().toImmutableList(),
+                        isLoading = false,
+                        error = if (videos.isEmpty()) "暂无关注动态，请先关注一些UP主" else null,
+                        hasMore = com.android.purebilibili.data.repository.DynamicRepository.hasMoreData(
+                            scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
+                            type = "video"
+                        )
+                    )
+                }
+            }
+        }
         return addedCount
+    }
+
+    private fun mapHomeFollowDynamicItemsToVideos(
+        items: List<com.android.purebilibili.data.model.response.DynamicItem>
+    ): List<com.android.purebilibili.data.model.response.VideoItem> {
+        return items.mapNotNull { item ->
+            if ((item.modules.module_author?.mid ?: 0) in blockedMids) return@mapNotNull null
+
+            val archive = item.modules.module_dynamic?.major?.archive ?: return@mapNotNull null
+            if (!shouldIncludeHomeFollowDynamicInVideoFeed(archive.bvid)) {
+                return@mapNotNull null
+            }
+
+            val resolvedAid = resolveDynamicArchiveAid(
+                archiveAid = archive.aid,
+                fallbackId = 0L
+            )
+            com.android.purebilibili.data.model.response.VideoItem(
+                id = resolvedAid,
+                bvid = archive.bvid,
+                dynamicId = item.id_str.trim(),
+                aid = resolvedAid,
+                title = archive.title,
+                pic = archive.cover,
+                duration = parseDurationText(archive.duration_text),
+                owner = com.android.purebilibili.data.model.response.Owner(
+                    mid = item.modules.module_author?.mid ?: 0,
+                    name = item.modules.module_author?.name ?: "",
+                    face = item.modules.module_author?.face ?: ""
+                ),
+                stat = com.android.purebilibili.data.model.response.Stat(
+                    view = parseStatText(archive.stat.play),
+                    danmaku = parseStatText(archive.stat.danmaku)
+                )
+            )
+        }
     }
 
     private fun videoItemKey(item: com.android.purebilibili.data.model.response.VideoItem): String {

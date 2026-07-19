@@ -576,4 +576,52 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertTrue(blended != base)
         assertTrue(blended.alpha > 0f)
     }
+
+    @Test
+    fun scaleGapFillKeepsOpaqueGrayFloorSoPredictiveBackEdgesDoNotReadAsWhiteBars() {
+        val lightHeld = resolveVideoCardTransitionScaleGapFillColor(
+            isLightBackground = true,
+            scrimAlpha = 0.11f,
+        )
+        val lightMidGesture = resolveVideoCardTransitionScaleGapFillColor(
+            isLightBackground = true,
+            scrimAlpha = 0.03f,
+        )
+        val darkHeld = resolveVideoCardTransitionScaleGapFillColor(
+            isLightBackground = false,
+            scrimAlpha = 0.22f,
+        )
+
+        assertEquals(1f, lightHeld.alpha)
+        assertEquals(1f, lightMidGesture.alpha)
+        assertTrue(lightHeld.red < 0.92f)
+        assertTrue(lightMidGesture.red < 0.92f)
+        assertEquals(lightHeld, lightMidGesture)
+        assertTrue(darkHeld.red < 0.35f)
+        assertTrue(
+            shouldDrawVideoCardTransitionScaleGapFill(contentScale = 0.96f)
+        )
+        assertFalse(
+            shouldDrawVideoCardTransitionScaleGapFill(contentScale = 1f)
+        )
+    }
+
+    @Test
+    fun navBackdropColorUsesScaleGapFloorDuringLowProgressGesture() {
+        val base = androidx.compose.ui.graphics.Color.White
+        val lowProgress = resolveVideoCardTransitionNavBackdropColor(
+            baseBackgroundColor = base,
+            frame = VideoCardTransitionNavBackdropFrame(
+                scrimAlpha = 0.02f,
+                useLightScrimTint = true,
+            ),
+        )
+        val gapFill = resolveVideoCardTransitionScaleGapFillColor(
+            isLightBackground = true,
+            scrimAlpha = 0.02f,
+        )
+
+        assertEquals(gapFill, lowProgress)
+        assertTrue(lowProgress.red < 0.92f)
+    }
 }

@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.settings
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppearanceThemeSegmentPolicyTest {
@@ -36,6 +37,20 @@ class AppearanceThemeSegmentPolicyTest {
         assertEquals("Standard Black", options[0].label)
         assertEquals(DarkThemeStyle.AMOLED, options[1].value)
         assertEquals("AMOLED Black", options[1].label)
+    }
+
+    @Test
+    fun `resolveAppLanguageSegmentOptions keeps four compact language slots`() {
+        val options = resolveAppLanguageSegmentOptions(
+            followSystemLabel = "系统",
+            simplifiedChineseLabel = "简体",
+            traditionalChineseLabel = "繁體",
+            englishLabel = "EN"
+        )
+
+        assertEquals(4, options.size)
+        assertEquals(listOf("系统", "简体", "繁體", "EN"), options.map { it.label })
+        assertTrue(options.all { it.label.length <= 2 })
     }
 
     @Test

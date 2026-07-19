@@ -282,57 +282,94 @@ fun AppearanceSettingsContent(
     val themeModeFollowSystemLabel = stringResource(R.string.theme_mode_follow_system)
     val themeModeLightLabel = stringResource(R.string.theme_mode_light)
     val themeModeDarkLabel = stringResource(R.string.theme_mode_dark)
+    val themeModeFollowSystemShortLabel = stringResource(R.string.theme_mode_follow_system_short)
+    val themeModeLightShortLabel = stringResource(R.string.theme_mode_light_short)
+    val themeModeDarkShortLabel = stringResource(R.string.theme_mode_dark_short)
     val themeModeOptions = remember(
+        themeModeFollowSystemShortLabel,
+        themeModeLightShortLabel,
+        themeModeDarkShortLabel
+    ) {
+        resolveThemeModeSegmentOptions(
+            followSystemLabel = themeModeFollowSystemShortLabel,
+            lightLabel = themeModeLightShortLabel,
+            darkLabel = themeModeDarkShortLabel
+        )
+    }
+    val selectedThemeModeLabel = remember(
+        state.themeMode,
         themeModeFollowSystemLabel,
         themeModeLightLabel,
         themeModeDarkLabel
     ) {
-        resolveThemeModeSegmentOptions(
-            followSystemLabel = themeModeFollowSystemLabel,
-            lightLabel = themeModeLightLabel,
-            darkLabel = themeModeDarkLabel
-        )
+        when (state.themeMode) {
+            AppThemeMode.FOLLOW_SYSTEM -> themeModeFollowSystemLabel
+            AppThemeMode.LIGHT -> themeModeLightLabel
+            AppThemeMode.DARK -> themeModeDarkLabel
+        }
     }
-    val selectedThemeModeLabel =
-        themeModeOptions.firstOrNull { it.value == state.themeMode }?.label ?: state.themeMode.label
     val darkThemeStyleTitle = stringResource(R.string.appearance_dark_theme_style_title)
     val darkThemeStyleSubtitle = stringResource(R.string.appearance_dark_theme_style_subtitle)
     val darkThemeStyleDefaultLabel = stringResource(R.string.dark_theme_style_default)
     val darkThemeStyleAmoledLabel = stringResource(R.string.dark_theme_style_amoled)
+    val darkThemeStyleDefaultShortLabel = stringResource(R.string.dark_theme_style_default_short)
+    val darkThemeStyleAmoledShortLabel = stringResource(R.string.dark_theme_style_amoled_short)
     val darkThemeStyleOptions = remember(
+        darkThemeStyleDefaultShortLabel,
+        darkThemeStyleAmoledShortLabel
+    ) {
+        resolveDarkThemeStyleSegmentOptions(
+            defaultLabel = darkThemeStyleDefaultShortLabel,
+            amoledLabel = darkThemeStyleAmoledShortLabel
+        )
+    }
+    val selectedDarkThemeStyleLabel = remember(
+        state.darkThemeStyle,
         darkThemeStyleDefaultLabel,
         darkThemeStyleAmoledLabel
     ) {
-        resolveDarkThemeStyleSegmentOptions(
-            defaultLabel = darkThemeStyleDefaultLabel,
-            amoledLabel = darkThemeStyleAmoledLabel
-        )
+        when (state.darkThemeStyle) {
+            DarkThemeStyle.DEFAULT -> darkThemeStyleDefaultLabel
+            DarkThemeStyle.AMOLED -> darkThemeStyleAmoledLabel
+        }
     }
-    val selectedDarkThemeStyleLabel = darkThemeStyleOptions
-        .firstOrNull { it.value == state.darkThemeStyle }
-        ?.label ?: state.darkThemeStyle.label
     val appLanguageTitle = stringResource(R.string.appearance_app_language_title)
     val appLanguageSubtitle = stringResource(R.string.appearance_app_language_subtitle)
     val appLanguageFollowSystemLabel = stringResource(R.string.app_language_follow_system)
     val appLanguageSimplifiedLabel = stringResource(R.string.app_language_simplified_chinese)
     val appLanguageTraditionalLabel = stringResource(R.string.app_language_traditional_chinese)
     val appLanguageEnglishLabel = stringResource(R.string.app_language_english)
+    val appLanguageFollowSystemShortLabel = stringResource(R.string.app_language_follow_system_short)
+    val appLanguageSimplifiedShortLabel = stringResource(R.string.app_language_simplified_chinese_short)
+    val appLanguageTraditionalShortLabel = stringResource(R.string.app_language_traditional_chinese_short)
+    val appLanguageEnglishShortLabel = stringResource(R.string.app_language_english_short)
     val appLanguageOptions = remember(
+        appLanguageFollowSystemShortLabel,
+        appLanguageSimplifiedShortLabel,
+        appLanguageTraditionalShortLabel,
+        appLanguageEnglishShortLabel
+    ) {
+        resolveAppLanguageSegmentOptions(
+            followSystemLabel = appLanguageFollowSystemShortLabel,
+            simplifiedChineseLabel = appLanguageSimplifiedShortLabel,
+            traditionalChineseLabel = appLanguageTraditionalShortLabel,
+            englishLabel = appLanguageEnglishShortLabel
+        )
+    }
+    val selectedAppLanguageLabel = remember(
+        state.appLanguage,
         appLanguageFollowSystemLabel,
         appLanguageSimplifiedLabel,
         appLanguageTraditionalLabel,
         appLanguageEnglishLabel
     ) {
-        resolveAppLanguageSegmentOptions(
-            followSystemLabel = appLanguageFollowSystemLabel,
-            simplifiedChineseLabel = appLanguageSimplifiedLabel,
-            traditionalChineseLabel = appLanguageTraditionalLabel,
-            englishLabel = appLanguageEnglishLabel
-        )
+        when (state.appLanguage) {
+            AppLanguage.FOLLOW_SYSTEM -> appLanguageFollowSystemLabel
+            AppLanguage.SIMPLIFIED_CHINESE -> appLanguageSimplifiedLabel
+            AppLanguage.TRADITIONAL_CHINESE_TAIWAN -> appLanguageTraditionalLabel
+            AppLanguage.ENGLISH -> appLanguageEnglishLabel
+        }
     }
-    val selectedAppLanguageLabel = appLanguageOptions
-        .firstOrNull { it.value == state.appLanguage }
-        ?.label ?: state.appLanguage.name
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val contentBottomPadding = resolveAppearanceBottomPadding(
         navigationBarsBottom = navigationBarBottomPadding,

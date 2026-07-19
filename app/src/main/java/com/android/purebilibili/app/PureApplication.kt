@@ -126,6 +126,7 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
         when (task.id) {
             "network_module_init" -> NetworkModule.init(this)
             "token_manager_init" -> TokenManager.init(this)
+            "wbi_key_restore" -> WbiKeyManager.restoreFromStorage(this)
             "video_repository_init" -> com.android.purebilibili.data.repository.VideoRepository.init(this)
             "background_manager_init" -> BackgroundManager.init(this)
             "player_settings_cache_init" -> com.android.purebilibili.core.store.PlayerSettingsCache.init(this)
@@ -177,17 +178,7 @@ class PureApplication : Application(), ImageLoaderFactory, ComponentCallbacks2 {
             SettingsManager.forceDanmakuDefaults(this@PureApplication)
         }
 
-        WbiKeyManager.restoreFromStorage(this)
         syncAppIconState()
-
-        AppScope.ioScope.launch {
-            try {
-                WbiKeyManager.getWbiKeys()
-                Logger.d(PureApplicationRuntimeConfig.TAG, " WBI Keys preloaded successfully")
-            } catch (e: Exception) {
-                android.util.Log.w(PureApplicationRuntimeConfig.TAG, " WBI Keys preload failed: ${e.message}")
-            }
-        }
     }
 
     private fun requestDex2OatProfileInstallNow() {

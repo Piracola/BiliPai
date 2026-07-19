@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-9.9.5-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.9.5" />
+  <img src="https://img.shields.io/badge/Version-9.9.8.4-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.9.8.4" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-Non--Commercial-FF3B30?style=flat-square" alt="Non-Commercial License" />
@@ -23,8 +23,8 @@
   <a href="https://github.com/jay3-yy/BiliPai/releases">
     <img src="https://img.shields.io/github/downloads/jay3-yy/BiliPai/total?style=flat-square&color=34C759&label=%E6%80%BB%E4%B8%8B%E8%BD%BD%E9%87%8F&labelColor=ffffff" alt="总下载量" />
   </a>
-  <a href="https://github.com/jay3-yy/BiliPai/releases/tag/v9.9.5">
-    <img src="https://img.shields.io/github/downloads/jay3-yy/BiliPai/v9.9.5/total?style=flat-square&color=5AC8FA&label=%E6%9C%80%E6%96%B0%E7%89%88%E4%B8%8B%E8%BD%BD%E9%87%8F&labelColor=ffffff" alt="最新版本下载量" />
+  <a href="https://github.com/jay3-yy/BiliPai/releases/tag/v9.9.8.4">
+    <img src="https://img.shields.io/github/downloads/jay3-yy/BiliPai/v9.9.8.4/total?style=flat-square&color=5AC8FA&label=%E6%9C%80%E6%96%B0%E7%89%88%E4%B8%8B%E8%BD%BD%E9%87%8F&labelColor=ffffff" alt="最新版本下载量" />
   </a>
 </p>
 
@@ -43,7 +43,7 @@
   </a>
 </p>
 
-<sub>README 更新：2026-07-07 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
+<sub>README 更新：2026-07-20 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
 
 </div>
 
@@ -188,11 +188,11 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `9.9.5 / versionCode 254`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.9.5`：
+当前仓库版本号已更新到 `9.9.8.4 / versionCode 259`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.9.8.4`：
 
-- 液态玻璃滑动性能优化：切断底栏无效重组、缓存 RenderEffect、顶部 chrome 折射延迟读取。
-- 视频卡片过渡统一为 Compose + backdrop 模糊链路，修复返回落位、共享边界与背景模糊稳定性。
-- 视频详情 Tab 指示器与 Pager 实时同步，分段控件增加物理 settle 回弹。
+- 关注下拉刷新后强制回顶并校正“新增”计数；分区 / 分类页补齐下拉刷新与换一批。
+- 动态蓝色 `@` 可跳转对应 UP 主页；冷启动提前恢复 WBI，减少首屏网络抢跑。
+- 默认稳定 DASH、视频详情拆分与过渡性能优化；外观分段短文案与自适应 UI 细化。
 
 ## 路线图
 

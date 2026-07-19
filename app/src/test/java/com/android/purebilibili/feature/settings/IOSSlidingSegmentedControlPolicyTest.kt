@@ -19,9 +19,39 @@ class IOSSlidingSegmentedControlPolicyTest {
         assertEquals(66, policy.itemWidthDp)
         assertEquals(44, policy.heightDp)
         assertEquals(30, policy.indicatorHeightDp)
-        assertEquals(13, policy.labelFontSizeSp)
+        assertEquals(15, policy.labelFontSizeSp)
         assertFalse(policy.liquidGlassEffectsEnabled)
         assertFalse(policy.tapPressRefractionEnabled)
+    }
+
+    @Test
+    fun denseSegmentLabelsShrinkFontAndPreferFillMaxWidth() {
+        assertEquals(
+            12f,
+            resolveSlidingSegmentedLabelFontSizeSp(
+                optionCount = 4,
+                longestLabelLength = 4,
+            )
+        )
+        assertEquals(
+            13f,
+            resolveSlidingSegmentedLabelFontSizeSp(
+                optionCount = 3,
+                longestLabelLength = 4,
+            )
+        )
+        assertTrue(
+            shouldFillMaxWidthSlidingSegmentedControl(
+                optionCount = 4,
+                longestLabelLength = 4,
+            )
+        )
+        val densePolicy = resolveIosSlidingSegmentedControlRenderPolicy(
+            itemCount = 4,
+            hasExternalBackdrop = false,
+            longestLabelLength = 4,
+        )
+        assertEquals(12, densePolicy.labelFontSizeSp)
     }
 
     @Test
@@ -31,6 +61,8 @@ class IOSSlidingSegmentedControlPolicyTest {
         )
 
         assertTrue(source.contains("itemWidth = resolvedItemWidth"))
+        assertTrue(source.contains("val resolvedItemWidth = null"))
+        assertTrue(source.contains("modifier = modifier.fillMaxWidth()"))
         assertTrue(source.contains("height = resolvedHeight"))
         assertTrue(source.contains("indicatorHeight = resolvedIndicatorHeight"))
         assertTrue(source.contains("labelFontSize = resolvedLabelFontSize"))

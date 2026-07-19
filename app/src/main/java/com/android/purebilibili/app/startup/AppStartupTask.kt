@@ -76,6 +76,13 @@ internal fun defaultAppStartupTasks(
             criticality = StartupCriticality.REQUIRED,
             thread = StartupThread.MAIN
         ),
+        // 必须在 video_repository_init / 首页预加载前恢复磁盘 WBI，避免冷启动多打一次 nav。
+        AppStartupTask(
+            id = "wbi_key_restore",
+            phase = StartupPhase.BEFORE_FIRST_INTERACTIVE,
+            criticality = StartupCriticality.REQUIRED,
+            thread = StartupThread.MAIN
+        ),
         AppStartupTask(
             id = "video_repository_init",
             phase = StartupPhase.BEFORE_FIRST_INTERACTIVE,

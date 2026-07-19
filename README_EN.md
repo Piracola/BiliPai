@@ -436,11 +436,11 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v9.6.0 · 2026-06-28)
+### Latest (v9.9.8.4 · 2026-07-20)
 
-- Vertical videos can route directly into Story with swipe-time playurl prefetch and early playback binding.
-- Sub-reply pagination and portrait comment-sheet interactions are fixed, including drag-dismiss bounce.
-- Long-press 2x progress freeze, danmaku seek/speed sync, and landscape inline danmaku composer are improved.
+- Follow-feed pull-to-refresh scrolls to top and reports truly new items; partition/category feeds gain refresh + page advance.
+- Dynamic blue `@` mentions open the UP space; cold start restores WBI keys earlier for faster home feed.
+- Stable DASH by default, video-detail layering/perf work, and adaptive UI / appearance segment polish.
 
 ---
 

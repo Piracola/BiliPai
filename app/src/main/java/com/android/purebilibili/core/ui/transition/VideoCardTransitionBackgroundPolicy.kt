@@ -30,7 +30,11 @@ private const val VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA_DARK = 0.22f
 private const val VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA_LIGHT = 0.11f
 private const val VIDEO_CARD_TRANSITION_LIGHT_REDUCED_OPENING_SCRIM_ALPHA = 0.07f
 private const val VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION = 0.04f
+/** 景深缩放露出的边缘：至少压到这个 tint 强度，避免浅色主题读成「白条」。 */
+private const val VIDEO_CARD_TRANSITION_SCALE_GAP_MIN_TINT_LIGHT = 0.34f
+private const val VIDEO_CARD_TRANSITION_SCALE_GAP_MIN_TINT_DARK = 0.42f
 private val VIDEO_CARD_TRANSITION_LIGHT_SCRIM_TINT = Color(0xFF8E8E93)
+private val VIDEO_CARD_TRANSITION_DARK_GAP_BASE = Color(0xFF121212)
 
 // 开场与返回时长由共享元素速度设置提供；取消仍固定为短恢复动画。
 internal const val VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS = 400
@@ -293,16 +297,45 @@ internal fun resolveVideoCardTransitionNavBackdropColor(
     baseBackgroundColor: Color,
     frame: VideoCardTransitionNavBackdropFrame,
 ): Color {
-    if (frame.scrimAlpha <= 0.001f) return baseBackgroundColor
-    val tint = if (frame.useLightScrimTint) {
+    return resolveVideoCardTransitionScaleGapFillColor(
+        isLightBackground = frame.useLightScrimTint,
+        scrimAlpha = frame.scrimAlpha,
+        baseBackgroundColor = baseBackgroundColor,
+    )
+}
+
+/**
+ * 景深 scale<1 时，缩放层四周会露出父级/窗口底色。
+ * 用与 blur scrim 同向的不透明填充盖住空隙，避免预测性返回读成右侧白条。
+ */
+internal fun shouldDrawVideoCardTransitionScaleGapFill(contentScale: Float): Boolean {
+    return contentScale < 0.999f
+}
+
+internal fun resolveVideoCardTransitionScaleGapFillColor(
+    isLightBackground: Boolean,
+    scrimAlpha: Float,
+    baseBackgroundColor: Color = if (isLightBackground) {
+        Color.White
+    } else {
+        VIDEO_CARD_TRANSITION_DARK_GAP_BASE
+    },
+): Color {
+    val tint = if (isLightBackground) {
         VIDEO_CARD_TRANSITION_LIGHT_SCRIM_TINT
     } else {
         Color.Black
     }
+    val minTint = if (isLightBackground) {
+        VIDEO_CARD_TRANSITION_SCALE_GAP_MIN_TINT_LIGHT
+    } else {
+        VIDEO_CARD_TRANSITION_SCALE_GAP_MIN_TINT_DARK
+    }
+    val fraction = maxOf(scrimAlpha, minTint).coerceIn(0f, 1f)
     return lerp(
         start = baseBackgroundColor,
         stop = tint,
-        fraction = frame.scrimAlpha.coerceIn(0f, 1f),
+        fraction = fraction,
     )
 }
 
@@ -519,6 +552,14 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
             } else {
                 null
             }
+        }
+        if (shouldDrawVideoCardTransitionScaleGapFill(frame.contentScale)) {
+            drawRect(
+                resolveVideoCardTransitionScaleGapFillColor(
+                    isLightBackground = frame.useLightScrimTint,
+                    scrimAlpha = frame.scrimAlpha,
+                )
+            )
         }
         drawLayer(contentLayer)
 

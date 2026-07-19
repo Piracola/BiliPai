@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.HomeSettings
 import com.android.purebilibili.core.store.HomeFeedCardStyle
+import com.android.purebilibili.core.ui.AdaptivePullToRefreshBox
 import com.android.purebilibili.core.ui.AdaptiveScaffold
 import com.android.purebilibili.core.ui.AdaptiveTopAppBar
 import com.android.purebilibili.core.ui.adaptive.resolveDeviceUiProfile
@@ -34,6 +35,7 @@ import com.android.purebilibili.feature.home.components.cards.ElegantVideoCard
 import com.android.purebilibili.feature.home.components.cards.StoryVideoCard
 import com.android.purebilibili.feature.home.resolveHomeFeedCardLayout
 import com.android.purebilibili.core.util.LocalWindowSizeClass
+import com.android.purebilibili.core.util.resolveReplaceRefreshPage
 import com.android.purebilibili.core.util.responsiveContentWidth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +51,9 @@ class CategoryViewModel : ViewModel() {
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
     
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
@@ -63,23 +68,37 @@ class CategoryViewModel : ViewModel() {
         currentPage = 1
         hasMore = true
         _videos.value = emptyList()
-        loadVideos()
+        loadVideos(replace = true)
     }
     
-    private fun loadVideos() {
-        if (_isLoading.value || !hasMore) return
+    private fun loadVideos(replace: Boolean = false, isRefresh: Boolean = false) {
+        if (_isRefreshing.value) return
+        if (!isRefresh && (_isLoading.value || !hasMore)) return
         
         viewModelScope.launch {
-            _isLoading.value = true
+            val pageToFetch = if (isRefresh) {
+                resolveReplaceRefreshPage(nextLoadPage = currentPage, hasMore = hasMore)
+            } else {
+                currentPage
+            }
+            if (isRefresh) {
+                _isRefreshing.value = true
+            } else {
+                _isLoading.value = true
+            }
             _error.value = null
             
-            VideoRepository.getRegionVideos(tid = currentTid, page = currentPage)
+            VideoRepository.getRegionVideos(tid = currentTid, page = pageToFetch)
                 .onSuccess { newVideos ->
                     if (newVideos.isEmpty()) {
                         hasMore = false
+                        if (isRefresh) {
+                            currentPage = 1
+                        }
                     } else {
-                        _videos.value = _videos.value + newVideos
-                        currentPage++
+                        hasMore = true
+                        _videos.value = if (replace || isRefresh) newVideos else _videos.value + newVideos
+                        currentPage = pageToFetch + 1
                     }
                 }
                 .onFailure { e ->
@@ -87,11 +106,17 @@ class CategoryViewModel : ViewModel() {
                 }
             
             _isLoading.value = false
+            _isRefreshing.value = false
         }
     }
     
     fun loadMore() {
-        loadVideos()
+        loadVideos(replace = false)
+    }
+
+    fun refresh() {
+        if (currentTid <= 0) return
+        loadVideos(replace = true, isRefresh = true)
     }
 }
 
@@ -111,6 +136,7 @@ fun CategoryScreen(
 ) {
     val videos by viewModel.videos.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     val gridState = rememberLazyGridState()
     val context = LocalContext.current
@@ -207,82 +233,88 @@ fun CategoryScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             } else {
-                // 视频网格
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(gridColumns),
-                    state = gridState,
-                    contentPadding = PaddingValues(horizontal = cardLayout.outerPaddingDp.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .responsiveContentWidth(maxWidth = 1000.dp)
+                AdaptivePullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = viewModel::refresh,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    itemsIndexed(
-                        items = videos,
-                        key = { index, video ->
-                            resolveIndexedVideoLazyKey(
-                                namespace = "category_video",
-                                index = index,
-                                bvid = video.bvid,
-                                id = video.id,
-                                aid = video.aid,
-                                cid = video.cid
-                            )
-                        }
-                    ) { index, video ->
-                        //  [修复] 根据首页设置选择卡片样式（与 HomeScreen 一致）
-                        when (displayMode) {
-                            1 -> {
-                                //  故事卡片（影院海报风格）
-                                StoryVideoCard(
-                                    video = video,
-                                    index = index,  //  动画索引
-                                    animationEnabled = homeSettings.cardAnimationEnabled,
-                                    motionTier = cardMotionTier,
-                                    transitionEnabled = homeSettings.cardTransitionEnabled,
-                                    coverAspectRatio = cardLayout.coverAspectRatio,
-                                    cardHorizontalPadding = cardLayout.storyCardHorizontalPaddingDp.dp,
-                                    compactMetadata = cardLayout.compactMetadata,
-                                    showOnlineCount = showOnlineCount,
-                                    isReturningFromVideoDetail = isReturningFromVideoDetail,
-                                    isQuickReturningFromVideoDetail = isQuickReturningFromVideoDetail,
-                                    onClick = { bvid, _ ->
-                                        onVideoClick(bvid, video.cid, video.pic, video.isVertical)
-                                    }
-                                )
-                            }
-                            else -> {
-                                //  默认网格卡片
-                                ElegantVideoCard(
-                                    video = video,
+                    // 视频网格
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(gridColumns),
+                        state = gridState,
+                        contentPadding = PaddingValues(horizontal = cardLayout.outerPaddingDp.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .responsiveContentWidth(maxWidth = 1000.dp)
+                    ) {
+                        itemsIndexed(
+                            items = videos,
+                            key = { index, video ->
+                                resolveIndexedVideoLazyKey(
+                                    namespace = "category_video",
                                     index = index,
-                                    animationEnabled = homeSettings.cardAnimationEnabled,
-                                    motionTier = cardMotionTier,
-                                    transitionEnabled = homeSettings.cardTransitionEnabled,
-                                    coverAspectRatio = cardLayout.coverAspectRatio,
-                                    compactMetadata = cardLayout.compactMetadata,
-                                    showOnlineCount = showOnlineCount,
-                                    isReturningFromVideoDetail = isReturningFromVideoDetail,
-                                    isQuickReturningFromVideoDetail = isQuickReturningFromVideoDetail,
-                                    onClick = { bvid, _ ->
-                                        onVideoClick(bvid, video.cid, video.pic, video.isVertical)
-                                    }
+                                    bvid = video.bvid,
+                                    id = video.id,
+                                    aid = video.aid,
+                                    cid = video.cid
                                 )
                             }
+                        ) { index, video ->
+                            //  [修复] 根据首页设置选择卡片样式（与 HomeScreen 一致）
+                            when (displayMode) {
+                                1 -> {
+                                    //  故事卡片（影院海报风格）
+                                    StoryVideoCard(
+                                        video = video,
+                                        index = index,  //  动画索引
+                                        animationEnabled = homeSettings.cardAnimationEnabled,
+                                        motionTier = cardMotionTier,
+                                        transitionEnabled = homeSettings.cardTransitionEnabled,
+                                        coverAspectRatio = cardLayout.coverAspectRatio,
+                                        cardHorizontalPadding = cardLayout.storyCardHorizontalPaddingDp.dp,
+                                        compactMetadata = cardLayout.compactMetadata,
+                                        showOnlineCount = showOnlineCount,
+                                        isReturningFromVideoDetail = isReturningFromVideoDetail,
+                                        isQuickReturningFromVideoDetail = isQuickReturningFromVideoDetail,
+                                        onClick = { bvid, _ ->
+                                            onVideoClick(bvid, video.cid, video.pic, video.isVertical)
+                                        }
+                                    )
+                                }
+                                else -> {
+                                    //  默认网格卡片
+                                    ElegantVideoCard(
+                                        video = video,
+                                        index = index,
+                                        animationEnabled = homeSettings.cardAnimationEnabled,
+                                        motionTier = cardMotionTier,
+                                        transitionEnabled = homeSettings.cardTransitionEnabled,
+                                        coverAspectRatio = cardLayout.coverAspectRatio,
+                                        compactMetadata = cardLayout.compactMetadata,
+                                        showOnlineCount = showOnlineCount,
+                                        isReturningFromVideoDetail = isReturningFromVideoDetail,
+                                        isQuickReturningFromVideoDetail = isQuickReturningFromVideoDetail,
+                                        onClick = { bvid, _ ->
+                                            onVideoClick(bvid, video.cid, video.pic, video.isVertical)
+                                        }
+                                    )
+                                }
+                            }
                         }
-                    }
-                    
-                    // 加载更多指示器
-                    if (isLoading) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                com.android.purebilibili.core.ui.CutePersonLoadingIndicator(modifier = Modifier.size(24.dp))
+                        
+                        // 加载更多指示器
+                        if (isLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    com.android.purebilibili.core.ui.CutePersonLoadingIndicator(modifier = Modifier.size(24.dp))
+                                }
                             }
                         }
                     }

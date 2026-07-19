@@ -34,10 +34,21 @@ class AppStartupPolicyTest {
 
         assertEquals(StartupPhase.BEFORE_FIRST_INTERACTIVE, tasks.getValue("network_module_init").phase)
         assertEquals(StartupPhase.BEFORE_FIRST_INTERACTIVE, tasks.getValue("token_manager_init").phase)
+        assertEquals(StartupPhase.BEFORE_FIRST_INTERACTIVE, tasks.getValue("wbi_key_restore").phase)
         assertEquals(StartupPhase.BEFORE_FIRST_INTERACTIVE, tasks.getValue("video_repository_init").phase)
         assertEquals(StartupPhase.BEFORE_FIRST_INTERACTIVE, tasks.getValue("background_manager_init").phase)
         assertEquals(StartupPhase.BEFORE_FIRST_INTERACTIVE, tasks.getValue("player_settings_cache_init").phase)
         assertEquals(StartupPhase.AFTER_FIRST_INTERACTIVE, tasks.getValue("notification_channel_init").phase)
+
+        val orderedIds = defaultAppStartupTasks(
+            sdkInt = 34,
+            deferredDelayMs = 900L,
+            dex2OatDelayMs = 2_500L
+        ).map { it.id }
+        assertTrue(
+            "wbi_key_restore must run before video_repository_init",
+            orderedIds.indexOf("wbi_key_restore") < orderedIds.indexOf("video_repository_init")
+        )
     }
 
     @Test

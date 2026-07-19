@@ -347,6 +347,46 @@ class SubReplyDetailPresentationPolicyTest {
     }
 
     @Test
+    fun `leaving conversation restores saved scroll instead of jumping to top`() {
+        assertEquals(
+            SubReplyDetailScrollRestoreAction.RESTORE_SAVED,
+            resolveSubReplyDetailScrollRestoreAction(
+                previousConversationMode = true,
+                currentConversationMode = false,
+                hasSavedPosition = true,
+            )
+        )
+        assertEquals(
+            SubReplyDetailScrollRestoreAction.SCROLL_TO_TOP,
+            resolveSubReplyDetailScrollRestoreAction(
+                previousConversationMode = true,
+                currentConversationMode = false,
+                hasSavedPosition = false,
+            )
+        )
+        assertEquals(
+            SubReplyDetailScrollRestoreAction.SCROLL_TO_TOP,
+            resolveSubReplyDetailScrollRestoreAction(
+                previousConversationMode = false,
+                currentConversationMode = true,
+                hasSavedPosition = true,
+            )
+        )
+        assertTrue(
+            shouldSaveSubReplyDetailScrollBeforeConversationEnter(
+                previousConversationMode = false,
+                currentConversationMode = true,
+            )
+        )
+        assertFalse(
+            shouldSaveSubReplyDetailScrollBeforeConversationEnter(
+                previousConversationMode = true,
+                currentConversationMode = false,
+            )
+        )
+    }
+
+    @Test
     fun `auxiliary label should prefer garb card number when available`() {
         assertEquals(
             "CO.013992",
