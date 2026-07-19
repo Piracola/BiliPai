@@ -3134,56 +3134,30 @@ internal fun VideoDetailScreenStateHolder(
             },
         )
 
-        InteractiveChoiceOverlay(
-            state = interactiveChoicePanel,
-            onSelectChoice = { edgeId, targetCid ->
-                viewModel.selectInteractiveChoice(edgeId = edgeId, cid = targetCid)
-            },
-            onDismiss = { viewModel.dismissInteractiveChoicePanel() }
-        )
-
-        //  [新增] 投币对话框
-        val coinDialogVisible = engagementState.coinDialogVisible
-        val currentCoinCount = engagementState.coinCount
-        CoinDialog(
-            visible = coinDialogVisible,
-            currentCoinCount = currentCoinCount,
-            userBalance = engagementState.userCoinBalance,
-            onDismiss = { engagementViewModel.setCoinDialogVisible(false) },
-            onConfirm = engagementViewModel::doCoin
-        )
-
-        VideoDetailFollowGroupDialog(viewModel = viewModel)
-
-        ExternalPlaylistQueueSheet(
-            visible = shouldShowExternalPlaylistQueueBar && showExternalPlaylistQueueSheet,
-            title = externalPlaylistQueueTitle,
+        VideoDetailCommonOverlayAdapter(
+            interactiveChoicePanel = interactiveChoicePanel,
+            engagementState = engagementState,
+            playbackViewModel = viewModel,
+            engagementViewModel = engagementViewModel,
+            queueVisible = shouldShowExternalPlaylistQueueBar && showExternalPlaylistQueueSheet,
+            queueTitle = externalPlaylistQueueTitle,
             playlist = playlistItems,
-            currentIndex = playlistCurrentIndex,
+            playlistCurrentIndex = playlistCurrentIndex,
             hazeState = hazeState,
-            presentation = externalPlaylistQueueSheetPresentation,
-            onDismiss = { showExternalPlaylistQueueSheet = false },
+            queuePresentation = externalPlaylistQueueSheetPresentation,
+            pendingVideoShare = pendingVideoShare,
+            player = playerState.player,
+            onDismissQueue = { showExternalPlaylistQueueSheet = false },
             onVideoSelected = { index, item ->
                 PlaylistManager.playAt(index)
                 showExternalPlaylistQueueSheet = false
                 switchVideoInCurrentDetailPage(
                     targetBvid = item.bvid,
                     targetCid = 0L,
-                    autoPlay = true
+                    autoPlay = true,
                 )
-            }
-        )
-
-        pendingVideoShare?.let { payload ->
-            VideoShareSheet(
-                payload = payload,
-                onDismiss = { pendingVideoShare = null }
-            )
-        }
-
-        VideoDetailPlaybackEndedDialog(
-            viewModel = viewModel,
-            player = playerState.player
+            },
+            onDismissShare = { pendingVideoShare = null },
         )
 
         val inputOverlayLayoutInfo = VideoDetailInputOverlayAdapter(

@@ -142,6 +142,21 @@ class VideoDetailScreenMethodSizeStructureTest {
         assertTrue(holder.contains("VideoDetailPortraitOverlayAdapter("))
     }
 
+    @Test
+    fun commonOverlayOrchestrationLivesOutsideTheStateHolder() {
+        val holder = loadSource("VideoDetailScreenStateHolder.kt")
+        val adapter = loadSource("VideoDetailCommonOverlayAdapter.kt")
+
+        assertTrue(adapter.lineSequence().count() <= 350)
+        assertTrue(adapter.contains("InteractiveChoiceOverlay("))
+        assertTrue(adapter.contains("ExternalPlaylistQueueSheet("))
+        assertTrue(adapter.contains("VideoShareSheet("))
+        assertTrue(adapter.contains("VideoDetailPlaybackEndedDialog("))
+        assertFalse(holder.contains("InteractiveChoiceOverlay("))
+        assertFalse(holder.contains("VideoShareSheet("))
+        assertTrue(holder.contains("VideoDetailCommonOverlayAdapter("))
+    }
+
     private fun loadSource(name: String): String {
         val candidates = listOf(
             File("src/main/java/com/android/purebilibili/feature/video/screen/$name"),
