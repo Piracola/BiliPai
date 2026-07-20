@@ -28,7 +28,6 @@ internal val SETTINGS_SUBTREE_ROUTE_BASES: Set<String> = setOf(
 
 private val SETTINGS_DEPTH2_ROUTE_BASES: Set<String> = setOf(
     "appearance_settings",
-    "animation_settings",
     "playback_settings",
     "permission_settings",
     "plugins_settings",
@@ -41,11 +40,22 @@ private val SETTINGS_DEPTH2_ROUTE_BASES: Set<String> = setOf(
 
 private val SETTINGS_DEPTH3_ROUTE_BASES: Set<String> = setOf(
     "icon_settings",
+    "animation_settings",
     "js_plugin",
 )
 
 private val SETTINGS_DEPTH4_ROUTE_BASES: Set<String> = setOf(
     "external_media",
+)
+
+/** settings / search / category 可直达的二级页；动画页虽挂在外观下，搜索与快捷入口也可直达。 */
+private val SETTINGS_DIRECT_REACH_FROM_ROOT_CHILDREN: Set<String> =
+    SETTINGS_DEPTH2_ROUTE_BASES + setOf("animation_settings")
+
+private val SETTINGS_DIRECT_REACH_PARENTS: Set<String> = setOf(
+    SETTINGS_ROUTE_BASE,
+    SETTINGS_SEARCH_ROUTE_BASE,
+    SETTINGS_CATEGORY_ROUTE_BASE,
 )
 
 private val ROUTE_TO_CATEGORY: Map<String, SettingsRootCategory> = mapOf(
@@ -126,9 +136,9 @@ internal fun isSettingsNavHierarchyTransition(
     if (resolveSettingsNavParentRoute(normalizedChild) == normalizedParent) {
         return true
     }
-    // 设置根页/搜索页可直达二级子页（分栏、快捷入口、Nav3 push），需与 category 中转同等动画。
-    if (normalizedChild in SETTINGS_DEPTH2_ROUTE_BASES &&
-        normalizedParent in setOf(SETTINGS_ROUTE_BASE, SETTINGS_SEARCH_ROUTE_BASE)
+    // 设置根页 / 搜索 / 分类可直达二级子页（分栏、快捷入口、Nav3 push），需与 category 中转同等动画。
+    if (normalizedChild in SETTINGS_DIRECT_REACH_FROM_ROOT_CHILDREN &&
+        normalizedParent in SETTINGS_DIRECT_REACH_PARENTS
     ) {
         return true
     }
@@ -148,13 +158,62 @@ internal fun resolveSettingsNavRouteTransition(
     return BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP
 }
 
+/**
+ * 设置树 pop 的单一决策入口。Display / Entry / 预测返回 handler 都应读这里，
+ * 避免 MainHost ↔ 底栏 Settings remap 不一致导致预览与提交动画分裂。
+ */
+internal fun resolveSettingsNavPopTransition(
+    fromRoute: String?,
+    toRoute: String?,
+    activeMainHostRoute: String? = null,
+): BiliPaiNavRouteTransition? {
+    if (!isSettingsSubtreeRoute(fromRoute)) return null
+    val normalizedTo = toRoute?.substringBefore("?")?.takeIf { it.isNotBlank() } ?: return null
+    val normalizedActive = activeMainHostRoute?.substringBefore("?")?.takeIf { it.isNotBlank() }
+    val effectiveParentRoute = if (
+        normalizedTo == BiliPaiNavKey.MainHost.routeBase &&
+        isSettingsSubtreeRoute(normalizedActive)
+    ) {
+        normalizedActive
+    } else {
+        normalizedTo
+    }
+    if (isSettingsNavHierarchyTransition(
+            parentRoute = effectiveParentRoute,
+            childRoute = fromRoute,
+        )
+    ) {
+        return BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP
+    }
+    // 设置子树任意页直接回到 MainHost，且底栏仍在 Settings：统一走设置 iOS pop，
+    // 覆盖非严格父子边（如搜索直达 animation 后一键返回）。
+    if (normalizedTo == BiliPaiNavKey.MainHost.routeBase && isSettingsSubtreeRoute(normalizedActive)) {
+        return BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP
+    }
+    return null
+}
+
+internal fun resolveSettingsNavPopTransition(
+    fromKey: BiliPaiNavKey?,
+    toKey: BiliPaiNavKey?,
+    activeMainHostRoute: String? = null,
+): BiliPaiNavRouteTransition? {
+    if (fromKey == null || toKey == null) return null
+    return resolveSettingsNavPopTransition(
+        fromRoute = fromKey.routeBase,
+        toRoute = toKey.routeBase,
+        activeMainHostRoute = activeMainHostRoute,
+    )
+}
+
 internal fun isSettingsNavPopTransition(
     fromKey: BiliPaiNavKey?,
     toKey: BiliPaiNavKey?,
+    activeMainHostRoute: String? = null,
 ): Boolean {
-    if (fromKey == null || toKey == null) return false
-    return isSettingsNavHierarchyTransition(
-        parentRoute = toKey.routeBase,
-        childRoute = fromKey.routeBase,
-    )
+    return resolveSettingsNavPopTransition(
+        fromKey = fromKey,
+        toKey = toKey,
+        activeMainHostRoute = activeMainHostRoute,
+    ) != null
 }

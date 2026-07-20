@@ -6,6 +6,10 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.android.purebilibili.feature.settings.SETTINGS_SUBTREE_ROUTE_BASES
 import com.android.purebilibili.feature.settings.isSettingsNavHierarchyTransition
+import com.android.purebilibili.feature.settings.resolveSettingsNavPopTransition
+import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
+import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiEntryForwardContentTransformForPredictiveStyle
+import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiEntryPopContentTransformForPredictiveStyle
 
 private const val BILI_PAI_NAV_ROUTE_BASE_METADATA_KEY = "biliPaiNavRouteBase"
 private const val VIDEO_ROUTE_BASE = "video"
@@ -56,6 +60,9 @@ internal fun biliPaiNavEntryProvider(
     cardTransitionEnabled: Boolean = true,
     visibleBottomBarRoutes: Set<String> = emptySet(),
     activeMainHostRoute: String? = null,
+    predictiveBackEnabled: Boolean = true,
+    predictiveBackAnimationStyle: BiliPaiPredictiveBackAnimationStyle =
+        BiliPaiPredictiveBackAnimationStyle.SCALE,
     content: @Composable (BiliPaiNavKey) -> Unit
 ): (BiliPaiNavKey) -> NavEntry<BiliPaiNavKey> {
     val entryMetadata: (BiliPaiNavKey) -> Map<String, Any> = { key ->
@@ -64,7 +71,9 @@ internal fun biliPaiNavEntryProvider(
             sourceMetadata = sourceMetadata,
             cardTransitionEnabled = cardTransitionEnabled,
             visibleBottomBarRoutes = visibleBottomBarRoutes,
-            activeMainHostRoute = activeMainHostRoute
+            activeMainHostRoute = activeMainHostRoute,
+            predictiveBackEnabled = predictiveBackEnabled,
+            predictiveBackAnimationStyle = predictiveBackAnimationStyle,
         )
     }
     return entryProvider(
@@ -158,7 +167,10 @@ internal fun biliPaiNavEntryMetadata(
     sourceMetadata: BiliPaiNavSourceMetadata,
     cardTransitionEnabled: Boolean = true,
     visibleBottomBarRoutes: Set<String> = emptySet(),
-    activeMainHostRoute: String? = null
+    activeMainHostRoute: String? = null,
+    predictiveBackEnabled: Boolean = true,
+    predictiveBackAnimationStyle: BiliPaiPredictiveBackAnimationStyle =
+        BiliPaiPredictiveBackAnimationStyle.SCALE,
 ): Map<String, Any> {
     val transitions = resolveBiliPaiNavEntryRouteTransitions(
         key = key,
@@ -175,22 +187,29 @@ internal fun biliPaiNavEntryMetadata(
             visibleBottomBarRoutes = visibleBottomBarRoutes,
             activeMainHostRoute = activeMainHostRoute
         )
-        resolveBiliPaiNavContentTransform(transition)
+        resolveBiliPaiEntryForwardContentTransformForPredictiveStyle(
+            routeTransition = transition,
+            style = predictiveBackAnimationStyle,
+            predictiveBackEnabled = predictiveBackEnabled,
+        )
     } + NavDisplay.popTransitionSpec {
         val transition = resolveBiliPaiNavEntryPopRouteTransition(
             defaultTransition = transitions.pop,
             fromRoute = initialState.biliPaiRouteBase(),
             toRoute = targetState.biliPaiRouteBase(),
             cardTransitionEnabled = cardTransitionEnabled,
-            sharedElementPopReady = (key is BiliPaiNavKey.SeasonSeriesDetail &&
-                key.sharedElementTransition) || isRelatedVideoDetailReturn(
+            sharedElementPopReady = isRelatedVideoDetailReturn(
                 fromKey = key as? BiliPaiNavKey.VideoDetail,
                 toKey = targetState.biliPaiTopKey(),
             ),
             sourceMetadata = sourceMetadata,
             activeMainHostRoute = activeMainHostRoute
         )
-        resolveBiliPaiNavContentTransform(transition)
+        resolveBiliPaiEntryPopContentTransformForPredictiveStyle(
+            routeTransition = transition,
+            style = predictiveBackAnimationStyle,
+            predictiveBackEnabled = predictiveBackEnabled,
+        )
     }
 }
 
@@ -275,6 +294,12 @@ internal fun resolveBiliPaiNavEntryPopRouteTransition(
         return resolveCardDisabledReturnTransition(sourceMetadata.cardSourceDirection)
     }
 
+    resolveSettingsNavPopTransition(
+        fromRoute = normalizedFromRoute,
+        toRoute = normalizedToRoute,
+        activeMainHostRoute = normalizedActiveMainHostRoute,
+    )?.let { return it }
+
     if (
         defaultTransition == BiliPaiNavRouteTransition.FALLBACK &&
         isLightSiblingPopRoute(
@@ -283,17 +308,7 @@ internal fun resolveBiliPaiNavEntryPopRouteTransition(
             activeMainHostRoute = normalizedActiveMainHostRoute
         )
     ) {
-        return if (
-            isSettingsNavHierarchyRoute(
-                parentRoute = normalizedToRoute,
-                childRoute = normalizedFromRoute,
-                activeMainHostRoute = normalizedActiveMainHostRoute
-            )
-        ) {
-            BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP
-        } else {
-            BiliPaiNavRouteTransition.LIGHT_SIBLING_POP
-        }
+        return BiliPaiNavRouteTransition.LIGHT_SIBLING_POP
     }
 
     return if (defaultTransition == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT) {
@@ -350,10 +365,12 @@ internal fun resolveBiliPaiNavEntryRouteTransitions(
                 ?: BiliPaiNavRouteTransition.FALLBACK
         else -> BiliPaiNavRouteTransition.FALLBACK
     }
-    val pop = if (cardTransitionEnabled && (sharedReadyFavoriteCollection || relatedVideoDetail)) {
-        BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
-    } else {
-        BiliPaiNavRouteTransition.FALLBACK
+    val pop = when {
+        cardTransitionEnabled && relatedVideoDetail ->
+            BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
+        cardTransitionEnabled && sharedReadyFavoriteCollection ->
+            BiliPaiNavRouteTransition.LIGHT_SIBLING_POP
+        else -> BiliPaiNavRouteTransition.FALLBACK
     }
     return BiliPaiNavEntryRouteTransitions(
         forward = forward,

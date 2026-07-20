@@ -235,7 +235,7 @@ class BiliPaiNavMotionPolicyTest {
     }
 
     @Test
-    fun navDisplayPop_subscribedFavoriteCollectionReturn_keepsRouteLayerNoOp() {
+    fun navDisplayPop_subscribedFavoriteCollectionReturn_usesLightSibling() {
         val transition = resolveBiliPaiNavDisplayPopRouteTransition(
             cardTransitionEnabled = true,
             sourceMetadata = BiliPaiNavSourceMetadata(),
@@ -248,11 +248,11 @@ class BiliPaiNavMotionPolicyTest {
             toKey = BiliPaiNavKey.MainHost
         )
 
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transition)
+        assertEquals(BiliPaiNavRouteTransition.LIGHT_SIBLING_POP, transition)
     }
 
     @Test
-    fun subscribedFavoriteCollectionBackGestureKeepsSharedElementRouteLayer() {
+    fun subscribedFavoriteCollectionBackGestureUsesLightSiblingRouteLayer() {
         val decision = resolveBiliPaiBackGestureDecision(
             cardTransitionEnabled = true,
             systemBackAction = AppSystemBackAction.NAVIGATE_UP,
@@ -266,7 +266,7 @@ class BiliPaiNavMotionPolicyTest {
             sourceMetadata = BiliPaiNavSourceMetadata()
         )
 
-        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, decision.routeTransition)
+        assertEquals(BiliPaiNavRouteTransition.LIGHT_SIBLING_POP, decision.routeTransition)
         assertFalse(decision.interceptSystemBack)
     }
 

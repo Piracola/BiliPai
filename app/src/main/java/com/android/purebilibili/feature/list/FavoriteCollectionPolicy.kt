@@ -98,6 +98,22 @@ internal fun resolveSubscribedFavoriteCollectionRoute(folder: FavFolder): Favori
     )
 }
 
+/** 非 type=21 的订阅夹也走合集详情页时，允许列表→详情做共享元素。 */
+internal fun resolveSubscribedFavoriteFolderRoute(folder: FavFolder): FavoriteCollectionRoute? {
+    resolveSubscribedFavoriteCollectionRoute(folder)?.let { return it }
+    if (folder.source != FavFolderSource.SUBSCRIBED) return null
+    val mediaId = resolveFavoriteFolderMediaId(folder)
+    if (mediaId <= 0L || folder.title.isBlank()) return null
+    return FavoriteCollectionRoute(
+        type = "favorite",
+        id = mediaId,
+        mid = folder.mid,
+        title = folder.title,
+        ownerName = folder.upper?.name.orEmpty(),
+        sharedElementTransition = true
+    )
+}
+
 internal fun filterFavoriteFoldersByQuery(
     folders: List<FavFolder>,
     query: String

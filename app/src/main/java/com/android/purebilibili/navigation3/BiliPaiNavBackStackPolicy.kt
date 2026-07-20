@@ -1,5 +1,7 @@
 package com.android.purebilibili.navigation3
 
+import com.android.purebilibili.feature.settings.isSettingsSubtreeRoute
+
 internal fun resolveInitialBiliPaiBackStack(
     firstRoute: String?,
     onboardingRequired: Boolean,
@@ -20,6 +22,42 @@ internal fun pushBiliPaiNavKey(
 ): List<BiliPaiNavKey> {
     val base = currentStack.ifEmpty { listOf(BiliPaiNavKey.MainHost) }
     return if (base.last() == key) base else base + key
+}
+
+/**
+ * 平板/侧栏切换 Category：同层 replace，避免 Category 叠 Category，或详情页上再叠一层 Category。
+ *
+ * - 栈顶已是目标 Category → 不变
+ * - 栈顶是 SettingsCategory 或其他设置子树详情 → 裁掉设置子树尾段后 push
+ * - 栈顶是 Settings 根 / Search / 非设置页 → 普通 push
+ */
+internal fun pushOrReplaceSettingsCategoryNavKey(
+    currentStack: List<BiliPaiNavKey>,
+    key: BiliPaiNavKey.SettingsCategory,
+): List<BiliPaiNavKey> {
+    val base = currentStack.ifEmpty { listOf(BiliPaiNavKey.MainHost) }
+    if (base.lastOrNull() == key) return base
+
+    val top = base.lastOrNull()
+    if (top is BiliPaiNavKey.SettingsCategory) {
+        return base.dropLast(1) + key
+    }
+    if (
+        top != null &&
+        top !is BiliPaiNavKey.Settings &&
+        top !is BiliPaiNavKey.SettingsSearch &&
+        isSettingsSubtreeRoute(top.routeBase)
+    ) {
+        var trimmed = base
+        while (trimmed.size > 1) {
+            val last = trimmed.last()
+            if (last is BiliPaiNavKey.Settings || last == BiliPaiNavKey.MainHost) break
+            if (!isSettingsSubtreeRoute(last.routeBase)) break
+            trimmed = trimmed.dropLast(1)
+        }
+        return trimmed + key
+    }
+    return base + key
 }
 
 internal fun popBiliPaiNavKey(

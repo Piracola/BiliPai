@@ -19,12 +19,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.android.purebilibili.core.ui.AdaptiveScaffold
 import com.android.purebilibili.core.ui.AdaptiveTopAppBar
 import com.android.purebilibili.core.ui.AppSurfaceTokens
+import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
 import com.android.purebilibili.core.ui.TopReadabilityChrome
 import com.android.purebilibili.core.ui.blur.BlurStyles
 import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
@@ -56,77 +58,81 @@ internal fun SettingsPageScaffold(
     } else {
         0.86f
     }
+    val pageContainerColor = AppSurfaceTokens.groupedListContainer()
 
-    AdaptiveScaffold(
-        modifier = modifier,
-        topBar = {
-            Box {
-                TopReadabilityChrome(
-                    height = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
-                    surfaceColor = AppSurfaceTokens.groupedListContainer(),
-                    surfaceAlpha = topBarSurfaceAlpha,
-                    hazeState = hazeState,
-                    hazeEnabled = topBarBlurEnabled,
-                )
-                AdaptiveTopAppBar(
-                    title = title,
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = rememberAppBackIcon(),
-                                contentDescription = backContentDescription,
-                            )
-                        }
-                    },
-                    actions = actions,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-            }
-        },
-        containerColor = AppSurfaceTokens.groupedListContainer(),
-        contentWindowInsets = WindowInsets(0.dp),
-    ) { padding ->
-        val scrollModifier = Modifier
-            .padding(padding)
-            .fillMaxSize()
-            .hazeSourceCompat(state = hazeState)
+    // InstallerX：设置页用不透明 grouped 底色，避免全局壁纸半透明与多页叠色闪烁。
+    CompositionLocalProvider(LocalGlobalWallpaperBackdropVisible provides false) {
+        AdaptiveScaffold(
+            modifier = modifier,
+            topBar = {
+                Box {
+                    TopReadabilityChrome(
+                        height = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
+                        surfaceColor = pageContainerColor,
+                        surfaceAlpha = topBarSurfaceAlpha,
+                        hazeState = hazeState,
+                        hazeEnabled = topBarBlurEnabled,
+                    )
+                    AdaptiveTopAppBar(
+                        title = title,
+                        navigationIcon = {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = rememberAppBackIcon(),
+                                    contentDescription = backContentDescription,
+                                )
+                            }
+                        },
+                        actions = actions,
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
+                    )
+                }
+            },
+            containerColor = pageContainerColor,
+            contentWindowInsets = WindowInsets(0.dp),
+        ) { padding ->
+            val scrollModifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .hazeSourceCompat(state = hazeState)
 
-        when (scrollHost) {
-            SettingsPageScrollHost.LazyColumn -> {
-                LazyColumn(
-                    state = listState,
-                    modifier = scrollModifier,
-                    contentPadding = PaddingValues(bottom = bottomContentPadding),
-                ) {
-                    if (header != null) {
-                        item {
-                            header()
+            when (scrollHost) {
+                SettingsPageScrollHost.LazyColumn -> {
+                    LazyColumn(
+                        state = listState,
+                        modifier = scrollModifier,
+                        contentPadding = PaddingValues(bottom = bottomContentPadding),
+                    ) {
+                        if (header != null) {
+                            item {
+                                header()
+                            }
                         }
-                    }
-                    if (lazyListContent != null) {
-                        lazyListContent()
-                    } else {
-                        item {
-                            content()
+                        if (lazyListContent != null) {
+                            lazyListContent()
+                        } else {
+                            item {
+                                content()
+                            }
                         }
                     }
                 }
-            }
 
-            SettingsPageScrollHost.External -> {
-                Column(modifier = scrollModifier) {
-                    header?.invoke()
-                    Box(
-                        modifier = Modifier
-                            .weight(1f, fill = true)
-                            .fillMaxSize(),
-                    ) {
-                        content()
+                SettingsPageScrollHost.External -> {
+                    Column(modifier = scrollModifier) {
+                        header?.invoke()
+                        Box(
+                            modifier = Modifier
+                                .weight(1f, fill = true)
+                                .fillMaxSize(),
+                        ) {
+                            content()
+                        }
                     }
                 }
             }

@@ -20,17 +20,17 @@ class PartitionScreenStructureTest {
 
         assertTrue(source.contains("PartitionSideRail("))
         assertTrue(source.contains("PartitionVideoList("))
-        assertTrue(source.contains("PartitionVideoRow("))
+        assertTrue(source.contains("ElegantVideoCard("))
+        assertTrue(source.contains("state.videos.chunked(2)"))
+        assertTrue(source.contains("coverAspectRatio = 4f / 3f"))
         assertTrue(source.contains("SettingsManager.getHomeSettings(context)"))
         assertTrue(source.contains("resolveSharedLiquidGlassChromeEnabled("))
         assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
         assertTrue(source.contains("liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled"))
         assertFalse(source.contains("partitionSideRailSweepSelection("))
-        assertTrue(source.contains("CardPositionManager.recordVideoCardPosition("))
-        assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
-        assertTrue(source.contains("shouldUseVideoCardShellSharedBounds("))
+        assertFalse(source.contains("PartitionVideoRow("))
         assertFalse(source.contains("videoTitleSharedElementKey("))
-        assertTrue(source.contains("sourceRoute = sharedElementSourceRoute"))
+        assertTrue(source.contains("sharedElementSourceRoute = sharedElementSourceRoute"))
         assertTrue(source.contains("LocalVideoCardSharedElementSourceRoute.current"))
         assertTrue(source.contains("VideoRepository.getPopularVideos(page = pageToFetch)"))
         assertTrue(source.contains("VideoRepository.getRegionVideos(tid = partition.id, page = pageToFetch)"))
@@ -171,12 +171,13 @@ class PartitionScreenStructureTest {
     @Test
     fun `partition video card obeys global shared transition switch`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/partition/PartitionScreen.kt")
-        val rowSource = source.substringAfter("private fun PartitionVideoRow(")
+        val listSource = source.substringAfter("private fun PartitionVideoList(")
 
-        assertTrue(rowSource.contains("val sharedTransitionEnabled = LocalSharedTransitionEnabled.current"))
-        assertTrue(rowSource.contains("transitionEnabled = sharedTransitionEnabled"))
-        assertFalse(rowSource.contains("spring(dampingRatio = 0.8f, stiffness = 200f)"))
-        assertFalse(rowSource.contains("transitionEnabled = true"))
+        assertTrue(listSource.contains("val sharedTransitionEnabled = LocalSharedTransitionEnabled.current"))
+        assertTrue(listSource.contains("transitionEnabled = sharedTransitionEnabled"))
+        assertTrue(listSource.contains("ElegantVideoCard("))
+        assertFalse(listSource.contains("spring(dampingRatio = 0.8f, stiffness = 200f)"))
+        assertFalse(listSource.contains("transitionEnabled = true"))
     }
 
     @Test

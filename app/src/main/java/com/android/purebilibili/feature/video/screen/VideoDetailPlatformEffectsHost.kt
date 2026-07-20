@@ -158,8 +158,9 @@ internal fun VideoDetailSystemBarsEffect(
     insetsController: WindowInsetsControllerCompat?,
     isScreenActive: Boolean,
     spec: VideoDetailSystemBarsApplySpec,
+    reapplyGeneration: Int = 0,
 ) {
-    LaunchedEffect(view, window, insetsController, isScreenActive, spec) {
+    LaunchedEffect(view, window, insetsController, isScreenActive, spec, reapplyGeneration) {
         if (view.isInEditMode || !isScreenActive || window == null || insetsController == null) return@LaunchedEffect
         applyVideoDetailSystemBarsSpec(window, insetsController, spec)
     }

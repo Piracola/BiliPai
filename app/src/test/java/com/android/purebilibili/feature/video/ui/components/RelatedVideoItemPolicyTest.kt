@@ -1,5 +1,8 @@
 package com.android.purebilibili.feature.video.ui.components
 
+import com.android.purebilibili.data.model.response.Owner
+import com.android.purebilibili.data.model.response.RelatedVideo
+import com.android.purebilibili.data.model.response.Stat
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,16 +61,35 @@ class RelatedVideoItemPolicyTest {
     }
 
     @Test
-    fun `related detail transition shares the whole card shell`() {
+    fun `related detail uses home style vertical card shell`() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/ui/components/RelatedVideoItem.kt")
             .readText()
-        val surfaceBlock = source
-            .substringAfter("Surface(")
-            .substringBefore("val relatedCoverWidth")
 
+        assertTrue(source.contains("RELATED_VIDEO_CARD_COVER_ASPECT_RATIO"))
+        assertTrue(source.contains("aspectRatio(RELATED_VIDEO_CARD_COVER_ASPECT_RATIO)"))
         assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
-        assertTrue(surfaceBlock.contains("videoCardShellSharedBoundsOrEmpty("))
-        assertTrue(source.contains("!useCardShellSharedBounds"))
+        assertTrue(source.contains("RelatedVideoGridRow("))
+        assertTrue(source.contains("chunkRelatedVideosForHomeStyleGrid("))
+        assertFalse(source.contains("relatedCoverWidth = 130.dp"))
+    }
+
+    @Test
+    fun `related videos chunk into home style two column rows`() {
+        val videos = (1..5).map { index ->
+            RelatedVideo(
+                aid = index.toLong(),
+                bvid = "BV$index",
+                title = "t$index",
+                owner = Owner(),
+                stat = Stat(),
+            )
+        }
+        val rows = chunkRelatedVideosForHomeStyleGrid(videos)
+        assertEquals(3, rows.size)
+        assertEquals(2, rows[0].size)
+        assertEquals(2, rows[1].size)
+        assertEquals(1, rows[2].size)
+        assertEquals("BV5", rows[2].single().bvid)
     }
 
     @Test

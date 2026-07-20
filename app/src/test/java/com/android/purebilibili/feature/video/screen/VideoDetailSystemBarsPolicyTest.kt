@@ -287,4 +287,65 @@ class VideoDetailSystemBarsPolicyTest {
             )
         )
     }
+
+    @Test
+    fun reactivatePolicy_restoresImmersiveAfterCancelledPredictiveExit() {
+        assertTrue(
+            shouldReactivateVideoDetailSystemBarsAfterCancelledExit(
+                isExitTransitionInProgress = false,
+                isActuallyLeaving = false,
+                isScreenActive = false,
+            )
+        )
+    }
+
+    @Test
+    fun reactivatePolicy_skipsWhileExitStillInProgressOrAlreadyActive() {
+        assertTrue(
+            !shouldReactivateVideoDetailSystemBarsAfterCancelledExit(
+                isExitTransitionInProgress = true,
+                isActuallyLeaving = false,
+                isScreenActive = false,
+            )
+        )
+        assertTrue(
+            !shouldReactivateVideoDetailSystemBarsAfterCancelledExit(
+                isExitTransitionInProgress = false,
+                isActuallyLeaving = false,
+                isScreenActive = true,
+            )
+        )
+        assertTrue(
+            !shouldReactivateVideoDetailSystemBarsAfterCancelledExit(
+                isExitTransitionInProgress = false,
+                isActuallyLeaving = true,
+                isScreenActive = false,
+            )
+        )
+    }
+
+    @Test
+    fun reapplyPolicy_whenReturningFromBackPreviewToTopDetail() {
+        assertTrue(
+            shouldReapplyVideoDetailSystemBarsAfterBecomingTop(
+                wasKeepLoadedContentForBackPreview = true,
+                keepLoadedContentForBackPreview = false,
+                isActuallyLeaving = false,
+            )
+        )
+        assertTrue(
+            !shouldReapplyVideoDetailSystemBarsAfterBecomingTop(
+                wasKeepLoadedContentForBackPreview = false,
+                keepLoadedContentForBackPreview = false,
+                isActuallyLeaving = false,
+            )
+        )
+        assertTrue(
+            !shouldReapplyVideoDetailSystemBarsAfterBecomingTop(
+                wasKeepLoadedContentForBackPreview = true,
+                keepLoadedContentForBackPreview = false,
+                isActuallyLeaving = true,
+            )
+        )
+    }
 }

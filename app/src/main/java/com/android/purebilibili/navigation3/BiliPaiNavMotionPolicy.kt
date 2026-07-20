@@ -1,6 +1,6 @@
 package com.android.purebilibili.navigation3
 
-import com.android.purebilibili.feature.settings.isSettingsNavPopTransition
+import com.android.purebilibili.feature.settings.resolveSettingsNavPopTransition
 import com.android.purebilibili.navigation.AppSystemBackAction
 import com.android.purebilibili.navigation.shouldInterceptSystemBackForAppAction
 
@@ -86,14 +86,16 @@ internal fun resolveBiliPaiBackGestureDecision(
     systemBackAction: AppSystemBackAction,
     currentKey: BiliPaiNavKey?,
     previousKey: BiliPaiNavKey?,
-    sourceMetadata: BiliPaiNavSourceMetadata
+    sourceMetadata: BiliPaiNavSourceMetadata,
+    activeMainHostRoute: String? = null,
 ): BiliPaiBackGestureDecision {
     val motionMode = resolveBiliPaiNavMotionMode(cardTransitionEnabled = cardTransitionEnabled)
     val routeTransition = resolveBiliPaiNavDisplayPopRouteTransition(
         cardTransitionEnabled = cardTransitionEnabled,
         sourceMetadata = sourceMetadata,
         fromKey = currentKey,
-        toKey = previousKey
+        toKey = previousKey,
+        activeMainHostRoute = activeMainHostRoute,
     )
     val isAppAction = systemBackAction == AppSystemBackAction.RETURN_TO_HOME_TAB
     return BiliPaiBackGestureDecision(
@@ -145,11 +147,14 @@ internal fun resolveBiliPaiNavDisplayPopRouteTransition(
     cardTransitionEnabled: Boolean = true,
     sourceMetadata: BiliPaiNavSourceMetadata,
     fromKey: BiliPaiNavKey?,
-    toKey: BiliPaiNavKey?
+    toKey: BiliPaiNavKey?,
+    activeMainHostRoute: String? = null,
 ): BiliPaiNavRouteTransition {
-    if (isSettingsNavPopTransition(fromKey = fromKey, toKey = toKey)) {
-        return BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP
-    }
+    resolveSettingsNavPopTransition(
+        fromKey = fromKey,
+        toKey = toKey,
+        activeMainHostRoute = activeMainHostRoute,
+    )?.let { return it }
     val fromVideoKey = fromKey as? BiliPaiNavKey.VideoDetail
     val toIsCardReturnTarget = toKey != null && isCardReturnTargetNavKey(toKey)
     if (cardTransitionEnabled) {
@@ -161,7 +166,9 @@ internal fun resolveBiliPaiNavDisplayPopRouteTransition(
                 fromKey.sharedElementTransition &&
                 (toKey == BiliPaiNavKey.MainHost || toKey == BiliPaiNavKey.Favorite)
         if (sharedReadyFavoriteCollectionReturn) {
-            return BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
+            // 合集详情↔收藏列表：预测返回时 sharedBounds 常对不齐，NO_OP 会让两页全屏叠在一起。
+            // 用轻量 sibling pop，进场仍可由顶栏 sharedBounds 增强。
+            return BiliPaiNavRouteTransition.LIGHT_SIBLING_POP
         }
 
         val normalizedSourceRoute = sourceMetadata.sourceRoute?.substringBefore("?")

@@ -1,6 +1,7 @@
 package com.android.purebilibili.feature.home.components.cards
 
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundPhase
+import com.android.purebilibili.core.ui.transition.normalizeSharedElementSourceRoute
 
 internal data class VideoCardScrollLiteVisualPolicy(
     val coverShadowElevationDp: Float,
@@ -85,26 +86,34 @@ internal fun shouldHideHomeCardCoverDuringShellMorph(
 }
 
 /**
- * 历史 API：曾按落位进度淡入 chrome。现改为始终可见，避免回弹末段才出标题。
+ * 返回落位进度达到该比例后开始淡入标题等 chrome。
+ * 略高于源卡 Enter 延后比（0.55），让封面先露一拍、字不盖实时画面。
  */
-internal const val HOME_CARD_CHROME_EARLY_REVEAL_SETTLE_START = 0f
+internal const val HOME_CARD_CHROME_EARLY_REVEAL_SETTLE_START = 0.62f
 
 /**
- * 历史 API：现恒为 1，保留供测试/调用方兼容。
+ * 源卡 chrome 在返回落位进度上的淡入曲线。
+ * [settleProgress] 0=刚开始缩回，1=完全落位；[revealStart] 之前保持 0。
  */
-@Suppress("UNUSED_PARAMETER")
 internal fun resolveHomeCardChromeEarlyRevealAlpha(
     settleProgress: Float,
     revealStart: Float = HOME_CARD_CHROME_EARLY_REVEAL_SETTLE_START,
-): Float = 1f
+): Float {
+    val clampedSettle = settleProgress.coerceIn(0f, 1f)
+    val start = revealStart.coerceIn(0f, 1f)
+    if (clampedSettle <= start) return 0f
+    if (start >= 1f) return if (clampedSettle >= 1f) 1f else 0f
+    return ((clampedSettle - start) / (1f - start)).coerceIn(0f, 1f)
+}
 
 /**
- * 返回 shell morph 期间首页源卡 **chrome**（标题/UP/信息区）的 alpha。
+ * 返回 shell morph 期间源卡 **chrome**（标题/UP/信息区）的 alpha。
  *
- * 始终 1：标题与封面同步参与落位，不再等回弹末段淡入。
- * 飞行中由详情壳盖住源卡信息区，避免再靠压透明制造延迟。
+ * - morph 未进行：始终 1，避免相关推荐等落位后标题空白
+ * - 进场飞向详情：保持 0，避免字叠在播放器上
+ * - 返回落位：按 settle 进度在末段淡入，与封面同步出现，且中段不盖住实时画面
+ * - 快速返回：直接 1
  */
-@Suppress("UNUSED_PARAMETER")
 internal fun resolveHomeCardChromeAlphaDuringShellReturnMorph(
     useCardContainerSharedBounds: Boolean,
     isSharedMorphSourceCard: Boolean,
@@ -115,7 +124,26 @@ internal fun resolveHomeCardChromeAlphaDuringShellReturnMorph(
     isSharedTransitionActive: Boolean = false,
     transitionBackgroundProgress: Float = 0f,
     isQuickReturnFromDetail: Boolean = false,
-): Float = 1f
+): Float {
+    if (!useCardContainerSharedBounds || !isSharedMorphSourceCard) return 1f
+    if (isQuickReturnFromDetail) return 1f
+
+    val morphActive = isSharedTransitionActive || isVideoCardReturnGestureInProgress
+    // morph 已结束：立刻恢复（哪怕景深 phase 仍短暂停留在 RETURNING）
+    if (!morphActive) return 1f
+
+    val isReturnMorph = isReturningFromDetail ||
+        isVideoCardReturnGestureInProgress ||
+        transitionBackgroundPhase == VideoCardTransitionBackgroundPhase.RETURNING
+    if (!isReturnMorph) {
+        // 进场：藏字，避免标题飞过实时播放器
+        return 0f
+    }
+
+    // 返回：景深 progress 1→0；settle 0→1。末段再露字，与延后淡入的封面对齐。
+    val settleProgress = 1f - transitionBackgroundProgress.coerceIn(0f, 1f)
+    return resolveHomeCardChromeEarlyRevealAlpha(settleProgress = settleProgress)
+}
 
 /**
  * 兼容旧布尔语义：chrome 尚未完全露出版视为仍在抑制。
@@ -144,12 +172,7 @@ internal fun shouldSuppressHomeCardVisualDuringShellReturnMorph(
 }
 
 internal fun normalizeVideoCardSourceRouteForSharedKey(sourceRoute: String?): String? {
-    val normalized = sourceRoute?.trim()?.takeIf { it.isNotBlank() } ?: return null
-    return if (normalized.startsWith("home?category=")) {
-        normalized
-    } else {
-        normalized.substringBefore("?")
-    }
+    return normalizeSharedElementSourceRoute(sourceRoute)
 }
 
 internal fun resolveVideoCardSharedReturnTargetKey(

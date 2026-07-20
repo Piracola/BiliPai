@@ -943,7 +943,9 @@ internal fun VideoDetailScreenStateHolder(
     val window = remember { activity?.window }
     var entryRequestedOrientation by rememberSaveable {
         mutableIntStateOf(
-            activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            resolveVideoDetailEntryOrientationSnapshot(
+                currentRequestedOrientation = activity?.requestedOrientation
+            )
         )
     }
     val insetsController = remember {
@@ -988,6 +990,7 @@ internal fun VideoDetailScreenStateHolder(
     var pendingTopBarActionRunnable by remember { mutableStateOf<Runnable?>(null) }
     var isActuallyLeaving by rememberSaveable(currentBvid) { mutableStateOf(false) }
     var forceCoverOnlyOnReturn by remember { mutableStateOf(false) }
+    var systemBarsReapplyGeneration by remember(currentBvid) { mutableIntStateOf(0) }
     val transitionState = rememberVideoDetailTransitionState(
         bvid = bvid,
         sourceRoute = sourceRouteForSharedElement,
@@ -1114,16 +1117,48 @@ internal fun VideoDetailScreenStateHolder(
     }
 
     LaunchedEffect(isExitTransitionInProgress, isActuallyLeaving) {
-        if (!shouldRestoreSystemBarsDuringVideoDetailExitTransition(
+        if (shouldRestoreSystemBarsDuringVideoDetailExitTransition(
                 isExitTransitionInProgress = isExitTransitionInProgress,
                 isActuallyLeaving = isActuallyLeaving
             )
         ) {
+            isScreenActive = false
+            restoreStatusBar()
             return@LaunchedEffect
         }
+        if (
+            shouldReactivateVideoDetailSystemBarsAfterCancelledExit(
+                isExitTransitionInProgress = isExitTransitionInProgress,
+                isActuallyLeaving = isActuallyLeaving,
+                isScreenActive = isScreenActive,
+            )
+        ) {
+            isScreenActive = true
+            systemBarsReapplyGeneration += 1
+        }
+    }
 
-        isScreenActive = false
-        restoreStatusBar()
+    var wasKeepLoadedContentForBackPreview by remember(currentBvid) {
+        mutableStateOf(keepLoadedContentForBackPreview)
+    }
+    LaunchedEffect(keepLoadedContentForBackPreview, isActuallyLeaving) {
+        if (
+            shouldReapplyVideoDetailSystemBarsAfterBecomingTop(
+                wasKeepLoadedContentForBackPreview = wasKeepLoadedContentForBackPreview,
+                keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
+                isActuallyLeaving = isActuallyLeaving,
+            )
+        ) {
+            isScreenActive = true
+            systemBarsReapplyGeneration += 1
+        }
+        wasKeepLoadedContentForBackPreview = keepLoadedContentForBackPreview
+    }
+
+    LaunchedEffect(predictiveBackCancelRecoveryGeneration) {
+        if (predictiveBackCancelRecoveryGeneration <= 0) return@LaunchedEffect
+        isScreenActive = true
+        systemBarsReapplyGeneration += 1
     }
 
     LaunchedEffect(currentBvid) {
@@ -2091,6 +2126,7 @@ internal fun VideoDetailScreenStateHolder(
         insetsController = insetsController,
         isScreenActive = isScreenActive,
         spec = systemBarsApplySpec,
+        reapplyGeneration = systemBarsReapplyGeneration,
     )
 
     val uiSuccessState = uiState as? VideoPlaybackUiState.Success

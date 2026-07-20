@@ -1025,6 +1025,10 @@ fun VideoPlayerSection(
     val overlayDrawerHazeState = com.android.purebilibili.core.ui.blur.rememberRecoverableHazeState()
     var showEndDrawer by remember { mutableStateOf(false) }
     var endDrawerInitialTab by remember { mutableIntStateOf(0) }
+    val currentPlaybackIdentity = remember(bvid, uiState) {
+        val success = uiState as? VideoPlaybackUiState.Success
+        "${bvid}_${success?.info?.cid ?: 0L}"
+    }
     val endDrawerReservedWidthDp = resolveLandscapeEndDrawerReservedWidthDp(
         drawerVisible = showEndDrawer,
         isFullscreen = isFullscreen,
@@ -1189,6 +1193,21 @@ fun VideoPlayerSection(
         }
     }
 
+    // 换集/换片后收口侧栏与手势中间态，避免全屏遮罩或 multi-touch 标志卡住导致触摸无响应。
+    LaunchedEffect(currentPlaybackIdentity) {
+        showEndDrawer = false
+        isScreenLocked = false
+        isMultiTouchActive = false
+        gestureMode = VideoGestureMode.None
+        isGestureVisible = false
+        scale = 1f
+        panX = 0f
+        panY = 0f
+        if (isLongPressing || longPressSpeedLocked) {
+            finishLongPressSpeedGesture(gestureEnded = true)
+        }
+    }
+
     fun applyExplicitPlaybackSpeedChange(speed: Float) {
         if (
             shouldClearLockedLongPressSpeedForExplicitSpeedChange(
@@ -1240,7 +1259,8 @@ fun VideoPlayerSection(
         modifier = rootModifier
             //  [新增] 处理双指缩放/平移，并在全屏时支持双指调倍速
             .pointerInput(playerState.player, isFullscreen, isInPipMode, isScreenLocked, twoFingerSpeedMode) {
-                awaitEachGesture {
+                try {
+                    awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
                     var totalPanX = 0f
                     var totalPanY = 0f
@@ -1347,6 +1367,9 @@ fun VideoPlayerSection(
                             }
                         }
                     }
+                    }
+                } finally {
+                    isMultiTouchActive = false
                 }
             }
             //  先处理拖拽手势 (音量/亮度/进度)

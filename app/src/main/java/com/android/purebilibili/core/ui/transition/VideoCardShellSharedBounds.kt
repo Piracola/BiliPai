@@ -7,6 +7,9 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.SharedTransitionScope.OverlayClip
 import androidx.compose.animation.SharedTransitionScope.ResizeMode.Companion.scaleToBounds
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -17,8 +20,11 @@ import androidx.compose.ui.layout.ContentScale
 /**
  * shell sharedBounds 角色。
  *
- * 两侧均 Enter/Exit.None：源卡标题/封面与壳一起参与 morph，避免
- * 「先淡掉标题再飞入」或「回弹末段才出标题」。叠字由详情壳盖住源卡信息区消化。
+ * - 进场（首页等大卡）：源卡 Exit.None、详情壳 Enter.None，整卡跟手放大。
+ * - 进场（相关/分区横条卡）：源卡短淡出，避免横条卡内容叠在详情播放器上。
+ * - 返回（首页等大卡）：详情壳 Exit.None 保住实时画面；源卡 Enter 延后淡入，
+ *   避免封面一开始盖住直播画面。
+ * - 返回（相关/分区横条卡）：源卡 Enter.None，标题与封面同步落位。
  */
 internal enum class VideoCardShellSharedBoundsRole {
     /** 列表源卡片 */
@@ -28,22 +34,82 @@ internal enum class VideoCardShellSharedBoundsRole {
     DetailShell,
 }
 
+/** 返回时源卡封面延后淡入的起点（占 morph 总时长比例）。 */
+internal const val VIDEO_CARD_SHELL_SOURCE_ENTER_FADE_DELAY_RATIO = 0.55f
+
+/** 横条卡进场源卡淡出时长（占 morph 总时长比例）。 */
+internal const val VIDEO_CARD_SHELL_SOURCE_EXIT_FADE_RATIO = 0.28f
+
+/**
+ * 首页与相关/分区竖卡返回延后淡入源卡。
+ */
+internal fun shouldDelaySourceCardEnterForLiveReturnMorph(sourceRoute: String?): Boolean {
+    @Suppress("UNUSED_PARAMETER")
+    val ignored = sourceRoute
+    return true
+}
+
+/**
+ * 竖卡进场 Exit.None；不再对横条做特判淡出。
+ */
+internal fun shouldFadeOutShellSourceCardOnOpen(sourceRoute: String?): Boolean {
+    @Suppress("UNUSED_PARAMETER")
+    val ignored = sourceRoute
+    return false
+}
+
+internal fun resolveVideoCardShellSourceEnterFadeDelayMillis(
+    transitionDurationMillis: Int,
+): Int {
+    val duration = transitionDurationMillis.coerceAtLeast(0)
+    return (duration * VIDEO_CARD_SHELL_SOURCE_ENTER_FADE_DELAY_RATIO).toInt().coerceIn(0, duration)
+}
+
+internal fun resolveVideoCardShellSourceExitFadeDurationMillis(
+    transitionDurationMillis: Int,
+): Int {
+    val duration = transitionDurationMillis.coerceAtLeast(0)
+    return (duration * VIDEO_CARD_SHELL_SOURCE_EXIT_FADE_RATIO).toInt().coerceIn(72, duration.coerceAtLeast(72))
+}
+
 internal fun resolveVideoCardShellSharedBoundsEnter(
     role: VideoCardShellSharedBoundsRole,
     transitionDurationMillis: Int,
+    delaySourceCardEnterForLiveReturn: Boolean = true,
 ): EnterTransition {
-    @Suppress("UNUSED_PARAMETER")
-    val ignoredRole = role
-    @Suppress("UNUSED_PARAMETER")
-    val ignoredDuration = transitionDurationMillis
+    if (
+        role == VideoCardShellSharedBoundsRole.SourceCard &&
+        delaySourceCardEnterForLiveReturn
+    ) {
+        val duration = transitionDurationMillis.coerceAtLeast(0)
+        val delay = resolveVideoCardShellSourceEnterFadeDelayMillis(duration)
+        return fadeIn(
+            animationSpec = tween(
+                durationMillis = (duration - delay).coerceAtLeast(0),
+                delayMillis = delay,
+            ),
+        )
+    }
     return EnterTransition.None
 }
 
 internal fun resolveVideoCardShellSharedBoundsExit(
     role: VideoCardShellSharedBoundsRole,
+    fadeOutSourceCardOnOpen: Boolean = false,
+    transitionDurationMillis: Int = 0,
 ): ExitTransition {
-    @Suppress("UNUSED_PARAMETER")
-    val ignoredRole = role
+    if (
+        role == VideoCardShellSharedBoundsRole.SourceCard &&
+        fadeOutSourceCardOnOpen
+    ) {
+        return fadeOut(
+            animationSpec = tween(
+                durationMillis = resolveVideoCardShellSourceExitFadeDurationMillis(
+                    transitionDurationMillis,
+                ),
+            ),
+        )
+    }
     return ExitTransition.None
 }
 
@@ -62,14 +128,25 @@ internal fun Modifier.videoCardShellSharedBoundsOrEmpty(
     if (!enabled || sharedTransitionScope == null || animatedVisibilityScope == null || bvid.isBlank()) {
         return this
     }
-    val enter = remember(role, motionSpec.durationMillis) {
+    val delaySourceCardEnter = remember(sourceRoute) {
+        shouldDelaySourceCardEnterForLiveReturnMorph(sourceRoute)
+    }
+    val fadeOutSourceOnOpen = remember(sourceRoute) {
+        shouldFadeOutShellSourceCardOnOpen(sourceRoute)
+    }
+    val enter = remember(role, motionSpec.durationMillis, delaySourceCardEnter) {
         resolveVideoCardShellSharedBoundsEnter(
             role = role,
             transitionDurationMillis = motionSpec.durationMillis,
+            delaySourceCardEnterForLiveReturn = delaySourceCardEnter,
         )
     }
-    val exit = remember(role) {
-        resolveVideoCardShellSharedBoundsExit(role = role)
+    val exit = remember(role, motionSpec.durationMillis, fadeOutSourceOnOpen) {
+        resolveVideoCardShellSharedBoundsExit(
+            role = role,
+            fadeOutSourceCardOnOpen = fadeOutSourceOnOpen,
+            transitionDurationMillis = motionSpec.durationMillis,
+        )
     }
     return then(
         with(sharedTransitionScope) {

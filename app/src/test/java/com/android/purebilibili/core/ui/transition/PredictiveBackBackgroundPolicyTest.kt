@@ -11,20 +11,20 @@ import kotlin.test.assertTrue
 class PredictiveBackBackgroundPolicyTest {
 
     @Test
-    fun gestureProgressMapsBackGestureToIncreasingBlur() {
-        assertEquals(0f, resolvePredictiveBackGestureBlurProgress(0f))
-        assertEquals(0.75f, resolvePredictiveBackGestureBlurProgress(0.5f))
-        assertEquals(1f, resolvePredictiveBackGestureBlurProgress(1f))
+    fun gestureProgressMapsBackGestureToDecreasingBlur() {
+        assertEquals(1f, resolvePredictiveBackGestureBlurProgress(0f))
+        assertEquals(0.25f, resolvePredictiveBackGestureBlurProgress(0.5f))
+        assertEquals(0f, resolvePredictiveBackGestureBlurProgress(1f))
     }
 
     @Test
     fun gestureProgressClampsOutOfRangeBackProgress() {
-        assertEquals(0f, resolvePredictiveBackGestureBlurProgress(-0.5f))
-        assertEquals(1f, resolvePredictiveBackGestureBlurProgress(1.5f))
+        assertEquals(1f, resolvePredictiveBackGestureBlurProgress(-0.5f))
+        assertEquals(0f, resolvePredictiveBackGestureBlurProgress(1.5f))
     }
 
     @Test
-    fun settingsIosPushPopGestureProgressMapsBackGestureToDecreasingBlur() {
+    fun settingsIosPushPopGestureProgressMatchesUnifiedDecreasingBlur() {
         assertEquals(1f, resolvePredictiveBackGestureBlurProgress(
             backProgress = 0f,
             routeTransition = BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
@@ -37,6 +37,17 @@ class PredictiveBackBackgroundPolicyTest {
             backProgress = 1f,
             routeTransition = BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
         ))
+        // CLASSIC_CARD 与设置同向：不再越拖越糊。
+        assertEquals(
+            resolvePredictiveBackGestureBlurProgress(
+                backProgress = 0.5f,
+                routeTransition = BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
+            ),
+            resolvePredictiveBackGestureBlurProgress(
+                backProgress = 0.5f,
+                routeTransition = BiliPaiNavRouteTransition.CLASSIC_CARD,
+            ),
+        )
     }
 
     @Test
@@ -142,8 +153,8 @@ class PredictiveBackBackgroundPolicyTest {
     }
 
     @Test
-    fun shouldApplyPredictiveBlur_forSettingsIosPushPopWhenEnabled() {
-        assertTrue(
+    fun shouldApplyPredictiveBlur_skipsSettingsIosPushPop() {
+        assertFalse(
             shouldApplyPredictiveBackGestureBlur(
                 routeTransition = BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
                 predictiveBackEnabled = true,

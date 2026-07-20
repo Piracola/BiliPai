@@ -5,6 +5,7 @@ import com.android.purebilibili.navigation3.BiliPaiNavRouteTransition
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SettingsNavHierarchyPolicyTest {
@@ -24,6 +25,14 @@ class SettingsNavHierarchyPolicyTest {
         assertEquals(1, resolveSettingsNavDepth("settings_category"))
         assertEquals(2, resolveSettingsNavDepth("appearance_settings"))
         assertEquals(3, resolveSettingsNavDepth("icon_settings"))
+        assertEquals(3, resolveSettingsNavDepth("animation_settings"))
+    }
+
+    @Test
+    fun resolveSettingsNavParentRoute_animationUnderAppearance() {
+        assertEquals("appearance_settings", resolveSettingsNavParentRoute("animation_settings"))
+        assertEquals("appearance_settings", resolveSettingsNavParentRoute("icon_settings"))
+        assertEquals("settings_category", resolveSettingsNavParentRoute("appearance_settings"))
     }
 
     @Test
@@ -58,6 +67,18 @@ class SettingsNavHierarchyPolicyTest {
                 childRoute = "playback_settings",
             )
         )
+        assertTrue(
+            isSettingsNavHierarchyTransition(
+                parentRoute = "appearance_settings",
+                childRoute = "animation_settings",
+            )
+        )
+        assertTrue(
+            isSettingsNavHierarchyTransition(
+                parentRoute = "settings",
+                childRoute = "animation_settings",
+            )
+        )
         assertFalse(
             isSettingsNavHierarchyTransition(
                 parentRoute = "home",
@@ -90,6 +111,41 @@ class SettingsNavHierarchyPolicyTest {
                 fromRoute = "settings",
                 toRoute = "appearance_settings",
                 forward = true,
+            )
+        )
+        assertEquals(
+            BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
+            resolveSettingsNavRouteTransition(
+                fromRoute = "animation_settings",
+                toRoute = "appearance_settings",
+                forward = false,
+            )
+        )
+    }
+
+    @Test
+    fun resolveSettingsNavPopTransition_remapsMainHostWhenSettingsTabActive() {
+        assertEquals(
+            BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
+            resolveSettingsNavPopTransition(
+                fromKey = BiliPaiNavKey.AppearanceSettings,
+                toKey = BiliPaiNavKey.MainHost,
+                activeMainHostRoute = "settings",
+            )
+        )
+        assertEquals(
+            BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
+            resolveSettingsNavPopTransition(
+                fromKey = BiliPaiNavKey.AnimationSettings,
+                toKey = BiliPaiNavKey.MainHost,
+                activeMainHostRoute = "settings",
+            )
+        )
+        assertNull(
+            resolveSettingsNavPopTransition(
+                fromKey = BiliPaiNavKey.AppearanceSettings,
+                toKey = BiliPaiNavKey.MainHost,
+                activeMainHostRoute = "home",
             )
         )
     }

@@ -642,6 +642,17 @@ fun VideoPlayerOverlay(
     }
     var showPlaybackOrderSheet by remember { mutableStateOf(false) }
     var showPageSelectorSheet by remember { mutableStateOf(false) }
+    // 换集后强制关掉分集/菜单等全屏遮罩，避免 Dialog/Sheet 残留挡触摸。
+    LaunchedEffect(bvid, cid) {
+        showPageSelectorSheet = false
+        showQualityMenu = false
+        showSpeedMenu = false
+        showRatioMenu = false
+        showDanmakuSettings = false
+        showChapterList = false
+        showPlaybackOrderSheet = false
+        showCastDialog = false
+    }
     var currentSpeed by remember(player) { mutableFloatStateOf(player.playbackParameters.speed) }
     //  使用传入的比例状态
     var isPlaying by remember(player) {
@@ -1322,6 +1333,7 @@ fun VideoPlayerOverlay(
                     onSpeedClick = { showSpeedMenu = true },
                     onRatioClick = { showRatioMenu = true },
                     onNextEpisodeClick = {
+                        onDismissEndDrawer()
                         val target = nextEpisodeTarget
                         when {
                             target?.nextPageIndex != null -> onPageSelect(target.nextPageIndex)
@@ -1974,8 +1986,8 @@ fun VideoPlayerOverlay(
                             blockParentVerticalScroll = true,
                             onDismissRequest = { showPageSelectorSheet = false },
                             onPageSelect = { index ->
-                                onPageSelect(index)
                                 showPageSelectorSheet = false
+                                onPageSelect(index)
                             }
                         )
                     }

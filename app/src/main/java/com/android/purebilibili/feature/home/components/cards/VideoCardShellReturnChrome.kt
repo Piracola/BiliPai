@@ -11,7 +11,8 @@ import com.android.purebilibili.core.util.CardPositionManager
 
 /**
  * 源卡信息区（标题/UP 等）在 shell 返回 morph 时的 chrome alpha。
- * 封面保持可见；快速返回不藏字；绘制阶段读 progress，避免整卡重组。
+ * 封面保持可见；返回末段按景深进度淡入字，避免叠实时画面又落后封面；
+ * 快速返回不藏字；绘制阶段读 progress，避免整卡重组。
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable

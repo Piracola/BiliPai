@@ -1074,7 +1074,12 @@ internal fun shouldEnableCoverOverlaySharedBounds(
     // 返回阶段或手动封面阶段由封面承接同一个 cover key，
     // 避免播放器画面和封面各自跑一段动画。
     val allowBySourceRoute = sourceRouteBase == null ||
-        com.android.purebilibili.navigation.isVideoCardReturnTargetRoute(sourceRouteBase)
+        (
+            com.android.purebilibili.navigation.isVideoCardReturnTargetRoute(sourceRouteBase) &&
+                !com.android.purebilibili.core.ui.transition.shouldSkipVideoCardSharedBoundsMorph(
+                    sourceRouteBase
+                )
+        )
     return useCoverOverlaySharedBounds &&
         transitionEnabled &&
         hasSharedTransitionScope &&

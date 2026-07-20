@@ -78,7 +78,8 @@ import com.android.purebilibili.feature.video.ui.section.shouldShowAiSummaryEntr
 import com.android.purebilibili.feature.video.ui.section.resolveVideoDetailMotionBudget
 import com.android.purebilibili.feature.video.ui.section.shouldAnimateVideoDetailLayout
 import com.android.purebilibili.feature.video.ui.components.DanmakuSettingsPanel
-import com.android.purebilibili.feature.video.ui.components.RelatedVideoItem
+import com.android.purebilibili.feature.video.ui.components.RelatedVideoGridRow
+import com.android.purebilibili.feature.video.ui.components.chunkRelatedVideosForHomeStyleGrid
 import com.android.purebilibili.feature.video.ui.components.CollectionRow
 import com.android.purebilibili.feature.video.ui.components.CollectionSheet
 import com.android.purebilibili.feature.video.ui.components.PagesSelector
@@ -852,43 +853,39 @@ private fun VideoIntroTab(
             VideoRecommendationHeader()
         }
 
+        val relatedRows = chunkRelatedVideosForHomeStyleGrid(relatedVideos)
         itemsIndexed(
-            items = relatedVideos,
-            key = { index, item ->
+            items = relatedRows,
+            key = { rowIndex, row ->
+                val first = row.firstOrNull()
                 resolveIndexedVideoLazyKey(
-                    namespace = "video_related",
-                    index = index,
-                    bvid = item.bvid,
-                    aid = item.aid,
-                    cid = item.cid
+                    namespace = "video_related_row",
+                    index = rowIndex,
+                    bvid = first?.bvid.orEmpty(),
+                    aid = first?.aid ?: 0L,
+                    cid = first?.cid ?: 0L
                 )
             }
-        ) { index, video ->
-            val openRelatedVideo = {
-                val navOptions = if (video.cid > 0L) {
-                    android.os.Bundle().apply {
-                        putLong(VIDEO_NAV_TARGET_CID_KEY, video.cid)
-                    }
-                } else {
-                    null
-                }
-                onRelatedVideoClick(video.bvid, navOptions)
-            }
-
+        ) { _, row ->
             CompositionLocalProvider(
                 LocalVideoCardSharedElementSourceRoute provides "video/${info.bvid}"
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    RelatedVideoItem(
-                        video = video,
-                        isFollowed = video.owner.mid in followingMids,
-                        transitionEnabled = relatedVideoTransitionEnabled,
-                        showUpBadge = showUpBadge,
-                        onClick = openRelatedVideo
-                    )
-                }
+                RelatedVideoGridRow(
+                    videos = row,
+                    followingMids = followingMids,
+                    transitionEnabled = relatedVideoTransitionEnabled,
+                    showUpBadge = showUpBadge,
+                    onVideoClick = { video ->
+                        val navOptions = if (video.cid > 0L) {
+                            android.os.Bundle().apply {
+                                putLong(VIDEO_NAV_TARGET_CID_KEY, video.cid)
+                            }
+                        } else {
+                            null
+                        }
+                        onRelatedVideoClick(video.bvid, navOptions)
+                    }
+                )
             }
         }
     }

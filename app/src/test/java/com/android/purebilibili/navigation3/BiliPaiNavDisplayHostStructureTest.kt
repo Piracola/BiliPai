@@ -62,7 +62,8 @@ class BiliPaiNavDisplayHostStructureTest {
             .substringAfter("NavigationBackHandler(")
             .substringBefore("onBackCancelled")
 
-        assertTrue(backHandlerBlock.contains("reportPredictiveProgress = predictiveBackEnabled"))
+        assertTrue(backHandlerBlock.contains("reportPredictiveProgress = predictiveBackEnabled &&"))
+        assertTrue(backHandlerBlock.contains("predictiveBackAnimationStyle.usesPredictivePreview"))
         assertTrue(source.contains("predictiveBackEnabled = predictiveBackEnabled"))
     }
 
@@ -220,7 +221,8 @@ class BiliPaiNavDisplayHostStructureTest {
         assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.OPENING"))
         assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.RETURNING"))
         assertTrue(preOnBack.contains("resolveVideoCardTransitionBackgroundReturnClearEasing()"))
-        assertFalse(preOnBack.contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
+        assertTrue(preOnBack.contains("shouldSnapClearVideoCardDepthBlurOnQuickReturn("))
+        assertTrue(preOnBack.contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
     }
 
     @Test

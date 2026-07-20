@@ -33,7 +33,6 @@ import com.android.purebilibili.R
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.ui.AdaptiveSplitLayout
 import com.android.purebilibili.core.ui.AppSurfaceTokens
-import com.android.purebilibili.core.ui.globalWallpaperAwareBackground
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.feature.settings.SettingsHomeSearchEntry
 import com.android.purebilibili.feature.settings.SettingsRootCategory
@@ -65,7 +64,7 @@ fun SettingsTabletShell(
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .globalWallpaperAwareBackground(AppSurfaceTokens.groupedListContainer())
+                    .background(AppSurfaceTokens.groupedListContainer())
                     .padding(layoutPolicy.masterPanePaddingDp.dp),
             ) {
                 Row(
@@ -136,7 +135,7 @@ fun SettingsTabletShell(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .globalWallpaperAwareBackground(AppSurfaceTokens.groupedListContainer())
+                    .background(AppSurfaceTokens.groupedListContainer())
                     .padding(layoutPolicy.detailPanePaddingDp.dp),
             ) {
                 rightPane()

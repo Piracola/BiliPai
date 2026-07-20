@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -34,10 +33,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -50,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.android.purebilibili.core.ui.AdaptivePullToRefreshBox
 import com.android.purebilibili.core.ui.AdaptiveScaffold
 import com.android.purebilibili.core.ui.AdaptiveTopAppBar
@@ -61,32 +55,21 @@ import com.android.purebilibili.core.ui.CutePersonLoadingIndicator
 import com.android.purebilibili.core.util.resolveReplaceRefreshPage
 import com.android.purebilibili.core.ui.animation.DampedDragAnimationState
 import com.android.purebilibili.core.ui.animation.rememberDampedDragAnimationState
-import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionEnabled
-import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.globalWallpaperAwareBackground
 import com.android.purebilibili.core.util.responsiveContentWidth
 import com.android.purebilibili.core.ui.rememberAppBackIcon
-import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.store.HomeSettings
 import com.android.purebilibili.core.store.BottomBarLiquidGlassPreset
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.resolveSharedLiquidGlassChromeEnabled
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
-import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
-import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
-import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionPlaybackIntent
-import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
-import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
-import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
-import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
-import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
-import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.BangumiType
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
+import com.android.purebilibili.feature.home.components.cards.ElegantVideoCard
 import com.android.purebilibili.feature.home.components.BottomBarClickPulseTransform
 import com.android.purebilibili.feature.home.components.BottomBarIndicatorLayerTransform
 import com.android.purebilibili.feature.home.components.KernelSuBottomBarIndicatorLayer
@@ -852,6 +835,10 @@ private fun PartitionVideoList(
     contentPadding: PaddingValues,
     onVideoClick: (VideoItem) -> Unit
 ) {
+    val sharedTransitionEnabled = LocalSharedTransitionEnabled.current
+    val sharedElementSourceRoute = LocalVideoCardSharedElementSourceRoute.current
+        ?.takeIf { it.isNotBlank() }
+        ?: "partition"
     when {
         state.videos.isEmpty() && state.isLoading -> {
             Box(modifier = modifier.fillMaxHeight()) {
@@ -868,29 +855,45 @@ private fun PartitionVideoList(
             }
         }
         else -> {
+            val videoRows = remember(state.videos) { state.videos.chunked(2) }
             LazyColumn(
                 state = listState,
                 modifier = modifier.fillMaxHeight(),
                 contentPadding = contentPadding,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 itemsIndexed(
-                    items = state.videos,
-                    key = { index, video ->
+                    items = videoRows,
+                    key = { rowIndex, row ->
+                        val first = row.firstOrNull()
                         resolveIndexedVideoLazyKey(
-                            namespace = "partition_feed",
-                            index = index,
-                            bvid = video.bvid,
-                            id = video.id,
-                            aid = video.aid,
-                            cid = video.cid
+                            namespace = "partition_feed_row",
+                            index = rowIndex,
+                            bvid = first?.bvid.orEmpty(),
+                            aid = first?.aid ?: 0L,
+                            cid = first?.cid ?: 0L
                         )
                     }
-                ) { _, video ->
-                    PartitionVideoRow(
-                        video = video,
-                        onClick = { onVideoClick(video) }
-                    )
+                ) { rowIndex, row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        row.forEachIndexed { columnIndex, video ->
+                            ElegantVideoCard(
+                                video = video,
+                                index = rowIndex * 2 + columnIndex,
+                                transitionEnabled = sharedTransitionEnabled,
+                                sharedElementSourceRoute = sharedElementSourceRoute,
+                                coverAspectRatio = 4f / 3f,
+                                modifier = Modifier.weight(1f),
+                                onClick = { _, _ -> onVideoClick(video) }
+                            )
+                        }
+                        repeat((2 - row.size).coerceAtLeast(0)) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
 
                 if (state.isLoading) {
@@ -908,177 +911,4 @@ private fun PartitionVideoList(
             }
         }
     }
-}
-
-/**
- *  分区视频条目
- */
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-private fun PartitionVideoRow(
-    video: VideoItem,
-    onClick: () -> Unit
-) {
-    val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-    val screenWidthPx = remember(configuration.screenWidthDp, density) {
-        with(density) { configuration.screenWidthDp.dp.toPx() }
-    }
-    val screenHeightPx = remember(configuration.screenHeightDp, density) {
-        with(density) { configuration.screenHeightDp.dp.toPx() }
-    }
-    val cardBoundsRef = remember { object { var value: androidx.compose.ui.geometry.Rect? = null } }
-    val sharedTransitionScope = LocalSharedTransitionScope.current
-    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-    val sharedTransitionEnabled = LocalSharedTransitionEnabled.current
-    val sharedElementSourceRoute = LocalVideoCardSharedElementSourceRoute.current
-    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
-    val coverSharedEnabled = shouldEnableVideoCoverSharedTransition(
-        transitionEnabled = sharedTransitionEnabled,
-        hasSharedTransitionScope = sharedTransitionScope != null,
-        hasAnimatedVisibilityScope = animatedVisibilityScope != null
-    ) && !sharedElementSourceRoute.isNullOrBlank()
-    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
-        sourceRoute = sharedElementSourceRoute,
-        transitionEnabled = coverSharedEnabled
-    )
-    val sharedTransitionMotionSpec = remember(
-        sharedElementSourceRoute,
-        sharedTransitionEnabled,
-        sharedTransitionSpeedSettings
-    ) {
-        resolveVideoCardSharedTransitionMotionSpec(
-            sourceRoute = sharedElementSourceRoute,
-            transitionEnabled = sharedTransitionEnabled,
-            speedSettings = sharedTransitionSpeedSettings
-        )
-    }
-    val videoSharedPlaybackIntent = remember(context) {
-        resolveVideoSharedTransitionPlaybackIntent(
-            clickToPlayEnabled = SettingsManager.getClickToPlaySync(context)
-        )
-    }
-    val sharedTransitionVisualSpec = remember(sharedElementSourceRoute, videoSharedPlaybackIntent) {
-        resolveVideoSharedTransitionVisualSpec(
-            sourceRoute = sharedElementSourceRoute,
-            sourceCornerDp = 10,
-            playbackIntent = videoSharedPlaybackIntent
-        )
-    }
-    val coverShape = remember(sharedTransitionVisualSpec) {
-        RoundedCornerShape(sharedTransitionVisualSpec.sourceCornerDp.dp)
-    }
-    val cardShellShape = remember(sharedTransitionVisualSpec) {
-        RoundedCornerShape(12.dp)
-    }
-    val triggerClick = {
-        cardBoundsRef.value?.let { bounds ->
-            CardPositionManager.recordVideoCardPosition(
-                bvid = video.bvid,
-                sourceRoute = sharedElementSourceRoute,
-                bounds = bounds,
-                screenWidth = screenWidthPx,
-                screenHeight = screenHeightPx,
-                density = density.density,
-                sourceCornerDp = sharedTransitionVisualSpec.sourceCornerDp
-            )
-        }
-        onClick()
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .videoCardShellSharedBoundsOrEmpty(
-                enabled = useCardShellSharedBounds,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-                bvid = video.bvid,
-                sourceRoute = sharedElementSourceRoute,
-                motionSpec = sharedTransitionMotionSpec,
-                clipShape = cardShellShape
-            )
-            .clip(RoundedCornerShape(12.dp))
-            .onGloballyPositioned { coordinates ->
-                cardBoundsRef.value = coordinates.boundsInRoot()
-            }
-            .clickable(onClick = triggerClick),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .width(146.dp)
-                .aspectRatio(16f / 9f)
-                .clip(coverShape)
-                .background(AppSurfaceTokens.cardContainer())
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                AsyncImage(
-                    model = FormatUtils.resolveVideoCoverUrl(video.pic, useLowQuality = true),
-                    contentDescription = video.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            if (video.duration > 0) {
-                Text(
-                    text = FormatUtils.formatDuration(video.duration),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .clip(AppShapes.container(ContainerLevel.Pill))
-                        .background(Color.Black.copy(alpha = 0.56f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    lineHeight = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 82.dp)
-                .padding(vertical = 2.dp)
-                .videoCardShellReturnChromeAlpha(
-                    enabled = useCardShellSharedBounds,
-                    bvid = video.bvid,
-                    sourceRoute = sharedElementSourceRoute,
-                )
-        ) {
-            Text(
-                text = video.title,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = buildPartitionVideoMeta(video),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-private fun buildPartitionVideoMeta(video: VideoItem): String {
-    val publishTime = FormatUtils.formatPublishTime(video.pubdate)
-    val ownerName = video.owner.name.ifBlank { video.tname }
-    val primaryStat = video.stat.view.takeIf { it > 0 }?.let { "播放 ${FormatUtils.formatStat(it.toLong())}" }
-    val secondaryStat = video.stat.danmaku.takeIf { it > 0 }?.let { "弹幕 ${FormatUtils.formatStat(it.toLong())}" }
-    return listOf(publishTime, ownerName, primaryStat, secondaryStat)
-        .filter { !it.isNullOrBlank() }
-        .joinToString("  ")
 }

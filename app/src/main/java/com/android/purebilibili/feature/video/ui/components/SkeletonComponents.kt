@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 
 /**
  *  骨架屏组件 - iOS 风格加载占位
@@ -86,8 +85,8 @@ fun VideoDetailSkeleton() {
                 VideoDetailActionButtonsSkeleton()
             }
             VideoDetailRelatedHeaderSkeleton()
-            repeat(3) {
-                RelatedVideoItemSkeleton()
+            repeat(2) {
+                RelatedVideoGridRowSkeleton()
             }
         }
     }
@@ -227,56 +226,47 @@ private fun VideoDetailRelatedHeaderSkeleton() {
 }
 
 @Composable
-private fun RelatedVideoItemSkeleton() {
-    Box(
+private fun RelatedVideoGridRowSkeleton() {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
+        repeat(2) {
+            RelatedVideoItemSkeleton(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun RelatedVideoItemSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        SkeletonBlock(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(5.dp)
+                .aspectRatio(RELATED_VIDEO_CARD_COVER_ASPECT_RATIO),
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+        )
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val relatedCoverWidth = 130.dp
-            val relatedCoverHeight = relatedCoverWidth / VIDEO_SHARED_COVER_ASPECT_RATIO
-            SkeletonBlock(
-                modifier = Modifier
-                    .width(relatedCoverWidth)
-                    .height(relatedCoverHeight),
-                shape = RoundedCornerShape(12.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = relatedCoverHeight)
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 16.dp, cornerRadius = 8.dp)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        SkeletonBox(modifier = Modifier.fillMaxWidth(0.82f), height = 16.dp, cornerRadius = 8.dp)
-                    }
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            SkeletonBlock(modifier = Modifier.size(16.dp), shape = CircleShape)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            SkeletonBox(modifier = Modifier.width(84.dp), height = 14.dp, cornerRadius = 7.dp)
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            SkeletonBox(modifier = Modifier.width(52.dp), height = 13.dp, cornerRadius = 7.dp)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            SkeletonBox(modifier = Modifier.width(52.dp), height = 13.dp, cornerRadius = 7.dp)
-                        }
-                    }
-                }
+            SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 16.dp, cornerRadius = 8.dp)
+            SkeletonBox(modifier = Modifier.fillMaxWidth(0.82f), height = 16.dp, cornerRadius = 8.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SkeletonBlock(modifier = Modifier.size(16.dp), shape = CircleShape)
+                Spacer(modifier = Modifier.width(6.dp))
+                SkeletonBox(modifier = Modifier.width(72.dp), height = 14.dp, cornerRadius = 7.dp)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SkeletonBox(modifier = Modifier.width(48.dp), height = 13.dp, cornerRadius = 7.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                SkeletonBox(modifier = Modifier.width(48.dp), height = 13.dp, cornerRadius = 7.dp)
             }
         }
     }

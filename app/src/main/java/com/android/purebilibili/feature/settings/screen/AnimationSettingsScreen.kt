@@ -29,6 +29,8 @@ import com.android.purebilibili.core.ui.blur.shouldAllowHomeChromeLiquidGlass
 import com.android.purebilibili.core.store.LiquidGlassMode
 import com.android.purebilibili.core.store.AppNavigationSettings
 import com.android.purebilibili.core.store.SettingsManager
+import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
+import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackExitDirection
 import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ContainerLevel
@@ -128,6 +130,61 @@ fun AnimationSettingsContent(
         .collectAsStateWithLifecycle(initialValue = true)
     val appNavigationSettings by SettingsManager.getAppNavigationSettings(context)
         .collectAsStateWithLifecycle(initialValue = AppNavigationSettings())
+    val predictiveBackAnimationUi = remember(
+        appNavigationSettings.predictiveBackEnabled,
+        appNavigationSettings.predictiveBackAnimationStyle,
+        appNavigationSettings.predictiveBackExitDirection,
+        state.cardTransitionEnabled,
+    ) {
+        resolvePredictiveBackAnimationUiState(
+            predictiveBackEnabled = appNavigationSettings.predictiveBackEnabled,
+            styleStorageValue = appNavigationSettings.predictiveBackAnimationStyle,
+            exitDirectionStorageValue = appNavigationSettings.predictiveBackExitDirection,
+            cardTransitionEnabled = state.cardTransitionEnabled,
+        )
+    }
+    LaunchedEffect(
+        state.cardTransitionEnabled,
+        appNavigationSettings.predictiveBackAnimationStyle,
+    ) {
+        if (
+            state.cardTransitionEnabled &&
+            BiliPaiPredictiveBackAnimationStyle.fromStorageValue(
+                appNavigationSettings.predictiveBackAnimationStyle,
+            ) == BiliPaiPredictiveBackAnimationStyle.AOSP
+        ) {
+            SettingsManager.setPredictiveBackAnimationStyle(
+                context,
+                BiliPaiPredictiveBackAnimationStyle.SCALE.storageValue,
+            )
+        }
+    }
+    var showPredictiveBackAnimationDialog by remember { mutableStateOf(false) }
+    var showPredictiveBackExitDirectionDialog by remember { mutableStateOf(false) }
+    if (showPredictiveBackAnimationDialog) {
+        PredictiveBackAnimationDialog(
+            currentStyle = predictiveBackAnimationUi.selectedStyle,
+            cardTransitionEnabled = state.cardTransitionEnabled,
+            onSelect = { style ->
+                scope.launch {
+                    SettingsManager.setPredictiveBackAnimationStyle(context, style.storageValue)
+                }
+            },
+            onDismiss = { showPredictiveBackAnimationDialog = false },
+        )
+    }
+    if (showPredictiveBackExitDirectionDialog) {
+        PredictiveBackExitDirectionDialog(
+            currentDirection = predictiveBackAnimationUi.selectedExitDirection
+                ?: BiliPaiPredictiveBackExitDirection.ALWAYS_RIGHT,
+            onSelect = { direction ->
+                scope.launch {
+                    SettingsManager.setPredictiveBackExitDirection(context, direction.storageValue)
+                }
+            },
+            onDismiss = { showPredictiveBackExitDirectionDialog = false },
+        )
+    }
     val videoTransitionRealtimeBlurEnabled by SettingsManager
         .getVideoTransitionRealtimeBlurEnabled(context)
         .collectAsStateWithLifecycle(initialValue = true)
@@ -226,9 +283,24 @@ fun AnimationSettingsContent(
 	                        IOSSwitchItem(
                             icon = rememberSettingsSemanticIcon(SettingsIconRole.CARD_TRANSITION_ANIMATION),
                             title = "过渡动画",
-                            subtitle = "全局视频卡片与详情页的共享元素过渡效果",
+                            subtitle = "全局视频卡片与详情页的共享元素过渡效果；开启后不可使用 AOSP 预测返回",
                             checked = state.cardTransitionEnabled,
-                            onCheckedChange = { viewModel.toggleCardTransition(it) },
+                            onCheckedChange = { enabled ->
+                                viewModel.toggleCardTransition(enabled)
+                                if (
+                                    enabled &&
+                                    BiliPaiPredictiveBackAnimationStyle.fromStorageValue(
+                                        appNavigationSettings.predictiveBackAnimationStyle,
+                                    ) == BiliPaiPredictiveBackAnimationStyle.AOSP
+                                ) {
+                                    scope.launch {
+                                        SettingsManager.setPredictiveBackAnimationStyle(
+                                            context,
+                                            BiliPaiPredictiveBackAnimationStyle.SCALE.storageValue,
+                                        )
+                                    }
+                                }
+                            },
                             iconTint = iOSTeal
                         )
                         IOSDivider()
@@ -253,6 +325,43 @@ fun AnimationSettingsContent(
                             },
                             iconTint = iOSTeal
                         )
+                        IOSDivider()
+                        IOSClickableItem(
+                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PREDICTIVE_BACK),
+                            title = predictiveBackAnimationUi.title,
+                            subtitle = predictiveBackAnimationUi.subtitle,
+                            value = predictiveBackAnimationUi.selectedStyle.displayName,
+                            onClick = if (predictiveBackAnimationUi.enabled) {
+                                { showPredictiveBackAnimationDialog = true }
+                            } else {
+                                null
+                            },
+                            iconTint = if (predictiveBackAnimationUi.enabled) {
+                                iOSBlue
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            textColor = if (predictiveBackAnimationUi.enabled) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            showChevron = predictiveBackAnimationUi.enabled,
+                        )
+                        if (predictiveBackAnimationUi.showExitDirection) {
+                            IOSDivider()
+                            IOSClickableItem(
+                                icon = rememberSettingsSemanticIcon(SettingsIconRole.PREDICTIVE_BACK),
+                                title = PREDICTIVE_BACK_EXIT_DIRECTION_TITLE,
+                                subtitle = predictiveBackAnimationUi.exitDirectionSubtitle,
+                                value = predictiveBackAnimationUi.selectedExitDirection?.displayName
+                                    .orEmpty(),
+                                onClick = { showPredictiveBackExitDirectionDialog = true },
+                                iconTint = iOSBlue,
+                                showChevron = true,
+                            )
+                        }
                         IOSDivider()
                         IOSSlidingSegmentedSetting(
                             title = "共享元素速度：${state.videoSharedTransitionSpeed.label}",
@@ -483,4 +592,119 @@ fun AnimationSettingsContent(
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
-    }
+}
+
+@Composable
+private fun PredictiveBackAnimationDialog(
+    currentStyle: BiliPaiPredictiveBackAnimationStyle,
+    cardTransitionEnabled: Boolean,
+    onSelect: (BiliPaiPredictiveBackAnimationStyle) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "选择预测性返回的动画效果",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        },
+        text = {
+            Column {
+                resolvePredictiveBackStyleOptions(
+                    cardTransitionEnabled = cardTransitionEnabled,
+                ).forEach { style ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelect(style)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = style == currentStyle,
+                            onClick = {
+                                onSelect(style)
+                                onDismiss()
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = style.displayName,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+                if (cardTransitionEnabled) {
+                    Text(
+                        text = "过渡动画开启时 AOSP 不可用",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        },
+        shape = RoundedCornerShape(28.dp),
+    )
+}
+
+@Composable
+private fun PredictiveBackExitDirectionDialog(
+    currentDirection: BiliPaiPredictiveBackExitDirection,
+    onSelect: (BiliPaiPredictiveBackExitDirection) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "选择退出方向",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        },
+        text = {
+            Column {
+                resolvePredictiveBackExitDirectionOptions().forEach { direction ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelect(direction)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = direction == currentDirection,
+                            onClick = {
+                                onSelect(direction)
+                                onDismiss()
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = direction.displayName,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        },
+        shape = RoundedCornerShape(28.dp),
+    )
+}

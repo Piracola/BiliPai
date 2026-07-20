@@ -1,5 +1,6 @@
 package com.android.purebilibili.core.ui.motion
 
+import androidx.compose.animation.EnterTransition
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,5 +19,13 @@ class SettingsIosPushTransitionPolicyTest {
     @Test
     fun settingsIosPushParallaxFactor_isStable() {
         assertTrue(SETTINGS_IOS_PUSH_PARALLAX_FACTOR in 0.25f..0.4f)
+    }
+
+    @Test
+    fun settingsIosPredictivePop_keepsTargetEnterNone() {
+        val transform = resolveSettingsIosPredictivePopContentTransform()
+        assertEquals(EnterTransition.None, transform.targetContentEnter)
+        val zero = resolveSettingsIosPredictivePopContentTransform(durationMillis = 0)
+        assertEquals(EnterTransition.None, zero.targetContentEnter)
     }
 }

@@ -22,9 +22,12 @@ internal fun resolveBiliPaiPredictiveBackExitDirection(
     autoDerived: BiliPaiPredictiveBackExitDirection,
 ): BiliPaiPredictiveBackExitDirection {
     return when (storageValue) {
-        "follow_gesture" -> BiliPaiPredictiveBackExitDirection.FOLLOW_GESTURE
-        "always_right" -> BiliPaiPredictiveBackExitDirection.ALWAYS_RIGHT
-        "always_left" -> BiliPaiPredictiveBackExitDirection.ALWAYS_LEFT
+        BiliPaiPredictiveBackExitDirection.FOLLOW_GESTURE.storageValue ->
+            BiliPaiPredictiveBackExitDirection.FOLLOW_GESTURE
+        BiliPaiPredictiveBackExitDirection.ALWAYS_RIGHT.storageValue ->
+            BiliPaiPredictiveBackExitDirection.ALWAYS_RIGHT
+        BiliPaiPredictiveBackExitDirection.ALWAYS_LEFT.storageValue ->
+            BiliPaiPredictiveBackExitDirection.ALWAYS_LEFT
         else -> autoDerived
     }
 }

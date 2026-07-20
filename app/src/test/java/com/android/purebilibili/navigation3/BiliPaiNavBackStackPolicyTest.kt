@@ -100,6 +100,57 @@ class BiliPaiNavBackStackPolicyTest {
     }
 
     @Test
+    fun pushOrReplaceSettingsCategory_replacesSiblingCategory() {
+        val a = BiliPaiNavKey.SettingsCategory(com.android.purebilibili.feature.settings.SettingsRootCategory.APPEARANCE_INTERACTION)
+        val b = BiliPaiNavKey.SettingsCategory(com.android.purebilibili.feature.settings.SettingsRootCategory.CONTENT_PLAYBACK)
+        assertEquals(
+            listOf(BiliPaiNavKey.MainHost, b),
+            pushOrReplaceSettingsCategoryNavKey(listOf(BiliPaiNavKey.MainHost, a), b)
+        )
+    }
+
+    @Test
+    fun pushOrReplaceSettingsCategory_replacesDetailChainOnTabletSwitch() {
+        val category = BiliPaiNavKey.SettingsCategory(
+            com.android.purebilibili.feature.settings.SettingsRootCategory.CONTENT_PLAYBACK
+        )
+        assertEquals(
+            listOf(BiliPaiNavKey.MainHost, category),
+            pushOrReplaceSettingsCategoryNavKey(
+                listOf(BiliPaiNavKey.MainHost, BiliPaiNavKey.AppearanceSettings),
+                category,
+            )
+        )
+        assertEquals(
+            listOf(BiliPaiNavKey.MainHost, category),
+            pushOrReplaceSettingsCategoryNavKey(
+                listOf(
+                    BiliPaiNavKey.MainHost,
+                    BiliPaiNavKey.SettingsCategory(
+                        com.android.purebilibili.feature.settings.SettingsRootCategory.APPEARANCE_INTERACTION
+                    ),
+                    BiliPaiNavKey.AppearanceSettings,
+                ),
+                category,
+            )
+        )
+    }
+
+    @Test
+    fun pushOrReplaceSettingsCategory_pushesOnSettingsRoot() {
+        val category = BiliPaiNavKey.SettingsCategory(
+            com.android.purebilibili.feature.settings.SettingsRootCategory.SYSTEM_ABOUT
+        )
+        assertEquals(
+            listOf(BiliPaiNavKey.MainHost, BiliPaiNavKey.Settings, category),
+            pushOrReplaceSettingsCategoryNavKey(
+                listOf(BiliPaiNavKey.MainHost, BiliPaiNavKey.Settings),
+                category,
+            )
+        )
+    }
+
+    @Test
     fun onboardingFinishEntersMainHostInsteadOfDirectHomeRoute() {
         val sourceFile = listOf(
             File("app/src/main/java/com/android/purebilibili/navigation/AppNavigation.kt"),

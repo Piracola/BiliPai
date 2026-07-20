@@ -251,26 +251,26 @@ class HomeGlassVisualPolicyTest {
     }
 
     @Test
-    fun globalHomeWallpaperFollowsVideoCardDepthOutsideIdle() {
+    fun globalHomeWallpaperDoesNotFollowVideoCardDepth() {
         assertFalse(
             shouldApplyVideoCardDepthToGlobalHomeWallpaper(
                 wallpaperVisible = true,
                 phase = VideoCardTransitionBackgroundPhase.IDLE,
             )
         )
-        assertTrue(
+        assertFalse(
             shouldApplyVideoCardDepthToGlobalHomeWallpaper(
                 wallpaperVisible = true,
                 phase = VideoCardTransitionBackgroundPhase.OPENING,
             )
         )
-        assertTrue(
+        assertFalse(
             shouldApplyVideoCardDepthToGlobalHomeWallpaper(
                 wallpaperVisible = true,
                 phase = VideoCardTransitionBackgroundPhase.HELD,
             )
         )
-        assertTrue(
+        assertFalse(
             shouldApplyVideoCardDepthToGlobalHomeWallpaper(
                 wallpaperVisible = true,
                 phase = VideoCardTransitionBackgroundPhase.RETURNING,

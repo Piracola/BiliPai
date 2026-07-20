@@ -58,3 +58,22 @@ internal fun resolveSettingsIosPushPopContentTransform(
         animationSpec = spec,
     )
 }
+
+/**
+ * 设置预测式返回专用：目标页保持全屏，只横滑顶页。
+ * 若对目标页再套 parallax 入场，手势 seek 时两页之间会露出 windowBackground 灰缝，并显得卡手。
+ */
+internal fun resolveSettingsIosPredictivePopContentTransform(
+    durationMillis: Int = SETTINGS_IOS_PUSH_DURATION_MS,
+): ContentTransform {
+    if (durationMillis <= 0) {
+        return EnterTransition.None togetherWith ExitTransition.None
+    }
+    return ContentTransform(
+        targetContentEnter = EnterTransition.None,
+        initialContentExit = slideOutHorizontally(
+            targetOffsetX = { fullWidth -> fullWidth },
+            animationSpec = tween(durationMillis = durationMillis, easing = EaseInOut),
+        ),
+    )
+}

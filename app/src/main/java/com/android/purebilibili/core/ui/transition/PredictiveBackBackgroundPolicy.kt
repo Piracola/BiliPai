@@ -43,21 +43,18 @@ internal val LocalPredictiveBackBackgroundState = compositionLocalOf {
 /**
  * 预测式返回手势进行中，把系统回退进度(0→1)映射为底层页模糊强度。
  *
- * - 卡片/兄弟页 pop：模糊随手势增强(0→1)，底层页留在后方制造景深；
- * - 设置 iOS push pop：模糊随手势减弱(1→0)，底层页随视差回到前景应逐渐清晰，
- *   与视频返场 [resolveVideoCardTransitionBackgroundGestureProgress] 同向。
+ * 统一为随手势减弱(1→0)：底层页随返回露出来应逐渐清晰。
+ * （旧版 CLASSIC_CARD 等用 0→1 增强模糊，体感与设置页相反，已统一。）
  */
 internal fun resolvePredictiveBackGestureBlurProgress(
     backProgress: Float,
     routeTransition: BiliPaiNavRouteTransition? = null,
 ): Float {
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredTransition = routeTransition
     val clamped = backProgress.coerceIn(0f, 1f)
-    val increasingBlur = 1f - (1f - clamped) * (1f - clamped)
-    return if (routeTransition == BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP) {
-        1f - increasingBlur
-    } else {
-        increasingBlur
-    }
+    // soft ease：前半段多留一点糊，接近完成时加速掐清。
+    return (1f - clamped) * (1f - clamped)
 }
 
 internal fun resolvePredictiveBackMaxBlurRadiusPx(isLightBackground: Boolean): Float {
@@ -113,10 +110,11 @@ internal fun shouldApplyPredictiveBackGestureBlur(
     if (gestureReturningVideoCard) return false
     if (motionTier == MotionTier.Reduced) return false
     if (routeTransition == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT) return false
+    // 设置 iOS 预测返回已靠横滑露出完整底层页；再叠满屏 GPU 模糊会起手发灰、跟手发沉。
+    if (routeTransition == BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP) return false
     return routeTransition == BiliPaiNavRouteTransition.CLASSIC_CARD ||
         routeTransition == BiliPaiNavRouteTransition.BOTTOM_BAR_SIBLING_POP ||
-        routeTransition == BiliPaiNavRouteTransition.LIGHT_SIBLING_POP ||
-        routeTransition == BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP
+        routeTransition == BiliPaiNavRouteTransition.LIGHT_SIBLING_POP
 }
 
 internal fun shouldApplyPredictiveBackBlurToRoute(

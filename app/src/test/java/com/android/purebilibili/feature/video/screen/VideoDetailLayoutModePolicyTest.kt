@@ -759,6 +759,50 @@ class VideoDetailLayoutModePolicyTest {
     }
 
     @Test
+    fun videoDetailDispose_neverRestoresVideoDrivenLandscapeLock() {
+        assertEquals(
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
+            resolveVideoDetailExitRequestedOrientation(
+                originalRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            )
+        )
+        assertEquals(
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
+            resolveVideoDetailExitRequestedOrientation(
+                originalRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+            )
+        )
+        assertEquals(
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
+            resolveVideoDetailExitRequestedOrientation(
+                originalRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            )
+        )
+    }
+
+    @Test
+    fun videoDetailEntrySnapshot_ignoresAlreadyLockedLandscape() {
+        assertEquals(
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
+            resolveVideoDetailEntryOrientationSnapshot(
+                currentRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            )
+        )
+        assertEquals(
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
+            resolveVideoDetailEntryOrientationSnapshot(
+                currentRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            )
+        )
+        assertEquals(
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
+            resolveVideoDetailEntryOrientationSnapshot(
+                currentRequestedOrientation = null
+            )
+        )
+    }
+
+    @Test
     fun phoneEnterOrientationPolicy_autoMode_usesVideoDirection() {
         assertEquals(
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,

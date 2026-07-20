@@ -162,6 +162,7 @@ import com.android.purebilibili.navigation3.legacyRouteToBiliPaiNavKey
 import com.android.purebilibili.navigation3.popBiliPaiNavKey
 import com.android.purebilibili.navigation3.popBiliPaiNavKeyToRoot
 import com.android.purebilibili.navigation3.pushBiliPaiNavKey
+import com.android.purebilibili.navigation3.pushOrReplaceSettingsCategoryNavKey
 import com.android.purebilibili.navigation3.resolveBiliPaiBackGestureDecision
 import com.android.purebilibili.navigation3.resolveBiliPaiNavCardSourceDirection
 import com.android.purebilibili.navigation3.resolveBiliPaiNavEntryContentRole
@@ -172,6 +173,7 @@ import com.android.purebilibili.navigation3.shouldActivateVideoDetailPlaybackSes
 import com.android.purebilibili.navigation3.shouldRecoverVideoPlayerAfterBackCancellation
 import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
+import com.android.purebilibili.navigation3.predictiveback.resolveEffectivePredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
 import com.android.purebilibili.navigation3.toLegacyRoute
 import androidx.compose.ui.Alignment
@@ -599,10 +601,16 @@ fun AppNavigation(
             )
         )
         fun pushNavigation3KeyDirect(key: BiliPaiNavKey) {
-            navigation3BackStack = pushBiliPaiNavKey(
-                currentStack = navigation3BackStack,
-                key = key
-            )
+            navigation3BackStack = when (key) {
+                is BiliPaiNavKey.SettingsCategory -> pushOrReplaceSettingsCategoryNavKey(
+                    currentStack = navigation3BackStack,
+                    key = key,
+                )
+                else -> pushBiliPaiNavKey(
+                    currentStack = navigation3BackStack,
+                    key = key,
+                )
+            }
         }
         fun pushNavigation3Key(key: BiliPaiNavKey, beforeNavigation: (() -> Unit)? = null) {
             val target = key.toPrivacyNavigationTarget()
@@ -886,29 +894,36 @@ fun AppNavigation(
         }
         val navigation3SourceMetadata = currentNavigation3SourceMetadata()
         val previousNavigation3Key = navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
+        val activeBottomTabRoute = resolveActiveBottomTabRoute(
+            currentKey = currentNavigation3Key,
+            currentBottomItem = currentBottomNavItem
+        )
         val backGestureDecision = remember(
             cardTransitionEnabled,
             systemBackAction,
             currentNavigation3Key,
             previousNavigation3Key,
-            navigation3SourceMetadata
+            navigation3SourceMetadata,
+            activeBottomTabRoute,
         ) {
             resolveBiliPaiBackGestureDecision(
                 cardTransitionEnabled = cardTransitionEnabled,
                 systemBackAction = systemBackAction,
                 currentKey = currentNavigation3Key,
                 previousKey = previousNavigation3Key,
-                sourceMetadata = navigation3SourceMetadata
+                sourceMetadata = navigation3SourceMetadata,
+                activeMainHostRoute = activeBottomTabRoute,
             )
         }
         val predictiveBackEnabled = appNavigationSettings.predictiveBackEnabled
-        val shouldInterceptTabBack = backGestureDecision.interceptSystemBack
-        val predictiveBackAnimationStyle = BiliPaiPredictiveBackAnimationStyle.DEFAULT
-        val predictiveBackExitDirection = "auto"
-        val activeBottomTabRoute = resolveActiveBottomTabRoute(
-            currentKey = currentNavigation3Key,
-            currentBottomItem = currentBottomNavItem
+        val predictiveBackAnimationStyle = resolveEffectivePredictiveBackAnimationStyle(
+            style = BiliPaiPredictiveBackAnimationStyle.fromStorageValue(
+                appNavigationSettings.predictiveBackAnimationStyle,
+            ),
+            cardTransitionEnabled = cardTransitionEnabled,
         )
+        val predictiveBackExitDirection = appNavigationSettings.predictiveBackExitDirection
+        val shouldInterceptTabBack = backGestureDecision.interceptSystemBack
         val isVideoDetailDestination = isVideoDetailRoute(currentRoute)
         val bottomBarMountRoute = if (isVideoDetailDestination) {
             currentBottomNavItem.route
@@ -2392,6 +2407,9 @@ fun AppNavigation(
                                             sourceRoute = ScreenRoutes.Favorite.route
                                         )
                                     },
+                                    onUpClick = { mid ->
+                                        pushNavigation3Route(ScreenRoutes.Space.createRoute(mid))
+                                    },
                                     onFavoriteFolderClick = { mediaId, ownerMid, title, ownerName ->
                                         pushNavigation3Key(
                                             BiliPaiNavKey.SeasonSeriesDetail(
@@ -2538,7 +2556,11 @@ fun AppNavigation(
                                 }
 
                                 CompositionLocalProvider(
-                                    LocalVideoCardSharedElementSourceRoute provides seasonSeriesKey.toLegacyRoute()
+                                    LocalVideoCardSharedElementSourceRoute provides (
+                                        com.android.purebilibili.navigation3.normalizeBiliPaiVideoSourceRoute(
+                                            seasonSeriesKey.toLegacyRoute()
+                                        ) ?: seasonSeriesKey.toLegacyRoute()
+                                    )
                                 ) {
                                     CommonListScreen(
                                         viewModel = viewModel,
@@ -2559,6 +2581,9 @@ fun AppNavigation(
                                                 initialVertical = isVertical,
                                                 sourceRoute = seasonSeriesKey.toLegacyRoute()
                                             )
+                                        },
+                                        onUpClick = { mid ->
+                                            pushNavigation3Route(ScreenRoutes.Space.createRoute(mid))
                                         },
                                         onCollectionClick = { route ->
                                             pushNavigation3Key(

@@ -26,8 +26,8 @@ import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackground
 import com.android.purebilibili.core.ui.transition.videoCardTransitionBackgroundEffect
 
 /**
- * App 根层全局壁纸：在卡片景深非 IDLE 时与来源页共用 progress/phase 做缩/糊。
- * 进度状态由外部 MutableState 写入；本组件只在 phase 变化时重组，progress 在 draw 期读取。
+ * App 根层全局壁纸。
+ * 景深 progress 仍由外部写入（兼容旧接线），但壁纸本身不跟卡片缩/糊，避免全屏壁纸猛缩猛放。
  */
 @Composable
 internal fun DepthSyncedGlobalHomeWallpaperBackdrop(

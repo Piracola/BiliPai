@@ -78,6 +78,7 @@ internal fun resolveVideoDetailReturnCoverAlpha(
     hasResidentCover: Boolean,
     liveReturnMorph: Boolean = false,
 ): Float {
+    // live morph：全程不抢封面，实时画面跟 shell 缩小；落位后由首页卡自身封面承接。
     if (liveReturnMorph || !hasResidentCover) return 0f
     val progress = transitionProgress.coerceIn(0f, 1f)
     return if (isCommittedCardReturn) 1f else 1f - progress
@@ -100,7 +101,8 @@ internal fun resolveVideoDetailReturnContentAlpha(
     holdFullyOpaqueAfterBackPreview: Boolean = false,
     liveReturnMorph: Boolean = false,
 ): Float {
-    // live morph：正文保持不透明，整页参与 shell 收缩；收束靠 bounds 形变而非先淡成封面。
+    // live morph：详情正文保持不透明，整页参与 shell 收缩（与快速返回观感一致）。
+    // 与首页卡标题叠字改由返回 morph 期间隐藏源卡 chrome 消化，而不是先把正文打成 0。
     if (liveReturnMorph) return 1f
     if (isCommittedCardReturn) return 0f
     if (holdFullyOpaqueAfterBackPreview) return 1f

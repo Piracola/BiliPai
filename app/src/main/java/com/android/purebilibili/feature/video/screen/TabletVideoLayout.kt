@@ -724,27 +724,29 @@ private fun TabletSecondaryContent(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(8.dp)
                     ) {
+                        val relatedRows = chunkRelatedVideosForHomeStyleGrid(success.related)
                         itemsIndexed(
-                            items = success.related,
-                            key = { index, item ->
+                            items = relatedRows,
+                            key = { rowIndex, row ->
+                                val first = row.firstOrNull()
                                 resolveIndexedVideoLazyKey(
-                                    namespace = "tablet_related",
-                                    index = index,
-                                    bvid = item.bvid,
-                                    aid = item.aid,
-                                    cid = item.cid
+                                    namespace = "tablet_related_row",
+                                    index = rowIndex,
+                                    bvid = first?.bvid.orEmpty(),
+                                    aid = first?.aid ?: 0L,
+                                    cid = first?.cid ?: 0L
                                 )
                             }
-                        ) { _, video ->
+                        ) { _, row ->
                             CompositionLocalProvider(
                                 LocalVideoCardSharedElementSourceRoute provides "video/${success.info.bvid}"
                             ) {
-                                RelatedVideoItem(
-                                    video = video,
-                                    isFollowed = video.owner.mid in success.followingMids,
+                                RelatedVideoGridRow(
+                                    videos = row,
+                                    followingMids = success.followingMids,
                                     transitionEnabled = LocalSharedTransitionEnabled.current,
                                     showUpBadge = showUpBadge,
-                                    onClick = {
+                                    onVideoClick = { video ->
                                         val activity = (context as? android.app.Activity)
                                             ?: (context as? android.content.ContextWrapper)?.baseContext as? android.app.Activity
                                         val options = activity?.let {

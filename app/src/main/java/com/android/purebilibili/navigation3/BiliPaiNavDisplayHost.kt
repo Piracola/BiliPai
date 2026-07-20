@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -42,6 +43,7 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.NavigationEventState
 import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.navigationevent.NavigationEventTransitionState
+import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.motion.rememberSystemReduceMotion
@@ -65,6 +67,7 @@ import com.android.purebilibili.core.ui.transition.shouldApplyPredictiveBackGest
 import com.android.purebilibili.core.ui.transition.shouldShowVideoCardTransitionNavBackdrop
 import com.android.purebilibili.core.ui.transition.shouldSnapClearVideoCardDepthBlurOnQuickReturn
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionNavBackdrop
+import com.android.purebilibili.feature.settings.isSettingsSubtreeNavKey
 import com.android.purebilibili.navigation.isVideoCardReturnTargetRoute
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationHandler
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
@@ -341,12 +344,18 @@ internal fun BiliPaiNavDisplayHost(
             }
         }
     }
-    val popRouteTransition = remember(cardTransitionEnabled, sourceMetadata, safeBackStack) {
+    val popRouteTransition = remember(
+        cardTransitionEnabled,
+        sourceMetadata,
+        safeBackStack,
+        activeMainHostRoute,
+    ) {
         resolveBiliPaiNavDisplayPopRouteTransition(
             cardTransitionEnabled = cardTransitionEnabled,
             sourceMetadata = sourceMetadata,
             fromKey = safeBackStack.lastOrNull(),
-            toKey = safeBackStack.getOrNull(safeBackStack.lastIndex - 1)
+            toKey = safeBackStack.getOrNull(safeBackStack.lastIndex - 1),
+            activeMainHostRoute = activeMainHostRoute,
         )
     }
     val autoPredictiveBackExitDirection = remember(popRouteTransition, sourceMetadata.cardSourceDirection) {
@@ -369,12 +378,14 @@ internal fun BiliPaiNavDisplayHost(
         predictiveBackEnabled,
         predictiveBackAnimationStyle,
         predictiveBackExitDirection,
+        cardTransitionEnabled,
     ) {
         resolveBiliPaiPredictiveBackAnimationHandler(
             routeTransition = popRouteTransition,
             predictiveBackEnabled = predictiveBackEnabled,
             style = predictiveBackAnimationStyle,
             exitDirection = predictiveBackExitDirection,
+            cardTransitionEnabled = cardTransitionEnabled,
         )
     }
     val currentBackKey = safeBackStack.lastOrNull()
@@ -576,12 +587,22 @@ internal fun BiliPaiNavDisplayHost(
             }
         }
     }
-    val entryProvider = remember(sourceMetadata, cardTransitionEnabled, visibleBottomBarRoutes, activeMainHostRoute, scopedContent) {
+    val entryProvider = remember(
+        sourceMetadata,
+        cardTransitionEnabled,
+        visibleBottomBarRoutes,
+        activeMainHostRoute,
+        predictiveBackEnabled,
+        predictiveBackAnimationStyle,
+        scopedContent,
+    ) {
         biliPaiNavEntryProvider(
             sourceMetadata = sourceMetadata,
             cardTransitionEnabled = cardTransitionEnabled,
             visibleBottomBarRoutes = visibleBottomBarRoutes,
             activeMainHostRoute = activeMainHostRoute,
+            predictiveBackEnabled = predictiveBackEnabled,
+            predictiveBackAnimationStyle = predictiveBackAnimationStyle,
             content = scopedContent
         )
     }
@@ -653,7 +674,8 @@ internal fun BiliPaiNavDisplayHost(
         isBackEnabled = scene.previousEntries.isNotEmpty(),
         // 关闭全局预测性返回时不向 NavDisplay 上报 InProgress，避免 seek 跟手预览；
         // 松手后仍走 performBack + 普通 popTransitionSpec。
-        reportPredictiveProgress = predictiveBackEnabled,
+        reportPredictiveProgress = predictiveBackEnabled &&
+            predictiveBackAnimationStyle.usesPredictivePreview,
         onBackCompleted = performBack,
         onBackCancelled = { commitTransition ->
             onNativeVideoBackCancelled(currentBackKey, targetBackKey)
@@ -707,6 +729,16 @@ internal fun BiliPaiNavDisplayHost(
     )
 
     Box(modifier = modifier.fillMaxSize()) {
+        val settingsSubtreeBackdrop =
+            (currentBackKey != null && isSettingsSubtreeNavKey(currentBackKey)) ||
+                (targetBackKey != null && isSettingsSubtreeNavKey(targetBackKey))
+        if (settingsSubtreeBackdrop) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppSurfaceTokens.groupedListContainer()),
+            )
+        }
         VideoCardTransitionNavBackdrop(
             visible = showVideoCardNavBackdrop,
             progressProvider = videoCardBackgroundProgressProvider,

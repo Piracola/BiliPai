@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import com.android.purebilibili.feature.settings.isSettingsSubtreeNavKey
 import com.android.purebilibili.feature.settings.resolveSettingsTabletShellCategory
 import com.android.purebilibili.feature.settings.shouldUseSettingsSplitLayout
+import com.android.purebilibili.feature.settings.ui.SettingsOpaqueSurfaceHost
 import com.android.purebilibili.navigation3.BiliPaiNavKey
 
 @Composable
@@ -17,13 +18,15 @@ internal fun SettingsTabletNavEntryShell(
     onPushKey: (BiliPaiNavKey) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    SettingsTabletRouteShell(
-        key = key,
-        onBack = onSystemBack,
-        onCategoryClick = { category -> onPushKey(BiliPaiNavKey.SettingsCategory(category)) },
-        onSearchOpen = { onPushKey(BiliPaiNavKey.SettingsSearch) },
-        phoneContent = content,
-    )
+    SettingsOpaqueSurfaceHost {
+        SettingsTabletRouteShell(
+            key = key,
+            onBack = onSystemBack,
+            onCategoryClick = { category -> onPushKey(BiliPaiNavKey.SettingsCategory(category)) },
+            onSearchOpen = { onPushKey(BiliPaiNavKey.SettingsSearch) },
+            phoneContent = content,
+        )
+    }
 }
 
 @Composable

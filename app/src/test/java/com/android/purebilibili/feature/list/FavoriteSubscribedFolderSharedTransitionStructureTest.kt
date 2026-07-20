@@ -35,11 +35,8 @@ class FavoriteSubscribedFolderSharedTransitionStructureTest {
         val navigationSource = loadNavigationSource()
 
         assertTrue(commonListSource.contains("transitionEnabled = cardTransitionEnabled"))
-        assertTrue(
-            navigationSource.contains(
-                "LocalVideoCardSharedElementSourceRoute provides seasonSeriesKey.toLegacyRoute()"
-            )
-        )
+        assertTrue(navigationSource.contains("LocalVideoCardSharedElementSourceRoute provides"))
+        assertTrue(navigationSource.contains("normalizeBiliPaiVideoSourceRoute("))
         assertTrue(navigationSource.contains("sourceRoute = seasonSeriesKey.toLegacyRoute()"))
     }
 

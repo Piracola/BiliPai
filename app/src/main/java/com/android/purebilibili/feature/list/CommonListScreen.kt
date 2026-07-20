@@ -783,7 +783,7 @@ fun CommonListScreen(
                         transitionEnabled = favoriteCollectionSharedTransitionEnabled,
                         onLoadMore = { favoriteVm.loadMoreSubscribedFolders() },
                         onFolderClick = { folder ->
-                            val collectionRoute = resolveSubscribedFavoriteCollectionRoute(folder)
+                            val collectionRoute = resolveSubscribedFavoriteFolderRoute(folder)
                             if (collectionRoute != null) {
                                 onCollectionClick?.invoke(collectionRoute)
                             } else {
@@ -867,6 +867,7 @@ fun CommonListScreen(
                                 } else {
                                     null
                                 },
+                                onUpClick = onUpClick,
                                 gridState = favoritePagerGridStates.getOrPut(page) {
                                     androidx.compose.foundation.lazy.grid.LazyGridState()
                                 }
@@ -905,6 +906,7 @@ fun CommonListScreen(
                             } else {
                                 null
                             },
+                            onUpClick = onUpClick,
                             gridState = primaryGridState
                         )
                     }
@@ -946,9 +948,11 @@ fun CommonListScreen(
                         onUnfavorite = if (favoriteViewModel != null) {
                             { favoriteViewModel.removeVideo(it) }
                         } else null,
-                        onUpClick = if (historyViewModel != null && !isHistoryBatchMode) {
+                        onUpClick = if (!isHistoryBatchMode) {
                             onUpClick
-                        } else null,
+                        } else {
+                            null
+                        },
                         searchPaginationFallbackEnabled = historyViewModel != null,
                         hasMoreSearchResults = historyHasMore,
                         isLoadingMoreSearchResults = historyIsLoadingMore,
@@ -2079,7 +2083,7 @@ private fun FavoriteSubscribedFolderRow(
     onClick: () -> Unit
 ) {
     val sharedElementRoute = remember(folder) {
-        resolveSubscribedFavoriteCollectionRoute(folder)
+        resolveSubscribedFavoriteFolderRoute(folder)
     }
     val previewCover = remember(folder.cover) {
         resolveFavoriteFolderPreviewCover(folder, emptyList())

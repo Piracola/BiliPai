@@ -113,6 +113,8 @@ import com.android.purebilibili.feature.video.ui.components.CollectionRow
 import com.android.purebilibili.feature.video.ui.components.CollectionSheet
 import com.android.purebilibili.feature.video.ui.components.PagesSelector
 import com.android.purebilibili.feature.video.ui.components.RelatedVideoItem
+import com.android.purebilibili.feature.video.ui.components.RelatedVideoGridRow
+import com.android.purebilibili.feature.video.ui.components.chunkRelatedVideosForHomeStyleGrid
 import com.android.purebilibili.feature.video.ui.components.ReplyItemView
 import com.android.purebilibili.feature.video.ui.components.VideoInlineSubReplyDetailContent
 import com.android.purebilibili.feature.video.ui.components.rememberVideoCommentAppearance
@@ -1353,27 +1355,29 @@ private fun CinemaRelatedPane(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 8.dp)
     ) {
+        val relatedRows = chunkRelatedVideosForHomeStyleGrid(success.related)
         itemsIndexed(
-            items = success.related,
-            key = { index, item ->
+            items = relatedRows,
+            key = { rowIndex, row ->
+                val first = row.firstOrNull()
                 resolveIndexedVideoLazyKey(
-                    namespace = "cinema_related",
-                    index = index,
-                    bvid = item.bvid,
-                    aid = item.aid,
-                    cid = item.cid
+                    namespace = "cinema_related_row",
+                    index = rowIndex,
+                    bvid = first?.bvid.orEmpty(),
+                    aid = first?.aid ?: 0L,
+                    cid = first?.cid ?: 0L
                 )
             }
-        ) { _, video ->
+        ) { _, row ->
             CompositionLocalProvider(
                 LocalVideoCardSharedElementSourceRoute provides "video/${success.info.bvid}"
             ) {
-                RelatedVideoItem(
-                    video = video,
-                    isFollowed = video.owner.mid in success.followingMids,
+                RelatedVideoGridRow(
+                    videos = row,
+                    followingMids = success.followingMids,
                     transitionEnabled = LocalSharedTransitionEnabled.current,
                     showUpBadge = showUpBadge,
-                    onClick = {
+                    onVideoClick = { video ->
                         val activity = (context as? Activity)
                             ?: (context as? ContextWrapper)?.baseContext as? Activity
                         val options = activity?.let {

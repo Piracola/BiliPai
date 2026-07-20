@@ -276,9 +276,8 @@ class VideoCardScrollLiteVisualPolicyTest {
     }
 
     @Test
-    fun homeCardChrome_staysVisibleWithCoverDuringShellMorph() {
-        // 不再压 chrome：进出场标题与封面同步，避免回弹末段才出字。
-        assertFalse(
+    fun homeCardChrome_revealsWithSettleProgressDuringReturnMorph() {
+        assertTrue(
             shouldSuppressHomeCardVisualDuringShellReturnMorph(
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
@@ -288,7 +287,7 @@ class VideoCardScrollLiteVisualPolicyTest {
             )
         )
         assertEquals(
-            1f,
+            0f,
             resolveHomeCardChromeAlphaDuringShellReturnMorph(
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
@@ -298,7 +297,48 @@ class VideoCardScrollLiteVisualPolicyTest {
             ),
             0.001f,
         )
-        assertEquals(1f, resolveHomeCardChromeEarlyRevealAlpha(settleProgress = 0.2f), 0.001f)
+        // 末段落位：settle=0.8 → 开始淡入（revealStart=0.62）
+        val midReveal = resolveHomeCardChromeAlphaDuringShellReturnMorph(
+            useCardContainerSharedBounds = true,
+            isSharedMorphSourceCard = true,
+            isReturningFromDetail = true,
+            transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.RETURNING,
+            isSharedTransitionActive = true,
+            transitionBackgroundProgress = 0.2f,
+        )
+        assertTrue(midReveal > 0f && midReveal < 1f)
+        assertEquals(
+            resolveHomeCardChromeEarlyRevealAlpha(settleProgress = 0.8f),
+            midReveal,
+            0.001f,
+        )
+        // morph 结束后即使仍标记 returning / 景深未 IDLE，也要立刻恢复标题，避免相关推荐空白。
+        assertEquals(
+            1f,
+            resolveHomeCardChromeAlphaDuringShellReturnMorph(
+                useCardContainerSharedBounds = true,
+                isSharedMorphSourceCard = true,
+                isReturningFromDetail = true,
+                transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.RETURNING,
+                isSharedTransitionActive = false,
+                isVideoCardReturnGestureInProgress = false,
+                transitionBackgroundProgress = 0.4f,
+            ),
+            0.001f,
+        )
+        assertEquals(
+            1f,
+            resolveHomeCardChromeAlphaDuringShellReturnMorph(
+                useCardContainerSharedBounds = true,
+                isSharedMorphSourceCard = true,
+                isReturningFromDetail = false,
+                isSharedTransitionActive = false,
+                transitionBackgroundProgress = 0f,
+            ),
+            0.001f,
+        )
+        assertEquals(0f, resolveHomeCardChromeEarlyRevealAlpha(settleProgress = 0.2f), 0.001f)
+        assertEquals(1f, resolveHomeCardChromeEarlyRevealAlpha(settleProgress = 1f), 0.001f)
         assertTrue(
             isVideoCardSharedReturnTarget(
                 bvid = "BV1xx",

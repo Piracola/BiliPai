@@ -169,6 +169,7 @@ class VideoSharedTransitionPolicyTest {
             coverSharedEnabled = true,
             isQuickReturnLimited = false
         )
+        // 相关推荐竖卡恢复整卡 shell，与首页同形态。
         assertTrue(related.useCoverSharedBounds)
         assertTrue(related.useCardContainerSharedBounds)
         assertFalse(related.useMetadataSharedBounds)
@@ -200,17 +201,32 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
+    fun videoCardShellKey_stripsSeasonSeriesQueryForStableMatch() {
+        val shellKey = videoCardShellSharedElementKey(
+            bvid = "BV1",
+            sourceRoute = "season_series_detail/favorite_season/123?mid=1&title=%E6%B5%8B%E8%AF%95"
+        )
+        assertEquals("season_series_detail/favorite_season/123", shellKey.sourceRoute)
+    }
+
+    @Test
     fun homeCategoryVideoCardSourceKeyKeepsCategoryRoute() {
         val homeCardSource = File(
             "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCard.kt"
         ).readText()
-        val policySource = File(
-            "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCardScrollLiteVisualPolicy.kt"
+        val sharedKeySource = File(
+            "src/main/java/com/android/purebilibili/core/ui/transition/BiliPaiSharedElementKey.kt"
         ).readText()
 
         assertTrue(homeCardSource.contains("isVideoCardSharedReturnTarget("))
-        assertTrue(policySource.contains("home?category="))
+        assertTrue(sharedKeySource.contains("home?category="))
         assertTrue(homeCardSource.contains("videoCardShellReturnChromeAlpha("))
+
+        val shellKey = videoCardShellSharedElementKey(
+            bvid = "BV1",
+            sourceRoute = "home?category=动画"
+        )
+        assertEquals("home?category=动画", shellKey.sourceRoute)
     }
 
     @Test
@@ -227,8 +243,8 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoCoverRelay_isDisabledPendingShellAdaptation() {
-        // 封面位进退已回退：返回时标题/真实列表会丢；先回到 shell 再适配横条卡。
+    fun videoCoverRelay_isDisabledPendingCoordinateFix() {
+        // 详情套详情下 cover relay 飞位易错；相关/分区暂用 shell + 源卡进场淡出。
         assertFalse(shouldUseVideoCoverRelayTransition("partition"))
         assertFalse(shouldUseVideoCoverRelayTransition("video/BV_A"))
         assertFalse(shouldUseVideoCoverRelayTransition("home"))
@@ -246,6 +262,9 @@ class VideoSharedTransitionPolicyTest {
         assertTrue(shouldUseVideoCardShellSharedBounds("video", transitionEnabled = true))
         assertFalse(shouldUseVideoCardShellSharedBounds("home", transitionEnabled = false))
         assertFalse(shouldUseVideoCardShellSharedBounds(null, transitionEnabled = true))
+        assertFalse(shouldSkipVideoCardSharedBoundsMorph("video/BV_A"))
+        assertFalse(shouldSkipVideoCardSharedBoundsMorph("partition"))
+        assertFalse(shouldSkipVideoCardSharedBoundsMorph("home"))
     }
 
     @Test
@@ -361,7 +380,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun cardShellSharedBoundsKeepsSourceCoverReadyWithoutDelayedEnter() {
+    fun cardShellSharedBoundsKeepsLiveReturnVisibleBeforeSourceCoverFadesIn() {
         assertEquals(
             EnterTransition.None,
             resolveVideoCardShellSharedBoundsEnter(
@@ -369,26 +388,46 @@ class VideoSharedTransitionPolicyTest {
                 transitionDurationMillis = 360,
             )
         )
-        assertEquals(
-            EnterTransition.None,
+        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("home"))
+        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("dynamic"))
+        // 分区竖卡与首页一样：返回延后淡入源卡。
+        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("partition"))
+        // 相关推荐竖卡与首页一样：返回延后淡入源卡。
+        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("video/BV_A"))
+        // 竖卡：源卡返回 Enter 延后淡入，避免封面盖住实时画面。
+        assertTrue(
             resolveVideoCardShellSharedBoundsEnter(
                 role = VideoCardShellSharedBoundsRole.SourceCard,
                 transitionDurationMillis = 360,
-            )
+                delaySourceCardEnterForLiveReturn = true,
+            ) != EnterTransition.None
         )
+        assertEquals(198, resolveVideoCardShellSourceEnterFadeDelayMillis(360))
         assertEquals(
             ExitTransition.None,
             resolveVideoCardShellSharedBoundsExit(
                 role = VideoCardShellSharedBoundsRole.DetailShell,
             )
         )
-        // 源卡也不淡出：避免点击时标题先消失再飞入。
+        // 首页 / 相关 / 分区竖卡进场：源卡不淡出。
         assertEquals(
             ExitTransition.None,
             resolveVideoCardShellSharedBoundsExit(
                 role = VideoCardShellSharedBoundsRole.SourceCard,
+                fadeOutSourceCardOnOpen = false,
             )
         )
+        assertFalse(shouldFadeOutShellSourceCardOnOpen("partition"))
+        assertFalse(shouldFadeOutShellSourceCardOnOpen("video/BV_A"))
+        assertFalse(shouldFadeOutShellSourceCardOnOpen("home"))
+        assertTrue(
+            resolveVideoCardShellSharedBoundsExit(
+                role = VideoCardShellSharedBoundsRole.SourceCard,
+                fadeOutSourceCardOnOpen = true,
+                transitionDurationMillis = 360,
+            ) != ExitTransition.None
+        )
+        assertEquals(100, resolveVideoCardShellSourceExitFadeDurationMillis(360))
         val detailSource = File(
             "src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreenStateHolder.kt"
         ).readText()
@@ -407,6 +446,10 @@ class VideoSharedTransitionPolicyTest {
             "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCardShellReturnChrome.kt"
         ).readText()
         assertTrue(chromeHelper.contains("resolveHomeCardChromeAlphaDuringShellReturnMorph("))
+        val shellHelper = File(
+            "src/main/java/com/android/purebilibili/core/ui/transition/VideoCardShellSharedBounds.kt"
+        ).readText()
+        assertTrue(shellHelper.contains("shouldDelaySourceCardEnterForLiveReturnMorph(sourceRoute)"))
     }
 
     @Test
@@ -589,7 +632,9 @@ class VideoSharedTransitionPolicyTest {
         assertTrue(homeCardSource.contains("videoCardShellSharedBoundsOrEmpty("))
         assertFalse(homeCardSource.contains("videoTitleSharedElementKey("))
         assertTrue(detailInfoSource.contains("useCardContainerSharedBounds = useCardContainerSharedBounds"))
-        assertTrue(partitionSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        // 分区复用首页 ElegantVideoCard（shell 在 VideoCard.kt），列表本身走竖卡双列。
+        assertTrue(partitionSource.contains("ElegantVideoCard("))
+        assertTrue(partitionSource.contains("state.videos.chunked(2)"))
         assertFalse(partitionSource.contains("videoTitleSharedElementKey("))
         assertTrue(cinematicCardSource.contains("videoCardShellSharedBoundsOrEmpty("))
         assertFalse(cinematicCardSource.contains("videoTitleSharedElementKey("))

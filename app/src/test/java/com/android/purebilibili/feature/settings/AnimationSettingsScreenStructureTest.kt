@@ -17,10 +17,21 @@ class AnimationSettingsScreenStructureTest {
             .substringAfter("title = \"预测性返回手势\"")
             .substringBefore("IOSDivider()")
         assertFalse(predictiveItem.contains("enabled = state.cardTransitionEnabled"))
-        assertFalse(source.contains("setPredictiveBackAnimationStyle"))
-        assertFalse(source.contains("setPredictiveBackExitDirection"))
-        assertFalse(source.contains("resolvePredictiveBackStyleOptions"))
-        assertFalse(source.contains("resolvePredictiveBackExitDirectionOptions"))
+    }
+
+    @Test
+    fun animationSettingsScreen_exposesInstallerAlignedPredictiveStylePicker() {
+        val source = animationSettingsSource()
+
+        assertTrue(source.contains("PREDICTIVE_BACK_EXIT_DIRECTION_TITLE") || source.contains("退出方向"))
+        assertTrue(source.contains("setPredictiveBackAnimationStyle"))
+        assertTrue(source.contains("setPredictiveBackExitDirection"))
+        assertTrue(source.contains("resolvePredictiveBackStyleOptions"))
+        assertTrue(source.contains("resolvePredictiveBackExitDirectionOptions"))
+        assertTrue(source.contains("PredictiveBackAnimationDialog"))
+        assertTrue(source.contains("showExitDirection"))
+        assertTrue(source.contains("cardTransitionEnabled = state.cardTransitionEnabled"))
+        assertTrue(source.contains("过渡动画开启时 AOSP 不可用") || source.contains("不可使用 AOSP"))
     }
 
     @Test

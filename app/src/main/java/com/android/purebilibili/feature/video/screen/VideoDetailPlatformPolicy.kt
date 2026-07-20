@@ -184,6 +184,30 @@ internal fun shouldRestoreSystemBarsDuringVideoDetailExitTransition(
     return true
 }
 
+/**
+ * 预测返回手势开始退出时会提前 restore 状态栏；若手势取消、详情仍留在栈顶，
+ * 需重新激活沉浸式，否则会一直停在非沉浸（常见为黑底状态栏）。
+ */
+internal fun shouldReactivateVideoDetailSystemBarsAfterCancelledExit(
+    isExitTransitionInProgress: Boolean,
+    isActuallyLeaving: Boolean,
+    isScreenActive: Boolean,
+): Boolean {
+    if (isExitTransitionInProgress) return false
+    if (isActuallyLeaving) return false
+    return !isScreenActive
+}
+
+/** 从相关视频等上层页预测返回后，底层详情重新成为栈顶时需强制重套系统栏。 */
+internal fun shouldReapplyVideoDetailSystemBarsAfterBecomingTop(
+    wasKeepLoadedContentForBackPreview: Boolean,
+    keepLoadedContentForBackPreview: Boolean,
+    isActuallyLeaving: Boolean,
+): Boolean {
+    if (isActuallyLeaving) return false
+    return wasKeepLoadedContentForBackPreview && !keepLoadedContentForBackPreview
+}
+
 internal fun applyVideoDetailSystemBarsSpec(
     window: Window,
     insetsController: WindowInsetsControllerCompat,
@@ -617,6 +641,33 @@ internal fun isLandscapeRequestedOrientation(requestedOrientation: Int): Boolean
         requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
 }
 
+/**
+ * 详情页/全屏路径会写入的横屏锁。连切相关视频时若把这类值当成「进入前方向」快照，
+ * 退出会再次写回横屏，导致首页也横屏。
+ */
+internal fun isVideoDrivenLandscapeOrientationLock(requestedOrientation: Int): Boolean {
+    return requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE ||
+        requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE ||
+        requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE ||
+        requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+}
+
+/**
+ * 进入详情时记录「离开后应恢复」的方向。已是视频横屏锁时改记 UNSPECIFIED，
+ * 避免旧详情 dispose 延迟恢复前、新详情把横屏锁当成入口快照。
+ */
+internal fun resolveVideoDetailEntryOrientationSnapshot(
+    currentRequestedOrientation: Int?
+): Int {
+    val current = currentRequestedOrientation
+        ?: return ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    return if (isVideoDrivenLandscapeOrientationLock(current)) {
+        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    } else {
+        current
+    }
+}
+
 internal fun shouldEnterPortraitFullscreenOnFullscreenToggle(
     targetOrientation: Int,
     portraitExperienceEnabled: Boolean
@@ -741,7 +792,13 @@ private fun readSystemAutoRotateEnabled(context: Context): Boolean {
 internal fun resolveVideoDetailExitRequestedOrientation(
     originalRequestedOrientation: Int?
 ): Int {
-    return originalRequestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    val original = originalRequestedOrientation
+        ?: return ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    return if (isVideoDrivenLandscapeOrientationLock(original)) {
+        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    } else {
+        original
+    }
 }
 
 internal fun shouldEnablePortraitExperience(): Boolean {

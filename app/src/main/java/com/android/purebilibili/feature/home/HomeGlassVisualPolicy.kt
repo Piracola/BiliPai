@@ -27,14 +27,19 @@ internal fun shouldRenderGlobalHomeWallpaperBackdrop(
 
 /**
  * 全局壁纸是否跟随卡片景深（缩/糊/压暗）。
- * 与来源页同一套 phase/progress，避免壁纸钉死全屏、内容单独后退。
+ *
+ * 始终关闭：壁纸钉在根层不动；景深只作用在来源页内容上。
+ * 壁纸跟缩/放大时（尤其全屏壁纸）会出现「猛的一下」的缩放感。
  */
 internal fun shouldApplyVideoCardDepthToGlobalHomeWallpaper(
     wallpaperVisible: Boolean,
     phase: VideoCardTransitionBackgroundPhase,
 ): Boolean {
-    if (!wallpaperVisible) return false
-    return phase != VideoCardTransitionBackgroundPhase.IDLE
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredVisible = wallpaperVisible
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredPhase = phase
+    return false
 }
 
 /**
