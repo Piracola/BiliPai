@@ -51,8 +51,9 @@ class HomeReturnAnimationPolicyTest {
 
     @Test
     fun sharedReturnSuppressionUsesTheConfiguredTransitionDuration() {
+        // 520 + 40 buffer + 180 spring settle
         assertEquals(
-            700L,
+            740L,
             resolveReturnAnimationSuppressionDurationMs(
                 isTabletLayout = false,
                 cardAnimationEnabled = true,

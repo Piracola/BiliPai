@@ -64,6 +64,7 @@ import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionP
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
+import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.model.response.Owner
 import com.android.purebilibili.data.model.response.Stat
@@ -1051,7 +1052,12 @@ private fun WatchLaterVideoCard(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .videoCardShellReturnChromeAlpha(
+                    enabled = useCardShellSharedBounds,
+                    bvid = item.bvid,
+                    sourceRoute = sourceRoute,
+                ),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(

@@ -123,12 +123,6 @@ fun StoryVideoCard(
             scrollLiteModeEnabled = scrollLiteModeEnabled
         )
     }
-    val coverCrossfadeEnabled = shouldEnableVideoCardCoverCrossfade(
-        isScrollInProgress = scrollLiteModeEnabled,
-        isReturningFromDetail = isReturningFromVideoDetail,
-        useCoverSharedBounds = false,
-        isSharedReturnTarget = false
-    )
     val badgeStylePolicy = remember(showCoverGlassBadges, showInfoGlassBadges) {
         resolveHomeVideoGlassBadgeStylePolicy(
             showCoverGlassBadges = showCoverGlassBadges,
@@ -202,6 +196,23 @@ fun StoryVideoCard(
     val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
         sourceRoute = effectiveSharedElementSourceRoute,
         transitionEnabled = coverSharedEnabled
+    )
+    val isSharedReturnTarget = remember(
+        video.bvid,
+        effectiveSharedElementSourceRoute,
+        CardPositionManager.lastClickedVideoSourceKey,
+    ) {
+        isVideoCardSharedReturnTarget(
+            bvid = video.bvid,
+            sourceRoute = effectiveSharedElementSourceRoute,
+            lastClickedVideoSourceKey = CardPositionManager.lastClickedVideoSourceKey,
+        )
+    }
+    val coverCrossfadeEnabled = shouldEnableVideoCardCoverCrossfade(
+        isScrollInProgress = scrollLiteModeEnabled,
+        isReturningFromDetail = isReturningFromVideoDetail,
+        useCoverSharedBounds = useCardShellSharedBounds,
+        isSharedReturnTarget = isSharedReturnTarget,
     )
     val cardSharedTransitionMotionSpec = remember(
         effectiveSharedElementSourceRoute,
@@ -340,6 +351,15 @@ fun StoryVideoCard(
             }
         }
         
+        Column(
+            modifier = Modifier.videoCardShellReturnChromeAlpha(
+                enabled = useCardShellSharedBounds,
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+                isReturningFromDetail = isReturningFromVideoDetail,
+                isQuickReturnFromDetail = isQuickReturningFromVideoDetail,
+            )
+        ) {
         Spacer(modifier = Modifier.height(if (compactMetadata) 8.dp else 12.dp))
         
         Text(
@@ -483,6 +503,7 @@ fun StoryVideoCard(
                     }
                 }
             }
+        }
         }
     }
     

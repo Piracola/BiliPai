@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -55,6 +56,7 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSo
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
+import com.android.purebilibili.core.ui.transition.resolveVideoSharedCoverCacheKey
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
@@ -82,6 +84,7 @@ fun GlassVideoCard(
     transitionEnabled: Boolean = false, //  卡片过渡动画开关
     sharedElementSourceRoute: String? = null,
     isReturningFromVideoDetail: Boolean = false,
+    isQuickReturningFromVideoDetail: Boolean = false,
     isDataSaverActive: Boolean = false,
     preferLowQualityCover: Boolean = false,
     showCoverGlassBadges: Boolean = true,
@@ -197,7 +200,26 @@ fun GlassVideoCard(
         sourceRoute = effectiveSharedElementSourceRoute,
         transitionEnabled = coverSharedEnabled
     )
-    
+    val isSharedReturnTarget = remember(
+        video.bvid,
+        effectiveSharedElementSourceRoute,
+        CardPositionManager.lastClickedVideoSourceKey,
+    ) {
+        isVideoCardSharedReturnTarget(
+            bvid = video.bvid,
+            sourceRoute = effectiveSharedElementSourceRoute,
+            lastClickedVideoSourceKey = CardPositionManager.lastClickedVideoSourceKey,
+        )
+    }
+    val coverCrossfadeEnabled = shouldEnableVideoCardCoverCrossfade(
+        isScrollInProgress = false,
+        isReturningFromDetail = isReturningFromVideoDetail,
+        useCoverSharedBounds = useCardShellSharedBounds,
+        isSharedReturnTarget = isSharedReturnTarget,
+    )
+    val coverCacheKey = remember(video.bvid, useLowQualityCover) {
+        resolveVideoSharedCoverCacheKey(video.bvid, useLowQualityCover)
+    }
     // 🌈 彩虹渐变边框色
     val rainbowColors = remember {
         listOf(
@@ -310,9 +332,10 @@ fun GlassVideoCard(
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(coverUrl)
-                                .crossfade(100)  //  缩短淡入时间
-                                .memoryCacheKey("glass_${video.bvid}")
-                                .diskCacheKey("glass_${video.bvid}")
+                                .placeholderMemoryCacheKey(coverCacheKey)
+                                .crossfade(coverCrossfadeEnabled)
+                                .memoryCacheKey(coverCacheKey)
+                                .diskCacheKey(coverCacheKey)
                                 .build(),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
@@ -426,6 +449,13 @@ fun GlassVideoCard(
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp)
                         .padding(bottom = 14.dp)
+                        .videoCardShellReturnChromeAlpha(
+                            enabled = useCardShellSharedBounds,
+                            bvid = video.bvid,
+                            sourceRoute = effectiveSharedElementSourceRoute,
+                            isReturningFromDetail = isReturningFromVideoDetail,
+                            isQuickReturnFromDetail = isQuickReturningFromVideoDetail,
+                        )
                 ) {
                     Text(
                         text = video.title,

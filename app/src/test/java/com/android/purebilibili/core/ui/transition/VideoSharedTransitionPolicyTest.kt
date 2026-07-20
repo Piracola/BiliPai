@@ -1,5 +1,7 @@
 package com.android.purebilibili.core.ui.transition
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.ui.geometry.Rect
@@ -8,6 +10,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -70,7 +73,7 @@ class VideoSharedTransitionPolicyTest {
         assertEquals(motion.spatialStiffness, returnSpring.stiffness, 0.001f)
         assertTrue(returnSpring.dampingRatio in 0.9f..0.95f)
         assertTrue(returnSpring.dampingRatio < 1f)
-        assertEquals(0.92f, motion.returnSpatialDampingRatio, 0.001f)
+        assertEquals(0.95f, motion.returnSpatialDampingRatio, 0.001f)
         assertEquals(240f, motion.spatialStiffness, 0.001f)
         assertEquals(180L, resolveVideoCardReturnSpringSettleBufferMs())
     }
@@ -180,9 +183,13 @@ class VideoSharedTransitionPolicyTest {
         val homeCardSource = File(
             "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCard.kt"
         ).readText()
+        val policySource = File(
+            "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCardScrollLiteVisualPolicy.kt"
+        ).readText()
 
-        assertTrue(homeCardSource.contains("normalizeVideoCardSourceRouteForKey(effectiveSharedElementSourceRoute)"))
-        assertFalse(homeCardSource.contains("val normalizedRoute = effectiveSharedElementSourceRoute\n                ?.substringBefore(\"?\")"))
+        assertTrue(homeCardSource.contains("isVideoCardSharedReturnTarget("))
+        assertTrue(policySource.contains("home?category="))
+        assertTrue(homeCardSource.contains("videoCardShellReturnChromeAlpha("))
     }
 
     @Test
@@ -303,6 +310,65 @@ class VideoSharedTransitionPolicyTest {
 
         assertTrue(helperSource.contains("videoCardShellSharedElementKey("))
         assertFalse(helperSource.contains("videoCoverSharedElementKey("))
+    }
+
+    @Test
+    fun cardShellSharedBoundsScalesTowardTopNotCenter() {
+        val helperSource = File(
+            "src/main/java/com/android/purebilibili/core/ui/transition/VideoCardShellSharedBounds.kt"
+        ).readText()
+
+        assertTrue(helperSource.contains("scaleToBounds(ContentScale.FillWidth, Alignment.TopCenter)"))
+        assertFalse(helperSource.contains("Alignment.Center)"))
+    }
+
+    @Test
+    fun cardShellSharedBoundsKeepsSourceCoverReadyWithoutDelayedEnter() {
+        assertEquals(
+            EnterTransition.None,
+            resolveVideoCardShellSharedBoundsEnter(
+                role = VideoCardShellSharedBoundsRole.DetailShell,
+                transitionDurationMillis = 360,
+            )
+        )
+        assertEquals(
+            EnterTransition.None,
+            resolveVideoCardShellSharedBoundsEnter(
+                role = VideoCardShellSharedBoundsRole.SourceCard,
+                transitionDurationMillis = 360,
+            )
+        )
+        assertEquals(
+            ExitTransition.None,
+            resolveVideoCardShellSharedBoundsExit(
+                role = VideoCardShellSharedBoundsRole.DetailShell,
+            )
+        )
+        // 源卡也不淡出：避免点击时标题先消失再飞入。
+        assertEquals(
+            ExitTransition.None,
+            resolveVideoCardShellSharedBoundsExit(
+                role = VideoCardShellSharedBoundsRole.SourceCard,
+            )
+        )
+        val detailSource = File(
+            "src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreenStateHolder.kt"
+        ).readText()
+        assertTrue(detailSource.contains("VideoCardShellSharedBoundsRole.DetailShell"))
+        val homeCardSource = File(
+            "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCard.kt"
+        ).readText()
+        // 整卡 alpha=0 会落位黑闪；只对 info 区接 chrome alpha。
+        assertTrue(homeCardSource.contains("infoContainerModifier.videoCardShellReturnChromeAlpha"))
+        assertFalse(
+            Regex(
+                """videoCardShellSharedBoundsOrEmpty\([\s\S]{0,400}?\)\s*\.graphicsLayer"""
+            ).containsMatchIn(homeCardSource)
+        )
+        val chromeHelper = File(
+            "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCardShellReturnChrome.kt"
+        ).readText()
+        assertTrue(chromeHelper.contains("resolveHomeCardChromeAlphaDuringShellReturnMorph("))
     }
 
     @Test
@@ -644,8 +710,8 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun detailReturnFade_playerOnlyForImmediate_coverForAnyLeaving() {
-        assertTrue(
+    fun detailReturnFade_immediateKeepsLiveSurface_coverFirstStillUsesCover() {
+        assertFalse(
             shouldFadePlayerSurfaceOnDetailReturn(
                 isLeaving = true,
                 playbackIntent = VideoSharedTransitionPlaybackIntent.ImmediatePlayback
@@ -663,8 +729,8 @@ class VideoSharedTransitionPolicyTest {
                 playbackIntent = VideoSharedTransitionPlaybackIntent.ImmediatePlayback
             )
         )
-        // 返回过程必须看得见封面（不限播放意图）
-        assertTrue(
+        // ImmediatePlayback 一镜到底不叠封面；CoverFirst 仍叠封面
+        assertFalse(
             shouldUseDetailReturnCoverCrossfade(
                 isLeaving = true,
                 playbackIntent = VideoSharedTransitionPlaybackIntent.ImmediatePlayback

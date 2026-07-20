@@ -274,4 +274,37 @@ class VideoCardScrollLiteVisualPolicyTest {
             )
         )
     }
+
+    @Test
+    fun homeCardChrome_staysVisibleWithCoverDuringShellMorph() {
+        // 不再压 chrome：进出场标题与封面同步，避免回弹末段才出字。
+        assertFalse(
+            shouldSuppressHomeCardVisualDuringShellReturnMorph(
+                useCardContainerSharedBounds = true,
+                isSharedMorphSourceCard = true,
+                isReturningFromDetail = true,
+                isSharedTransitionActive = true,
+                transitionBackgroundProgress = 1f,
+            )
+        )
+        assertEquals(
+            1f,
+            resolveHomeCardChromeAlphaDuringShellReturnMorph(
+                useCardContainerSharedBounds = true,
+                isSharedMorphSourceCard = true,
+                isReturningFromDetail = true,
+                isSharedTransitionActive = true,
+                transitionBackgroundProgress = 1f,
+            ),
+            0.001f,
+        )
+        assertEquals(1f, resolveHomeCardChromeEarlyRevealAlpha(settleProgress = 0.2f), 0.001f)
+        assertTrue(
+            isVideoCardSharedReturnTarget(
+                bvid = "BV1xx",
+                sourceRoute = "home?category=1",
+                lastClickedVideoSourceKey = "home?category=1:BV1xx",
+            )
+        )
+    }
 }

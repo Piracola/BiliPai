@@ -180,6 +180,7 @@ import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionS
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellContainerTransform
+import com.android.purebilibili.core.ui.transition.VideoCardShellSharedBoundsRole
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.ui.transition.videoSharedElementBoundsTransformSpec
 import com.android.purebilibili.core.ui.rememberAppCollectionIcon
@@ -1003,12 +1004,13 @@ internal fun VideoDetailScreenStateHolder(
         bvid = bvid,
         sourceRoute = sourceRouteForSharedElement,
         motionSpec = homeSharedTransitionMotionSpec,
-        clipShape = detailShellShape
+        clipShape = detailShellShape,
+        role = VideoCardShellSharedBoundsRole.DetailShell,
     )
     val coverTakeoverBeforeBackDelayMillis = remember {
         resolveCoverTakeoverDelayBeforeBackNavigationMillis()
     }
-    // 仅当详情页自身正在回收到来源卡片时让封面接管。详情页作为上层页面的
+    // 仅当详情页自身正在回收到来源卡片时进入离开态。详情页作为上层页面的
     // 直接返回目标时必须保留已加载的播放器与内容，避免预测返回预览变成封面占位。
     val isCardReturnExitInProgress = shouldTreatVideoDetailCardExitAsReturning(
         isExitTransitionInProgress = isExitTransitionInProgress,
@@ -1020,8 +1022,7 @@ internal fun VideoDetailScreenStateHolder(
         transitionEnabled = transitionEnabled,
         isCardReturnExitInProgress = isCardReturnExitInProgress
     )
-    // 提交返回 / session 已 mark 返回：叠已缓存封面并淡出 surface，但不 forceCoverOnly
-    //（保留 shell/player 容器参与 sharedBounds，避免 key 被拆掉）。
+    // 离开态：次要内容淡出等。ImmediatePlayback live morph 时不把视觉交给常驻封面。
     val useReturningVideoDetailVisualState = shouldUseReturningVideoDetailVisualState(
         forceCoverOnlyForReturn = forceCoverOnlyForReturn,
         isCardReturnExitInProgress = isCardReturnExitInProgress,
@@ -1031,8 +1032,21 @@ internal fun VideoDetailScreenStateHolder(
             !keepLoadedContentForBackPreview,
     )
     val hasResidentReturnCover = coverUrl.isNotBlank()
-    val useResidentCoverForCommittedReturn =
-        useReturningVideoDetailVisualState && hasResidentReturnCover
+    val detailContentReadyForLiveReturnMorph = shouldTreatVideoDetailContentReadyForLiveReturnMorph(
+        hasSuccessfulDetailContent = uiState is VideoPlaybackUiState.Success,
+    )
+    val liveReturnMorph = shouldUseLiveReturnMorph(
+        transitionEnabled = transitionEnabled,
+        sharedBoundsActive = sharedBoundsActive,
+        keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
+        playbackIntent = videoSharedPlaybackIntent,
+        detailContentReady = detailContentReadyForLiveReturnMorph,
+    )
+    val useResidentCoverForCommittedReturn = shouldHandVisualOwnershipToResidentCover(
+        useReturningVisualState = useReturningVideoDetailVisualState,
+        hasResidentCover = hasResidentReturnCover,
+        liveReturnMorph = liveReturnMorph,
+    )
 
     val handleTopBarAction = remember(
         miniPlayerManager,
@@ -2649,7 +2663,8 @@ internal fun VideoDetailScreenStateHolder(
                                     videoPlayerBounds = nextBounds
                                 }
                         ) {
-                            // 前台常驻封面叠层，返回时只改 alpha，避免临时解码/淡入打断共享元素动画。
+                            // 常驻封面叠层：CoverFirst / 非 live morph 时改 alpha；
+                            // ImmediatePlayback live morph 保持 cover=0、player=1 一镜到底。
                             if (residentCoverImageRequest != null) {
                                 AsyncImage(
                                     model = residentCoverImageRequest,
@@ -2661,6 +2676,7 @@ internal fun VideoDetailScreenStateHolder(
                                                 transitionProgress = detailTransitionProgress.value,
                                                 isCommittedCardReturn = isLeaving,
                                                 hasResidentCover = hasResidentReturnCover,
+                                                liveReturnMorph = liveReturnMorph,
                                             )
                                         },
                                     contentScale = ContentScale.Crop
@@ -2675,6 +2691,7 @@ internal fun VideoDetailScreenStateHolder(
                                             transitionProgress = detailTransitionProgress.value,
                                             isCommittedCardReturn = isLeaving,
                                             hasResidentCover = hasResidentReturnCover,
+                                            liveReturnMorph = liveReturnMorph,
                                         )
                                     }
                             ) {
@@ -2752,6 +2769,7 @@ internal fun VideoDetailScreenStateHolder(
                                         isCommittedCardReturn = isLeaving,
                                         holdFullyOpaqueAfterBackPreview =
                                             suppressEnterFadeAfterBackPreview && !isLeaving,
+                                        liveReturnMorph = liveReturnMorph,
                                     )
                                 }
                                 // .nestedScroll(nestedScrollConnection) // [Remove] 移除嵌套滚动，确保 Tabs 正常滑动

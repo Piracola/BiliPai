@@ -84,6 +84,93 @@ internal fun shouldHideHomeCardCoverDuringShellMorph(
     return false
 }
 
+/**
+ * 历史 API：曾按落位进度淡入 chrome。现改为始终可见，避免回弹末段才出标题。
+ */
+internal const val HOME_CARD_CHROME_EARLY_REVEAL_SETTLE_START = 0f
+
+/**
+ * 历史 API：现恒为 1，保留供测试/调用方兼容。
+ */
+@Suppress("UNUSED_PARAMETER")
+internal fun resolveHomeCardChromeEarlyRevealAlpha(
+    settleProgress: Float,
+    revealStart: Float = HOME_CARD_CHROME_EARLY_REVEAL_SETTLE_START,
+): Float = 1f
+
+/**
+ * 返回 shell morph 期间首页源卡 **chrome**（标题/UP/信息区）的 alpha。
+ *
+ * 始终 1：标题与封面同步参与落位，不再等回弹末段淡入。
+ * 飞行中由详情壳盖住源卡信息区，避免再靠压透明制造延迟。
+ */
+@Suppress("UNUSED_PARAMETER")
+internal fun resolveHomeCardChromeAlphaDuringShellReturnMorph(
+    useCardContainerSharedBounds: Boolean,
+    isSharedMorphSourceCard: Boolean,
+    isReturningFromDetail: Boolean,
+    transitionBackgroundPhase: VideoCardTransitionBackgroundPhase =
+        VideoCardTransitionBackgroundPhase.IDLE,
+    isVideoCardReturnGestureInProgress: Boolean = false,
+    isSharedTransitionActive: Boolean = false,
+    transitionBackgroundProgress: Float = 0f,
+    isQuickReturnFromDetail: Boolean = false,
+): Float = 1f
+
+/**
+ * 兼容旧布尔语义：chrome 尚未完全露出版视为仍在抑制。
+ */
+internal fun shouldSuppressHomeCardVisualDuringShellReturnMorph(
+    useCardContainerSharedBounds: Boolean,
+    isSharedMorphSourceCard: Boolean,
+    isReturningFromDetail: Boolean,
+    transitionBackgroundPhase: VideoCardTransitionBackgroundPhase =
+        VideoCardTransitionBackgroundPhase.IDLE,
+    isVideoCardReturnGestureInProgress: Boolean = false,
+    isSharedTransitionActive: Boolean = false,
+    transitionBackgroundProgress: Float = 0f,
+    isQuickReturnFromDetail: Boolean = false,
+): Boolean {
+    return resolveHomeCardChromeAlphaDuringShellReturnMorph(
+        useCardContainerSharedBounds = useCardContainerSharedBounds,
+        isSharedMorphSourceCard = isSharedMorphSourceCard,
+        isReturningFromDetail = isReturningFromDetail,
+        transitionBackgroundPhase = transitionBackgroundPhase,
+        isVideoCardReturnGestureInProgress = isVideoCardReturnGestureInProgress,
+        isSharedTransitionActive = isSharedTransitionActive,
+        transitionBackgroundProgress = transitionBackgroundProgress,
+        isQuickReturnFromDetail = isQuickReturnFromDetail,
+    ) < 1f
+}
+
+internal fun normalizeVideoCardSourceRouteForSharedKey(sourceRoute: String?): String? {
+    val normalized = sourceRoute?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    return if (normalized.startsWith("home?category=")) {
+        normalized
+    } else {
+        normalized.substringBefore("?")
+    }
+}
+
+internal fun resolveVideoCardSharedReturnTargetKey(
+    bvid: String,
+    sourceRoute: String?,
+): String? {
+    val normalizedBvid = bvid.trim()
+    val normalizedRoute = normalizeVideoCardSourceRouteForSharedKey(sourceRoute) ?: return null
+    if (normalizedBvid.isEmpty()) return null
+    return "$normalizedRoute:$normalizedBvid"
+}
+
+internal fun isVideoCardSharedReturnTarget(
+    bvid: String,
+    sourceRoute: String?,
+    lastClickedVideoSourceKey: String?,
+): Boolean {
+    val key = resolveVideoCardSharedReturnTargetKey(bvid, sourceRoute) ?: return false
+    return key == lastClickedVideoSourceKey
+}
+
 internal data class StoryVideoCardScrollLiteVisualPolicy(
     val coverShadowElevationDp: Float,
     val showSecondaryStatsRow: Boolean

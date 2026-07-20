@@ -73,6 +73,7 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSo
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
+import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.data.model.response.VideoItem
@@ -181,7 +182,7 @@ private fun HomeHeroCarouselCard(
         }
     }
 
-    // —— 共享元素过渡相关 ——
+    // �� ???????? ��
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
@@ -203,7 +204,7 @@ private fun HomeHeroCarouselCard(
         )
     }
 
-    // 屏幕尺寸（用于 CardPositionManager 归一化坐标计算）
+    // ??????? CardPositionManager ????????
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val screenWidthPx: Float
@@ -221,12 +222,12 @@ private fun HomeHeroCarouselCard(
         densityValue = d
     }
 
-    // 卡片坐标引用（惰性记录，仅在点击时读取）
+    // ????????????????????
     val cardCoordsRef = remember { object { var value: LayoutCoordinates? = null } }
 
     val cardShape = AppShapes.container(ContainerLevel.Card)
 
-    // 点击时先记录卡片位置，再执行导航
+    // ????????????????
     val clickAction: () -> Unit = {
         cardCoordsRef.value?.takeIf { it.isAttached }?.boundsInRoot()?.let { bounds ->
             CardPositionManager.recordVideoCardPosition(
@@ -329,14 +330,19 @@ private fun HomeHeroCarouselCard(
                         )
                     )
             )
-            // 底部信息区（标题在上行，统计在下行右侧，互不遮挡）
+            // ????????????????????
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .padding(start = 28.dp, end = 28.dp, bottom = 14.dp)
+                    .videoCardShellReturnChromeAlpha(
+                        enabled = useCardShellSharedBounds,
+                        bvid = video.bvid,
+                        sourceRoute = sourceRoute,
+                    )
             ) {
-                // 标题
+                // ??
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -359,7 +365,7 @@ private fun HomeHeroCarouselCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                // 统计信息（第二行靠右）
+                // ???????????
                 if (video.duration > 0 || video.stat.view > 0 || video.stat.danmaku > 0) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
@@ -368,7 +374,7 @@ private fun HomeHeroCarouselCard(
                         horizontalArrangement = Arrangement.End
                     ) {
                     var separatorNeeded = false
-                    // 时长
+                    // ??
                     if (video.duration > 0) {
                         Text(
                             text = FormatUtils.formatDuration(video.duration),
@@ -380,15 +386,15 @@ private fun HomeHeroCarouselCard(
                         )
                         separatorNeeded = true
                     }
-                    // 播放量
+                    // ???
                     if (video.stat.view > 0) {
                         if (separatorNeeded) Text(
-                            " · ",
+                            " � ",
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 12.sp
                         )
                         Text(
-                            text = FormatUtils.formatStat(video.stat.view.toLong()) + "播放",
+                            text = FormatUtils.formatStat(video.stat.view.toLong()) + "??",
                             color = Color.White.copy(alpha = 0.65f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal,
@@ -397,15 +403,15 @@ private fun HomeHeroCarouselCard(
                         )
                         separatorNeeded = true
                     }
-                    // 弹幕
+                    // ??
                     if (video.stat.danmaku > 0) {
                         if (separatorNeeded) Text(
-                            " · ",
+                            " � ",
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 12.sp
                         )
                         Text(
-                            text = FormatUtils.formatStat(video.stat.danmaku.toLong()) + "弹幕",
+                            text = FormatUtils.formatStat(video.stat.danmaku.toLong()) + "??",
                             color = Color.White.copy(alpha = 0.65f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal,

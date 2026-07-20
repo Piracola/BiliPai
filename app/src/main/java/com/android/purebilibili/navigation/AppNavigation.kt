@@ -2851,6 +2851,13 @@ fun AppNavigation(
                             globalWallpaperDepthGestureRestore.value = gestureRestore
                         }
                     },
+                    isQuickReturnFromDetail = navigation3ReturnSession.isQuickReturnFromDetail,
+                    onPrepareVideoCardSharedReturn = {
+                        val previousKey =
+                            navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
+                        markNavigation3VideoReturnBeforeBackAction(targetKey = previousKey)
+                        navigation3ReturnSession.isQuickReturnFromDetail
+                    },
                     modifier = Modifier.fillMaxSize(),
                     sharedTransitionScope = LocalSharedTransitionScope.current,
                     visibleBottomBarRoutes = visibleBottomBarRoutes,

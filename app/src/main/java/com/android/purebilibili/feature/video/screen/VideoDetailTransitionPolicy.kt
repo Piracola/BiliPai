@@ -1,6 +1,7 @@
 package com.android.purebilibili.feature.video.screen
 
 import androidx.compose.animation.core.Easing
+import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionEnterEasing
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionReturnEasing
 
@@ -17,11 +18,8 @@ internal fun resolveForceCoverOnlyForReturn(
 }
 
 /**
- * 返回视觉（封面叠层 + 播放器淡出）：
- * - 显式 forceCoverOnly
- * - 已提交的卡片回收退出（PostExit + sharedBounds）
- * - 或 session 已标记返回卡片（顶栏 markReturning 后 / 栈返回中）——尽早叠封面，
- *   避免「整段 return 只有播放器/黑底，落位才出封面」
+ * 返回「离开态」（次要内容淡出、标记离开等）。
+ * 不等于封面接管：ImmediatePlayback 的 live morph 路径下播放器应保持可见。
  *
  * 预测拖动未提交时 isSessionReturningToCard 应为 false（尚未 markReturning）。
  */
@@ -35,22 +33,63 @@ internal fun shouldUseReturningVideoDetailVisualState(
         isSessionReturningToCard
 }
 
+/**
+ * 详情 → 来源卡片 sharedBounds：实时画面跟手缩小（一镜到底）。
+ * CoverFirst / back-preview 保活父页时关闭。
+ * 详情正文未就绪（快速返回常见 Loading/骨架）时也关闭，否则 skeleton 会被缩进卡片位。
+ */
+internal fun shouldUseLiveReturnMorph(
+    transitionEnabled: Boolean,
+    sharedBoundsActive: Boolean,
+    keepLoadedContentForBackPreview: Boolean,
+    playbackIntent: VideoSharedTransitionPlaybackIntent,
+    detailContentReady: Boolean = true,
+): Boolean {
+    return transitionEnabled &&
+        sharedBoundsActive &&
+        !keepLoadedContentForBackPreview &&
+        playbackIntent == VideoSharedTransitionPlaybackIntent.ImmediatePlayback &&
+        detailContentReady
+}
+
+/**
+ * 详情页下方推荐/简介等是否已可安全参与 live morph。
+ * Loading / 错误态仍可能画骨架或空壳，快速返回时不能当「实时组件」。
+ */
+internal fun shouldTreatVideoDetailContentReadyForLiveReturnMorph(
+    hasSuccessfulDetailContent: Boolean,
+): Boolean = hasSuccessfulDetailContent
+
+/**
+ * 是否把视觉主导权交给常驻封面（forceCover / 藏 surface）。
+ * live morph 时必须为 false，否则会出现「先切封面再缩小」。
+ */
+internal fun shouldHandVisualOwnershipToResidentCover(
+    useReturningVisualState: Boolean,
+    hasResidentCover: Boolean,
+    liveReturnMorph: Boolean,
+): Boolean {
+    return useReturningVisualState && hasResidentCover && !liveReturnMorph
+}
+
 internal fun resolveVideoDetailReturnCoverAlpha(
     transitionProgress: Float,
     isCommittedCardReturn: Boolean,
     hasResidentCover: Boolean,
+    liveReturnMorph: Boolean = false,
 ): Float {
+    if (liveReturnMorph || !hasResidentCover) return 0f
     val progress = transitionProgress.coerceIn(0f, 1f)
-    return if (hasResidentCover && isCommittedCardReturn) 1f
-    else if (hasResidentCover) 1f - progress
-    else 0f
+    return if (isCommittedCardReturn) 1f else 1f - progress
 }
 
 internal fun resolveVideoDetailReturnPlayerAlpha(
     transitionProgress: Float,
     isCommittedCardReturn: Boolean,
     hasResidentCover: Boolean,
+    liveReturnMorph: Boolean = false,
 ): Float {
+    if (liveReturnMorph) return 1f
     if (isCommittedCardReturn) return if (hasResidentCover) 0f else 1f
     return transitionProgress.coerceIn(0f, 1f)
 }
@@ -59,7 +98,10 @@ internal fun resolveVideoDetailReturnContentAlpha(
     transitionProgress: Float,
     isCommittedCardReturn: Boolean,
     holdFullyOpaqueAfterBackPreview: Boolean = false,
+    liveReturnMorph: Boolean = false,
 ): Float {
+    // live morph：正文保持不透明，整页参与 shell 收缩；收束靠 bounds 形变而非先淡成封面。
+    if (liveReturnMorph) return 1f
     if (isCommittedCardReturn) return 0f
     if (holdFullyOpaqueAfterBackPreview) return 1f
     return transitionProgress.coerceIn(0f, 1f)

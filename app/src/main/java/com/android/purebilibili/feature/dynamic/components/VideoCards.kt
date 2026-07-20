@@ -50,6 +50,7 @@ import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.util.CardPositionManager
+import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
 import com.android.purebilibili.data.model.response.ArchiveMajor
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.filled.PlayCircle
@@ -163,13 +164,21 @@ fun VideoCardLarge(
             cornerBadgeText = cornerBadgeText,
             coverShape = coverShape
         )
-        Spacer(modifier = Modifier.height(6.dp))
-        VideoCardLargeInfo(
-            archive = archive,
-            isCollection = isCollection,
-            collectionTitle = collectionTitle,
-            publishTs = publishTs
-        )
+        Column(
+            modifier = Modifier.videoCardShellReturnChromeAlpha(
+                enabled = useCardShellSharedBounds,
+                bvid = archive.bvid,
+                sourceRoute = sourceRoute,
+            )
+        ) {
+            Spacer(modifier = Modifier.height(6.dp))
+            VideoCardLargeInfo(
+                archive = archive,
+                isCollection = isCollection,
+                collectionTitle = collectionTitle,
+                publishTs = publishTs
+            )
+        }
     }
 }
 

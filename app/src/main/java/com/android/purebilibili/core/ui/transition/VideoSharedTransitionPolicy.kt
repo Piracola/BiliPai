@@ -31,20 +31,22 @@ internal fun resolveVideoSharedTransitionPlaybackIntent(
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 internal fun shouldFadePlayerSurfaceOnDetailReturn(
     isLeaving: Boolean,
     playbackIntent: VideoSharedTransitionPlaybackIntent
 ): Boolean {
-    // CoverFirst 本身已是封面主导；Immediate 返回时要淡出 surface 露出 handoff 封面。
-    return isLeaving && playbackIntent == VideoSharedTransitionPlaybackIntent.ImmediatePlayback
+    // ImmediatePlayback 一镜到底：返回全程保留直播 surface，不为 handoff 封面淡出。
+    // CoverFirst 本身无直播 surface 主导，也不走淡出。签名保留供测试/未来接线。
+    return false
 }
 
 internal fun shouldUseDetailReturnCoverCrossfade(
     isLeaving: Boolean,
     playbackIntent: VideoSharedTransitionPlaybackIntent
 ): Boolean {
-    // 任意播放意图在返回时都叠封面，保证 morph 过程看得见封面而非黑底。
-    return isLeaving
+    // CoverFirst 返回仍叠封面防黑底；ImmediatePlayback 由直播画面填满 morph，不抢封面。
+    return isLeaving && playbackIntent == VideoSharedTransitionPlaybackIntent.CoverFirst
 }
 
 internal enum class VideoSharedTransitionTargetMode {
@@ -79,8 +81,8 @@ private const val DYNAMIC_VIDEO_CARD_CORNER_DP = 10
 private const val WATCH_LATER_VIDEO_CARD_CORNER_DP = 8
 // 进场仍用 Continuity tween；返回用 soft spring，保留一次轻回弹并天然支持打断续传。
 private const val VIDEO_CARD_HERO_ENTER_SPRING_DAMPING_RATIO = 0.86f
-// 更接近临界阻尼：过冲更轻、落位更稳，避免标准时长下「弹回卡片」偏急。
-private const val VIDEO_CARD_RETURN_SPRING_DAMPING_RATIO = 0.92f
+// 近临界阻尼：保留极轻贴位感，避免过冲与 chrome 淡入抢拍显得突兀。
+private const val VIDEO_CARD_RETURN_SPRING_DAMPING_RATIO = 0.95f
 private const val VIDEO_CARD_HERO_SPRING_REFERENCE_STIFFNESS = 240f
 private const val VIDEO_CARD_HERO_SPRING_REFERENCE_DURATION_MILLIS = 360f
 private const val VIDEO_CARD_HERO_SPRING_MIN_STIFFNESS = 50f

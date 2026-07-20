@@ -63,6 +63,7 @@ internal data class VideoCardTransitionBackgroundState(
     },
     val isReturnGestureInProgressProvider: () -> Boolean = { false },
     val isGestureRestoreInProgressProvider: () -> Boolean = { false },
+    val isQuickReturnFromDetailProvider: () -> Boolean = { false },
     val motionTierProvider: () -> MotionTier = { MotionTier.Normal },
     val isLightBackgroundProvider: () -> Boolean = { false },
 )
@@ -234,6 +235,22 @@ internal fun resolveVideoCardTransitionBackgroundReturnDurationMs(
 internal fun shouldInterruptVideoCardOpeningOnReturn(
     phase: VideoCardTransitionBackgroundPhase,
 ): Boolean = phase == VideoCardTransitionBackgroundPhase.OPENING
+
+/**
+ * 是否立刻掐掉景深模糊，避免封面落位后仍带 BlurEffect 闪一下。
+ *
+ * - 打断 [OPENING]：shared 常先落位，景深按比例消糊会拖尾 → 必 snap
+ * - [HELD]/[RETURNING] + 快速返回会话：同样可能落位快于消糊
+ */
+internal fun shouldSnapClearVideoCardDepthBlurOnQuickReturn(
+    isQuickReturnFromDetail: Boolean,
+    phase: VideoCardTransitionBackgroundPhase,
+): Boolean {
+    if (phase == VideoCardTransitionBackgroundPhase.OPENING) return true
+    if (!isQuickReturnFromDetail) return false
+    return phase == VideoCardTransitionBackgroundPhase.HELD ||
+        phase == VideoCardTransitionBackgroundPhase.RETURNING
+}
 
 internal fun shouldApplyVideoCardTransitionBackgroundToRoute(
     entryRoute: String?,

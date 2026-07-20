@@ -112,6 +112,7 @@ import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
 import com.android.purebilibili.core.ui.transition.videoSharedElementBoundsTransformSpec
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
+import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
 import com.android.purebilibili.core.ui.components.UserLevelBadge
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.util.CardPositionManager
@@ -2696,32 +2697,40 @@ private fun SpaceHomeVideoCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = video.title,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        val metadata = remember(video.created, video.play, progressState.progressSec) {
-            buildList {
-                if (video.created > 0L) add(FormatUtils.formatPublishTime(video.created))
-                if (video.play > 0) add("${FormatUtils.formatStat(video.play.toLong())}播放")
-                if (progressState.progressSec == -1) add("已看完")
-            }.joinToString(" · ")
-        }
-        if (metadata.isNotBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = metadata,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        Column(
+            modifier = Modifier.videoCardShellReturnChromeAlpha(
+                enabled = useCardShellSharedBounds,
+                bvid = sharedTransitionKey.orEmpty(),
+                sourceRoute = sourceRoute,
             )
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = video.title,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            val metadata = remember(video.created, video.play, progressState.progressSec) {
+                buildList {
+                    if (video.created > 0L) add(FormatUtils.formatPublishTime(video.created))
+                    if (video.play > 0) add("${FormatUtils.formatStat(video.play.toLong())}播放")
+                    if (progressState.progressSec == -1) add("已看完")
+                }.joinToString(" · ")
+            }
+            if (metadata.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = metadata,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -3157,7 +3166,12 @@ private fun SpaceArchiveListItemRow(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .height(coverHeight),
+                .height(coverHeight)
+                .videoCardShellReturnChromeAlpha(
+                    enabled = useCardShellSharedBounds,
+                    bvid = sharedTransitionKey.orEmpty(),
+                    sourceRoute = sourceRoute,
+                ),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(

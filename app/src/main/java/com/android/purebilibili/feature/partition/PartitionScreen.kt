@@ -82,6 +82,7 @@ import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionV
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
+import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
 import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
 import com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey
@@ -1047,6 +1048,11 @@ private fun PartitionVideoRow(
                 .weight(1f)
                 .heightIn(min = 82.dp)
                 .padding(vertical = 2.dp)
+                .videoCardShellReturnChromeAlpha(
+                    enabled = useCardShellSharedBounds,
+                    bvid = video.bvid,
+                    sourceRoute = sharedElementSourceRoute,
+                )
         ) {
             Text(
                 text = video.title,

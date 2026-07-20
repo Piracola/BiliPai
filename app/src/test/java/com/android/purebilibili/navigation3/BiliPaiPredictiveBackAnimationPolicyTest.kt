@@ -3,6 +3,7 @@ package com.android.purebilibili.navigation3
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiDefaultPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiDisabledPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
+import com.android.purebilibili.navigation3.predictiveback.BiliPaiSettingsIosPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiSharedElementPredictiveBackAnimation
 import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiPredictiveBackAnimationHandler
 import java.io.File
@@ -12,6 +13,31 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BiliPaiPredictiveBackAnimationPolicyTest {
+
+    @Test
+    fun settingsIosPushPop_usesSettingsAlignedPredictiveHandler() {
+        val handler = resolveBiliPaiPredictiveBackAnimationHandler(
+            routeTransition = BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_POP,
+        )
+        assertTrue(handler is BiliPaiSettingsIosPredictiveBackAnimation)
+    }
+
+    @Test
+    fun settingsPredictivePop_reusesIosPushPopTransform() {
+        val source = listOf(
+            File("app/src/main/java/com/android/purebilibili/navigation3/predictiveback/BiliPaiSettingsIosPredictiveBackAnimation.kt"),
+            File("src/main/java/com/android/purebilibili/navigation3/predictiveback/BiliPaiSettingsIosPredictiveBackAnimation.kt")
+        ).first { it.exists() }.readText()
+        val function = source.substringAfter(
+            "override fun AnimatedContentTransitionScope<Scene<BiliPaiNavKey>>.onPredictivePopTransitionSpec"
+        ).substringBefore(
+            "override fun AnimatedContentTransitionScope<Scene<BiliPaiNavKey>>.onPopTransitionSpec"
+        )
+
+        assertTrue(function.contains("resolveSettingsIosPushPopContentTransform("))
+        assertFalse(function.contains("durationMillis = 550"))
+        assertFalse(function.contains("EnterTransition.None"))
+    }
 
     @Test
     fun sharedElementRoute_usesSharedElementHandler() {

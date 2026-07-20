@@ -491,6 +491,35 @@ class VideoCardTransitionBackgroundPolicyTest {
     }
 
     @Test
+    fun quickReturnSnapsDepthBlurClearToAvoidCoverBlurFlash() {
+        // 打断 OPENING：无论是否已 mark quick，都必须立刻清模糊。
+        assertTrue(
+            shouldSnapClearVideoCardDepthBlurOnQuickReturn(
+                isQuickReturnFromDetail = false,
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+            )
+        )
+        assertTrue(
+            shouldSnapClearVideoCardDepthBlurOnQuickReturn(
+                isQuickReturnFromDetail = true,
+                phase = VideoCardTransitionBackgroundPhase.HELD,
+            )
+        )
+        assertFalse(
+            shouldSnapClearVideoCardDepthBlurOnQuickReturn(
+                isQuickReturnFromDetail = false,
+                phase = VideoCardTransitionBackgroundPhase.HELD,
+            )
+        )
+        assertFalse(
+            shouldSnapClearVideoCardDepthBlurOnQuickReturn(
+                isQuickReturnFromDetail = false,
+                phase = VideoCardTransitionBackgroundPhase.IDLE,
+            )
+        )
+    }
+
+    @Test
     fun navBackdropStaysVisibleThroughTheWholeVideoCardTransition() {
         assertTrue(
             shouldShowVideoCardTransitionNavBackdrop(

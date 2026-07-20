@@ -63,6 +63,7 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSo
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
+import com.android.purebilibili.core.ui.transition.resolveVideoSharedCoverCacheKey
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
@@ -183,6 +184,26 @@ fun CinematicVideoCard(
         sourceRoute = effectiveSharedElementSourceRoute,
         transitionEnabled = coverSharedEnabled
     )
+    val isSharedReturnTarget = remember(
+        video.bvid,
+        effectiveSharedElementSourceRoute,
+        CardPositionManager.lastClickedVideoSourceKey,
+    ) {
+        isVideoCardSharedReturnTarget(
+            bvid = video.bvid,
+            sourceRoute = effectiveSharedElementSourceRoute,
+            lastClickedVideoSourceKey = CardPositionManager.lastClickedVideoSourceKey,
+        )
+    }
+    val coverCrossfadeEnabled = shouldEnableVideoCardCoverCrossfade(
+        isScrollInProgress = false,
+        isReturningFromDetail = isReturningFromVideoDetail,
+        useCoverSharedBounds = useCardShellSharedBounds,
+        isSharedReturnTarget = isSharedReturnTarget,
+    )
+    val coverCacheKey = remember(video.bvid, useLowQualityCover) {
+        resolveVideoSharedCoverCacheKey(video.bvid, useLowQualityCover)
+    }
     val cardShellShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
@@ -243,8 +264,10 @@ fun CinematicVideoCard(
                  AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(coverUrl)
-                        .crossfade(200)
-                        .memoryCacheKey("cover_${video.bvid}_cis")
+                        .placeholderMemoryCacheKey(coverCacheKey)
+                        .crossfade(coverCrossfadeEnabled)
+                        .memoryCacheKey(coverCacheKey)
+                        .diskCacheKey(coverCacheKey)
                         .build(),
                     contentDescription = null,
                     modifier = coverModifier,
@@ -274,7 +297,14 @@ fun CinematicVideoCard(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(16.dp) 
+                    .padding(16.dp)
+                    .videoCardShellReturnChromeAlpha(
+                        enabled = useCardShellSharedBounds,
+                        bvid = video.bvid,
+                        sourceRoute = effectiveSharedElementSourceRoute,
+                        isReturningFromDetail = isReturningFromVideoDetail,
+                        isQuickReturnFromDetail = isQuickReturningFromVideoDetail,
+                    )
             ) {
                 Text(
                     text = video.title,

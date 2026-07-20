@@ -40,6 +40,7 @@ import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RAT
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
+import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
 import com.android.purebilibili.core.ui.transition.videoSharedElementBoundsTransformSpec
 import com.android.purebilibili.feature.video.ui.FollowBadgeTone
@@ -290,7 +291,12 @@ fun RelatedVideoItem(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = relatedCoverHeight),
+                    .heightIn(min = relatedCoverHeight)
+                    .videoCardShellReturnChromeAlpha(
+                        enabled = useCardShellSharedBounds,
+                        bvid = video.bvid,
+                        sourceRoute = sourceRoute,
+                    ),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Box(modifier = Modifier.fillMaxWidth()) {

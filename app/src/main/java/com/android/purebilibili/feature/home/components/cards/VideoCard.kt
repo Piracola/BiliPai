@@ -609,17 +609,17 @@ fun ElegantVideoCard(
         val homeSharedTransitionMotionSpec = homeSharedTransitionSpecs.motion
         val homeSharedTransitionVisualSpec = homeSharedTransitionSpecs.visual
         val useCardShellSharedBounds = sharedTransitionOwnership.useCardContainerSharedBounds
-        val thisCardVideoSourceKey = remember(video.bvid, effectiveSharedElementSourceRoute) {
-            val normalizedBvid = video.bvid.trim()
-            val normalizedRoute = normalizeVideoCardSourceRouteForKey(effectiveSharedElementSourceRoute)
-            if (normalizedBvid.isNotEmpty() && normalizedRoute != null) {
-                "$normalizedRoute:$normalizedBvid"
-            } else {
-                null
-            }
+        val isCoverSharedReturnTarget = remember(
+            video.bvid,
+            effectiveSharedElementSourceRoute,
+            CardPositionManager.lastClickedVideoSourceKey,
+        ) {
+            isVideoCardSharedReturnTarget(
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+                lastClickedVideoSourceKey = CardPositionManager.lastClickedVideoSourceKey,
+            )
         }
-        val isCoverSharedReturnTarget = thisCardVideoSourceKey != null &&
-            thisCardVideoSourceKey == CardPositionManager.lastClickedVideoSourceKey
         val videoCardTransitionBackgroundState = LocalVideoCardTransitionBackgroundState.current
         val hideCoverDuringShellMorph = shouldHideHomeCardCoverDuringShellMorph(
             useCardContainerSharedBounds = useCardShellSharedBounds,
@@ -985,7 +985,15 @@ fun ElegantVideoCard(
             Modifier.fillMaxWidth()
         }
 
-        Column(modifier = infoContainerModifier) {
+        Column(
+            modifier = infoContainerModifier.videoCardShellReturnChromeAlpha(
+                enabled = useCardShellSharedBounds,
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+                isReturningFromDetail = isReturningFromVideoDetail,
+                isQuickReturnFromDetail = isQuickReturningFromVideoDetail,
+            )
+        ) {
         if (!infoSurfaceAppearance.useTintedSurface) {
             Spacer(modifier = Modifier.height(if (compactMetadata) 6.dp else 8.dp))
         }
@@ -1392,15 +1400,6 @@ internal fun HomeVideoBadgePill(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             content = content
         )
-    }
-}
-
-private fun normalizeVideoCardSourceRouteForKey(sourceRoute: String?): String? {
-    val normalized = sourceRoute?.trim()?.takeIf { it.isNotBlank() } ?: return null
-    return if (normalized.startsWith("home?category=")) {
-        normalized
-    } else {
-        normalized.substringBefore("?")
     }
 }
 
