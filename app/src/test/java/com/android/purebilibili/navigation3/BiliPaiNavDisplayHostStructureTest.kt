@@ -73,7 +73,9 @@ class BiliPaiNavDisplayHostStructureTest {
         assertTrue(source.contains("resolveVideoCardSharedMorphRemainingDurationMs("))
         assertTrue(source.contains("gestureFractionAtCommit"))
         assertTrue(source.contains("morphRemainingMs"))
-        assertTrue(source.contains("morphAlignedFullMs"))
+        assertTrue(source.contains("resolveMorphAlignedFallbackDurationMs"))
+        assertTrue(source.contains("VideoCardTransitionClock"))
+        assertTrue(source.contains("LocalVideoCardMorphProgressReporter"))
     }
 
     @Test
@@ -106,23 +108,18 @@ class BiliPaiNavDisplayHostStructureTest {
             .substringAfter("returnedFromVideoDetail -> {")
             .substringBefore("!isCardMorphDestinationNavKey(currentTop)")
 
-        assertTrue(openingBranch.contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
-        assertTrue(openingBranch.contains("targetValue = 1f"))
-        assertTrue(openingBranch.contains("VideoCardTransitionBackgroundPhase.HELD"))
-        assertFalse(openingBranch.substringAfter("targetValue = 1f").contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
-        assertFalse(openingBranch.substringAfter("targetValue = 1f").contains("VideoCardTransitionBackgroundPhase.IDLE"))
-        assertTrue(returnBranch.contains("VideoCardTransitionBackgroundPhase.RETURNING"))
-        assertTrue(returnBranch.contains("videoCardTransitionBackgroundProgress.snapTo(1f)"))
-        // 消糊与 morph 墙钟锁步，不再走带 min 160 地板的旧 returnDuration API。
-        assertTrue(returnBranch.contains("resolveMorphAlignedDepthClearDurationMs"))
-        assertTrue(returnBranch.contains("resolveVideoCardTransitionBackgroundReturnClearEasing()"))
-        assertTrue(returnBranch.contains("remainingBlur"))
-        assertTrue(returnBranch.contains("videoCardTransitionBackgroundProgress.animateTo("))
+        // 单时钟：open/return 走 clock.begin* + fallback，shared morph 回灌优先。
+        assertTrue(openingBranch.contains("beginOpening("))
+        assertTrue(openingBranch.contains("animateFallbackTo("))
+        assertTrue(openingBranch.contains("markHeld()"))
+        assertTrue(returnBranch.contains("beginReturning("))
+        assertTrue(returnBranch.contains("resolveMorphAlignedFallbackDurationMs"))
+        assertTrue(returnBranch.contains("timelineSpec.returnEasing"))
         assertTrue(returnBranch.contains("parentSourceRoute"))
         assertTrue(source.contains("safeBackStack.size > previousStack.size"))
         assertTrue(source.contains("safeBackStack.size < previousStack.size"))
         assertTrue(source.contains("isCardMorphDestinationNavKey("))
-        assertFalse(source.contains("mutableStateOf(sourceMetadata.sourceRoute)"))
+        assertTrue(source.contains("reportSharedMorphProgress"))
     }
 
     @Test
@@ -148,7 +145,7 @@ class BiliPaiNavDisplayHostStructureTest {
 
         assertTrue(source.contains("onBack = { performBack { } }"))
         assertTrue(source.contains("onBackCompleted = performBack"))
-        assertTrue(performBackBlock.contains("videoCardBackgroundProgressProvider()"))
+        assertTrue(performBackBlock.contains("videoCardClock.depthProgress()"))
         assertTrue(performBackBlock.contains("videoBlurFadeJob"))
         assertTrue(performBackBlock.contains("predictiveBackHandler.onBackPressed("))
         assertTrue(performBackBlock.contains("commitTransitionCallBack()"))
@@ -166,9 +163,8 @@ class BiliPaiNavDisplayHostStructureTest {
         assertTrue(source.contains("cancelVideoCardDepthAnimation"))
         assertTrue(source.contains("resolveVideoCardTransitionReturnFullDurationMillis"))
         assertTrue(performBackBlock.contains("cancelVideoCardDepthAnimation()"))
-        // 进场结束后仅在仍 OPENING 时写入 HELD，避免打断后补写。
-        assertTrue(source.contains("未被返回打断"))
-        assertTrue(source.contains("VideoCardTransitionBackgroundPhase.OPENING"))
+        assertTrue(source.contains("VideoCardTransitionClock"))
+        assertTrue(source.contains("beginOpening("))
     }
 
     @Test
@@ -230,11 +226,10 @@ class BiliPaiNavDisplayHostStructureTest {
         assertTrue(preOnBack.contains("isVideoCardActiveReturn"))
         assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.HELD"))
         assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.OPENING"))
-        assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.RETURNING"))
-        assertTrue(preOnBack.contains("resolveVideoCardTransitionBackgroundReturnClearEasing()"))
-        assertTrue(preOnBack.contains("resolveMorphAlignedDepthClearDurationMs"))
+        assertTrue(preOnBack.contains("beginReturning("))
+        assertTrue(preOnBack.contains("resolveMorphAlignedFallbackDurationMs"))
         assertTrue(preOnBack.contains("shouldSnapClearVideoCardDepthBlurOnQuickReturn("))
-        assertTrue(preOnBack.contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
+        assertTrue(preOnBack.contains("snapClearAndIdle()"))
     }
 
     @Test
@@ -242,7 +237,7 @@ class BiliPaiNavDisplayHostStructureTest {
         val source = navDisplayHostSource()
 
         assertTrue(source.contains("isVideoCardTransitionBackgroundGesturePhase"))
-        assertTrue(source.contains("resolveVideoCardTransitionBackgroundGestureBlurProgress"))
+        assertTrue(source.contains("beginGesture("))
         val gestureBlock = source
             .substringAfter("val gestureReturningVideoCard =")
             .substringBefore("val predictiveBackGestureBlurEnabled")

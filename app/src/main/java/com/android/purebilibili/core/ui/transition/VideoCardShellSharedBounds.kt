@@ -187,10 +187,13 @@ internal fun Modifier.videoCardShellSharedBoundsOrEmpty(
                 exit = exit,
                 boundsTransform = { initialBounds, targetBounds ->
                     if (motionSpec.enabled) {
+                        // duration/easing 与 VideoCardTransitionTimelineSpec /
+                        // 详情 AVS morph clock 强制同源（进 Continuity / 回 Linear）。
                         videoSharedElementBoundsTransformSpec(
                             motion = motionSpec,
                             initialBounds = initialBounds,
-                            targetBounds = targetBounds
+                            targetBounds = targetBounds,
+                            durationMillis = motionSpec.durationMillis,
                         )
                     } else {
                         com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()

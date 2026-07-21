@@ -141,9 +141,10 @@ internal fun resolveHomeCardChromeAlphaDuringShellReturnMorph(
         return 0f
     }
 
-    // 返回：与详情 content yield 共用 settle 解析（景深 1→0 → settle 0→1）。
+    // 返回：单时钟 depth == morphFraction（1 详情→0 卡），settle = 1 - depth。
     val settleProgress = resolveVideoCardReturnSettleProgress(
         depthBlurProgress = transitionBackgroundProgress,
+        transitionProgress = transitionBackgroundProgress,
     )
     return resolveHomeCardChromeEarlyRevealAlpha(settleProgress = settleProgress)
 }

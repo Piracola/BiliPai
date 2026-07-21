@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
@@ -31,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
+import com.android.purebilibili.core.ui.transition.LocalVideoCardMorphProgressReporter
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellContainerTransform
@@ -69,13 +71,6 @@ internal fun rememberVideoDetailTransitionState(
         hasSharedTransitionScope = sharedTransitionScope != null,
         hasAnimatedVisibilityScope = animatedVisibilityScope != null,
     )
-    val secondaryContentTiming = remember(motionSpec) {
-        resolveVideoDetailSecondaryContentTiming(
-            fullDurationMillis = motionSpec.durationMillis,
-            contentDelayMillis = motionSpec.contentDelayMillis,
-            contentDurationMillis = motionSpec.contentDurationMillis,
-        )
-    }
     var wasKeptAsBackPreview by rememberSaveable(bvid) { mutableStateOf(false) }
     SideEffect {
         if (keepLoadedContentForBackPreview) wasKeptAsBackPreview = true
@@ -84,6 +79,8 @@ internal fun rememberVideoDetailTransitionState(
         wasKeptAsBackPreview = wasKeptAsBackPreview,
         keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
     )
+    // Shell sharedBounds 路径：根 progress 必须与 boundsTransform 同 duration/easing，
+    // 再回灌 VideoCardTransitionClock，形成单时钟。
     val progress = if (
         shouldUseVideoDetailRootTransitionProgress(
             detailShellSharedBoundsEnabled = detailShellSharedBoundsEnabled,
@@ -94,20 +91,20 @@ internal fun rememberVideoDetailTransitionState(
         requireNotNull(animatedVisibilityScope).transition.animateFloat(
             transitionSpec = {
                 if (targetState == EnterExitState.PostExit) {
+                    // 返回：Linear + 满 morph 时长，与 videoSharedElementReturnTweenSpec 一致
                     tween(
-                        durationMillis = secondaryContentTiming.returnDurationMillis,
-                        delayMillis = secondaryContentTiming.returnDelayMillis,
-                        easing = motionSpec.returnAlphaEasing,
+                        durationMillis = motionSpec.durationMillis.coerceAtLeast(0),
+                        easing = androidx.compose.animation.core.LinearEasing,
                     )
                 } else {
+                    // 进场：Continuity + 满 morph 时长，与 bounds enter 一致
                     tween(
-                        durationMillis = secondaryContentTiming.enterDurationMillis,
-                        delayMillis = secondaryContentTiming.enterDelayMillis,
+                        durationMillis = motionSpec.durationMillis.coerceAtLeast(0),
                         easing = motionSpec.enterAlphaEasing,
                     )
                 }
             },
-            label = "video-detail-shared-transition-progress",
+            label = "video-detail-shared-morph-clock",
         ) { state ->
             if (state == EnterExitState.Visible) 1f else 0f
         }
@@ -121,6 +118,29 @@ internal fun rememberVideoDetailTransitionState(
         hasAnimatedVisibilityScope = animatedVisibilityScope != null,
     ) && !sourceRoute.isNullOrBlank()
     val sharedBoundsActive = detailShellSharedBoundsEnabled || coverSharedBoundsActive
+    // 单时钟回灌：与 sharedBounds 共用 AVS Transition 的 progress。
+    val morphReporter = LocalVideoCardMorphProgressReporter.current
+    val morphFraction = progress.value
+    val morphActive = detailShellSharedBoundsEnabled && (
+        sharedTransitionScope?.isTransitionActive == true ||
+            animatedVisibilityScope?.transition?.isRunning == true ||
+            isExitTransitionInProgress
+        )
+    SideEffect {
+        if (detailShellSharedBoundsEnabled) {
+            morphReporter?.report(
+                morphFraction = morphFraction,
+                active = morphActive,
+            )
+        }
+    }
+    DisposableEffect(detailShellSharedBoundsEnabled, morphReporter) {
+        onDispose {
+            if (detailShellSharedBoundsEnabled) {
+                morphReporter?.report(morphFraction = morphFraction, active = false)
+            }
+        }
+    }
     val routeSheetFrameProvider = rememberVideoDetailRouteSheetFrameProvider(
         motion = routeSheetMotion,
         isExitTransitionInProgress = isExitTransitionInProgress,
