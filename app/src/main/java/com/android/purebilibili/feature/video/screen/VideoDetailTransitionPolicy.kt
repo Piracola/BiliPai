@@ -2,8 +2,12 @@ package com.android.purebilibili.feature.video.screen
 
 import androidx.compose.animation.core.Easing
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
+import com.android.purebilibili.core.ui.transition.isVideoCardLiveReturnMorphOwnership
+import com.android.purebilibili.core.ui.transition.resolveVideoCardReturnCoverOwnership
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionEnterEasing
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionReturnEasing
+import com.android.purebilibili.core.ui.transition.shouldHandVisualOwnershipToResidentCoverForOwnership
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardLiveReturnMorph
 
 private const val COVER_TAKEOVER_PRE_BACK_DELAY_MILLIS = 0L
 internal const val VIDEO_CONTENT_COMMENT_TAB_INDEX = 1
@@ -35,8 +39,7 @@ internal fun shouldUseReturningVideoDetailVisualState(
 
 /**
  * 详情 → 来源卡片 sharedBounds：实时画面跟手缩小（一镜到底）。
- * CoverFirst / back-preview 保活父页时关闭。
- * 详情正文未就绪（快速返回常见 Loading/骨架）时也关闭，否则 skeleton 会被缩进卡片位。
+ * 实现收口到 [shouldUseVideoCardLiveReturnMorph]（[VideoCardReturnTimeline]）。
  */
 internal fun shouldUseLiveReturnMorph(
     transitionEnabled: Boolean,
@@ -44,13 +47,13 @@ internal fun shouldUseLiveReturnMorph(
     keepLoadedContentForBackPreview: Boolean,
     playbackIntent: VideoSharedTransitionPlaybackIntent,
     detailContentReady: Boolean = true,
-): Boolean {
-    return transitionEnabled &&
-        sharedBoundsActive &&
-        !keepLoadedContentForBackPreview &&
-        playbackIntent == VideoSharedTransitionPlaybackIntent.ImmediatePlayback &&
-        detailContentReady
-}
+): Boolean = shouldUseVideoCardLiveReturnMorph(
+    transitionEnabled = transitionEnabled,
+    sharedBoundsActive = sharedBoundsActive,
+    keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
+    playbackIntent = playbackIntent,
+    detailContentReady = detailContentReady,
+)
 
 /**
  * 详情页下方推荐/简介等是否已可安全参与 live morph。
@@ -63,14 +66,50 @@ internal fun shouldTreatVideoDetailContentReadyForLiveReturnMorph(
 /**
  * 是否把视觉主导权交给常驻封面（forceCover / 藏 surface）。
  * live morph 时必须为 false，否则会出现「先切封面再缩小」。
+ * ownership 真相见 [resolveVideoCardReturnCoverOwnership]。
  */
 internal fun shouldHandVisualOwnershipToResidentCover(
     useReturningVisualState: Boolean,
     hasResidentCover: Boolean,
     liveReturnMorph: Boolean,
 ): Boolean {
-    return useReturningVisualState && hasResidentCover && !liveReturnMorph
+    // 保持与 timeline 一致：live 时永不把视觉交给封面
+    if (liveReturnMorph) return false
+    return useReturningVisualState && hasResidentCover
 }
+
+/**
+ * 详情返回 ownership 表入口（供 StateHolder / 测试直接断言三条路径）。
+ */
+internal fun resolveVideoDetailReturnCoverOwnership(
+    transitionEnabled: Boolean,
+    sharedBoundsActive: Boolean,
+    keepLoadedContentForBackPreview: Boolean,
+    playbackIntent: VideoSharedTransitionPlaybackIntent,
+    detailContentReady: Boolean,
+    hasResidentCover: Boolean,
+) = resolveVideoCardReturnCoverOwnership(
+    transitionEnabled = transitionEnabled,
+    sharedBoundsActive = sharedBoundsActive,
+    keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
+    playbackIntent = playbackIntent,
+    detailContentReady = detailContentReady,
+    hasResidentCover = hasResidentCover,
+)
+
+internal fun isLiveReturnMorphFromOwnership(
+    ownership: com.android.purebilibili.core.ui.transition.VideoCardReturnCoverOwnership,
+): Boolean = isVideoCardLiveReturnMorphOwnership(ownership)
+
+internal fun shouldHandResidentCoverFromOwnership(
+    ownership: com.android.purebilibili.core.ui.transition.VideoCardReturnCoverOwnership,
+    useReturningVisualState: Boolean,
+    hasResidentCover: Boolean,
+): Boolean = shouldHandVisualOwnershipToResidentCoverForOwnership(
+    ownership = ownership,
+    useReturningVisualState = useReturningVisualState,
+    hasResidentCover = hasResidentCover,
+)
 
 internal fun resolveVideoDetailReturnCoverAlpha(
     transitionProgress: Float,

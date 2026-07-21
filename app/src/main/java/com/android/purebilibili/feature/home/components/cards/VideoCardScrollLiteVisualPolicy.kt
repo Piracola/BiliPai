@@ -1,7 +1,9 @@
 package com.android.purebilibili.feature.home.components.cards
 
+import com.android.purebilibili.core.ui.transition.VIDEO_CARD_RETURN_CHROME_REVEAL_START
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundPhase
 import com.android.purebilibili.core.ui.transition.normalizeSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.resolveVideoCardReturnListCoverContract
 
 internal data class VideoCardScrollLiteVisualPolicy(
     val coverShadowElevationDp: Float,
@@ -37,42 +39,36 @@ internal fun resolveVideoCardScrollLiteVisualPolicy(
 
 /**
  * 列表封面是否允许 Coil crossfade。
- *
- * 关键：快速/普通返回结束后 [isReturningFromDetail] 会被 clear，若此时把 crossfade
- * 从 false 拨回 true，ImageRequest 重建会触发一次假加载淡入 → **落位后再闪一下**。
- * 因此只要仍是 shared 返回目标卡（lastClicked），就持续关闭 crossfade，直到用户点了别的卡。
+ * 契约收口到 [resolveVideoCardReturnListCoverContract]（[VideoCardReturnTimeline]）。
  */
 internal fun shouldEnableVideoCardCoverCrossfade(
     isScrollInProgress: Boolean,
     isReturningFromDetail: Boolean,
     useCoverSharedBounds: Boolean,
     isSharedReturnTarget: Boolean
-): Boolean {
-    if (isScrollInProgress) return false
-    // 返回目标：全程禁用 Coil 淡入（含 clearReturning 之后）。
-    if (useCoverSharedBounds && isSharedReturnTarget) return false
-    // 返回会话中非 shell 路径的兜底
-    if (isReturningFromDetail && isSharedReturnTarget) return false
-    return true
-}
+): Boolean = resolveVideoCardReturnListCoverContract(
+    isSharedReturnTarget = isSharedReturnTarget,
+    isScrollInProgress = isScrollInProgress,
+    isReturningFromDetail = isReturningFromDetail,
+    useCoverSharedBounds = useCoverSharedBounds,
+).enableCoilCrossfade
 
 /**
  * shared 返回目标卡是否应钉住封面 URL/缓存键。
- *
- * 进场/快速返回期间若省流开关、插件或数据刷新改了 pic/质量，ImageRequest 重建会在
- * overlay 卸层后换源解码 → 落位闪。目标卡在 lastClicked 生命周期内保持点击时的源。
+ * 契约收口到 [resolveVideoCardReturnListCoverContract]。
  */
 internal fun shouldPinVideoCardCoverForSharedReturn(
     isSharedReturnTarget: Boolean,
-): Boolean = isSharedReturnTarget
+): Boolean = resolveVideoCardReturnListCoverContract(
+    isSharedReturnTarget = isSharedReturnTarget,
+    isScrollInProgress = false,
+    isReturningFromDetail = false,
+    useCoverSharedBounds = true,
+).pinCoverSource
 
 /**
  * 首页卡片 → 详情页 CARD_SHELL morph 期间，源卡片封面是否让位给 overlay。
- *
- * 始终不藏：列表封面一直在 shared overlay 下方待命。
- * 快速返回会打断 OPENING，若此时仍 alpha=0，overlay 撤掉的一帧就会露出
- * surfaceVariant 占位色 → 落位闪烁。进场时 overlay 本身盖住列表封面，
- * 保留可见封面的代价可接受。
+ * 始终不藏：见 [VideoCardReturnListCoverContract.hideCoverDuringShellMorph]。
  */
 @Suppress("UNUSED_PARAMETER")
 internal fun shouldHideHomeCardCoverDuringShellMorph(
@@ -81,15 +77,19 @@ internal fun shouldHideHomeCardCoverDuringShellMorph(
     isReturningFromDetail: Boolean,
     transitionBackgroundPhase: VideoCardTransitionBackgroundPhase,
     isVideoCardReturnGestureInProgress: Boolean,
-): Boolean {
-    return false
-}
+): Boolean = resolveVideoCardReturnListCoverContract(
+    isSharedReturnTarget = isSharedMorphSourceCard,
+    isScrollInProgress = false,
+    isReturningFromDetail = isReturningFromDetail,
+    useCoverSharedBounds = useCardContainerSharedBounds,
+).hideCoverDuringShellMorph
 
 /**
  * 返回落位进度达到该比例后开始淡入标题等 chrome。
- * 略高于源卡 Enter 延后比（0.55），让封面先露一拍、字不盖实时画面。
+ * 与 [VIDEO_CARD_RETURN_CHROME_REVEAL_START] 同源。
  */
-internal const val HOME_CARD_CHROME_EARLY_REVEAL_SETTLE_START = 0.62f
+internal const val HOME_CARD_CHROME_EARLY_REVEAL_SETTLE_START =
+    VIDEO_CARD_RETURN_CHROME_REVEAL_START
 
 /**
  * 源卡 chrome 在返回落位进度上的淡入曲线。

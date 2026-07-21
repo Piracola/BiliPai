@@ -218,6 +218,9 @@ internal fun resolveVideoCardTransitionReturnFullDurationMillis(
 /**
  * 返回动画提交时，若手势已消解部分虚化(startProgress < 1)，剩余 [RETURNING] 动画按比例缩短，
  * 保持与共享元素落位一致的视觉速度，避免手势拖到底后仍补一段完整时长的收尾。
+ *
+ * 与 [resolveVideoCardReturnDepthBlurRemainingDurationMs] 同一公式；
+ * morph 后半段时长见 [resolveVideoCardSharedMorphRemainingDurationMs]。
  */
 internal fun resolveVideoCardTransitionBackgroundReturnDurationMs(
     startProgress: Float,

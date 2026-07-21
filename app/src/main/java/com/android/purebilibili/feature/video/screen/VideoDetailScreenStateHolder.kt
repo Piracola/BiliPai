@@ -1096,17 +1096,20 @@ internal fun VideoDetailScreenStateHolder(
     val detailContentReadyForLiveReturnMorph = shouldTreatVideoDetailContentReadyForLiveReturnMorph(
         hasSuccessfulDetailContent = uiState is VideoPlaybackUiState.Success,
     )
-    val liveReturnMorph = shouldUseLiveReturnMorph(
+    // 封面路径类型（LIVE / RESIDENT / FALLBACK）由 VideoCardReturnTimeline 单一真相解析。
+    val returnCoverOwnership = resolveVideoDetailReturnCoverOwnership(
         transitionEnabled = transitionEnabled,
         sharedBoundsActive = sharedBoundsActive,
         keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
         playbackIntent = videoSharedPlaybackIntent,
         detailContentReady = detailContentReadyForLiveReturnMorph,
+        hasResidentCover = hasResidentReturnCover,
     )
-    val useResidentCoverForCommittedReturn = shouldHandVisualOwnershipToResidentCover(
+    val liveReturnMorph = isLiveReturnMorphFromOwnership(returnCoverOwnership)
+    val useResidentCoverForCommittedReturn = shouldHandResidentCoverFromOwnership(
+        ownership = returnCoverOwnership,
         useReturningVisualState = useReturningVideoDetailVisualState,
         hasResidentCover = hasResidentReturnCover,
-        liveReturnMorph = liveReturnMorph,
     )
 
     val handleTopBarAction = remember(

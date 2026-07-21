@@ -409,6 +409,43 @@ class VideoDetailReturnCoverPolicyTest {
     }
 
     @Test
+    fun `detail return cover ownership table matches timeline contract`() {
+        val live = resolveVideoDetailReturnCoverOwnership(
+            transitionEnabled = true,
+            sharedBoundsActive = true,
+            keepLoadedContentForBackPreview = false,
+            playbackIntent = VideoSharedTransitionPlaybackIntent.ImmediatePlayback,
+            detailContentReady = true,
+            hasResidentCover = true,
+        )
+        assertTrue(isLiveReturnMorphFromOwnership(live))
+        assertFalse(
+            shouldHandResidentCoverFromOwnership(
+                ownership = live,
+                useReturningVisualState = true,
+                hasResidentCover = true,
+            )
+        )
+
+        val coverFirst = resolveVideoDetailReturnCoverOwnership(
+            transitionEnabled = true,
+            sharedBoundsActive = true,
+            keepLoadedContentForBackPreview = false,
+            playbackIntent = VideoSharedTransitionPlaybackIntent.CoverFirst,
+            detailContentReady = true,
+            hasResidentCover = true,
+        )
+        assertFalse(isLiveReturnMorphFromOwnership(coverFirst))
+        assertTrue(
+            shouldHandResidentCoverFromOwnership(
+                ownership = coverFirst,
+                useReturningVisualState = true,
+                hasResidentCover = true,
+            )
+        )
+    }
+
+    @Test
     fun `missing return cover keeps player visible instead of revealing black`() {
         assertEquals(0f, resolveVideoDetailReturnCoverAlpha(0.2f, true, false), 0.0001f)
         assertEquals(1f, resolveVideoDetailReturnPlayerAlpha(0.2f, true, false), 0.0001f)
