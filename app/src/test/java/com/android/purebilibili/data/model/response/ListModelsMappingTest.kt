@@ -152,4 +152,32 @@ class ListModelsMappingTest {
         )
         assertEquals("游戏", video.tname)
     }
+
+    @Test
+    fun `unknown dislike reason id still infers localAction from name`() {
+        assertEquals(
+            RecommendationFeedbackLocalAction.CREATOR,
+            resolveRecommendationFeedbackLocalAction(
+                type = RecommendationFeedbackType.DISLIKE,
+                reasonId = 99L,
+                reasonName = "UP主:测试UP"
+            )
+        )
+        assertEquals(
+            RecommendationFeedbackLocalAction.CATEGORY,
+            resolveRecommendationFeedbackLocalAction(
+                type = RecommendationFeedbackType.DISLIKE,
+                reasonId = 98L,
+                reasonName = "分区:动物圈"
+            )
+        )
+        assertEquals(
+            RecommendationFeedbackLocalAction.SIMILAR_CONTENT,
+            resolveRecommendationFeedbackLocalAction(
+                type = RecommendationFeedbackType.DISLIKE,
+                reasonId = 97L,
+                reasonName = "此类内容过多"
+            )
+        )
+    }
 }

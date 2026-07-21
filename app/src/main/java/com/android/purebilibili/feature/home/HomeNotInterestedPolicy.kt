@@ -44,8 +44,9 @@ internal fun resolveHomeNotInterestedAction(
     video: VideoItem,
     reason: RecommendationFeedbackReason
 ): HomeNotInterestedAction {
+    val effectiveReason = reason.withInferredLocalActionIfNeeded()
     val creatorMid = video.owner.mid
-    val shouldBlockCreator = reason.localAction == RecommendationFeedbackLocalAction.CREATOR &&
+    val shouldBlockCreator = effectiveReason.localAction == RecommendationFeedbackLocalAction.CREATOR &&
         creatorMid > 0L
     return HomeNotInterestedAction(
         bvid = video.bvid,
@@ -56,8 +57,24 @@ internal fun resolveHomeNotInterestedAction(
             if (creatorMid > 0L) "UP主$creatorMid" else ""
         },
         creatorFace = video.owner.face,
-        keywords = resolveHomeNotInterestedKeywords(video, reason)
+        keywords = resolveHomeNotInterestedKeywords(video, effectiveReason)
     )
+}
+
+/**
+ * 已落盘的 reason 可能仍是 VIDEO_ONLY（旧映射/未知 id）。
+ * 在真正写反馈前再按文案推断一次，避免分区/UP 主选择失效。
+ */
+private fun RecommendationFeedbackReason.withInferredLocalActionIfNeeded(): RecommendationFeedbackReason {
+    if (type == RecommendationFeedbackType.FEEDBACK) return this
+    if (localAction != RecommendationFeedbackLocalAction.VIDEO_ONLY) return this
+    val inferred = com.android.purebilibili.data.model.response
+        .inferRecommendationFeedbackLocalActionFromName(name)
+    return if (inferred == RecommendationFeedbackLocalAction.VIDEO_ONLY) {
+        this
+    } else {
+        copy(localAction = inferred)
+    }
 }
 
 internal fun resolveHomeNotInterestedReasons(video: VideoItem): List<RecommendationFeedbackReason> {
@@ -164,9 +181,28 @@ internal fun filterHomeVideosByNotInterestedFeedback(
     }
 
     return videos.filter { video ->
-        video.bvid !in normalizedBvids &&
+        val bvid = video.bvid.trim()
+        (bvid.isBlank() || bvid !in normalizedBvids) &&
             video.owner.mid !in normalizedCreators &&
+            !matchesDislikedPartition(video.tname, normalizedKeywords) &&
             !shouldFilterByDislikedKeywords(video.title, normalizedKeywords)
+    }
+}
+
+/**
+ * 分区名反馈必须按 tname 精确/包含匹配。
+ * 中文分区名常见 2–3 字（游戏、知识、动物圈），不能套用标题短词防误伤规则。
+ */
+private fun matchesDislikedPartition(
+    tname: String,
+    dislikedKeywords: Set<String>
+): Boolean {
+    val partition = tname.trim().lowercase()
+    if (partition.isBlank() || dislikedKeywords.isEmpty()) return false
+    return dislikedKeywords.any { keyword ->
+        partition == keyword ||
+            (keyword.length >= 2 && partition.contains(keyword)) ||
+            (partition.length >= 2 && keyword.contains(partition))
     }
 }
 
@@ -181,6 +217,6 @@ private fun shouldFilterByDislikedKeywords(
     }
     if (hitKeywords.isEmpty()) return false
 
-    // 单个短词容易误伤，例如“日常”；长短语或多个命中才认为是同类型内容。
+    // 标题侧：单个短词容易误伤（如“日常”）；长短语或多个命中才认为是同类型内容。
     return hitKeywords.any { it.length >= 4 } || hitKeywords.size >= 2
 }

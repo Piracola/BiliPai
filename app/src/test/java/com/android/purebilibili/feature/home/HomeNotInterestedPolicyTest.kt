@@ -148,6 +148,66 @@ class HomeNotInterestedPolicyTest {
     }
 
     @Test
+    fun `short partition keyword filters by tname even when title has no match`() {
+        val videos = listOf(
+            VideoItem(
+                bvid = "BV_GAME",
+                title = "新作开荒第一天",
+                tname = "游戏",
+                owner = Owner(mid = 1L, name = "UP-A")
+            ),
+            VideoItem(
+                bvid = "BV_KEEP",
+                title = "Kotlin 协程实践",
+                tname = "知识",
+                owner = Owner(mid = 2L, name = "UP-B")
+            )
+        )
+
+        val filtered = filterHomeVideosByNotInterestedFeedback(
+            videos = videos,
+            dislikedKeywords = setOf("游戏")
+        )
+
+        assertEquals(listOf("BV_KEEP"), filtered.map { it.bvid })
+    }
+
+    @Test
+    fun `creator reason name recovers when remote localAction degraded to video only`() {
+        val action = resolveHomeNotInterestedAction(
+            video = VideoItem(
+                bvid = "BV1",
+                owner = Owner(mid = 42L, name = "UP-X", face = "face.jpg")
+            ),
+            reason = RecommendationFeedbackReason(
+                name = "UP主:UP-X",
+                localAction = RecommendationFeedbackLocalAction.VIDEO_ONLY
+            )
+        )
+
+        assertTrue(action.shouldBlockCreator)
+        assertEquals(42L, action.creatorMid)
+    }
+
+    @Test
+    fun `category reason name recovers keywords when localAction degraded`() {
+        val action = resolveHomeNotInterestedAction(
+            video = VideoItem(
+                bvid = "BV3",
+                title = "新作开荒",
+                tname = "游戏"
+            ),
+            reason = RecommendationFeedbackReason(
+                name = "分区:游戏",
+                localAction = RecommendationFeedbackLocalAction.VIDEO_ONLY
+            )
+        )
+
+        assertEquals(setOf("游戏"), action.keywords)
+        assertFalse(action.shouldBlockCreator)
+    }
+
+    @Test
     fun `not interested starts dissolve before removing card`() {
         val transition = resolveHomeNotInterestedVisualTransition(
             isFeedbackRecorded = true,

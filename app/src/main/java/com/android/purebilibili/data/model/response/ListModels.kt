@@ -675,7 +675,8 @@ data class MobileFeedItem(
                                 type = type,
                                 localAction = resolveRecommendationFeedbackLocalAction(
                                     type = type,
-                                    reasonId = reason.id
+                                    reasonId = reason.id,
+                                    reasonName = it
                                 )
                             )
                         }
@@ -724,9 +725,10 @@ data class MobileFeedFeedbackReason(
     val toast: String = ""
 )
 
-private fun resolveRecommendationFeedbackLocalAction(
+internal fun resolveRecommendationFeedbackLocalAction(
     type: RecommendationFeedbackType,
-    reasonId: Long
+    reasonId: Long,
+    reasonName: String = ""
 ): RecommendationFeedbackLocalAction {
     if (type == RecommendationFeedbackType.FEEDBACK) {
         return RecommendationFeedbackLocalAction.VIDEO_ONLY
@@ -735,6 +737,27 @@ private fun resolveRecommendationFeedbackLocalAction(
         4L -> RecommendationFeedbackLocalAction.CREATOR
         2L, 3L -> RecommendationFeedbackLocalAction.CATEGORY
         12L -> RecommendationFeedbackLocalAction.SIMILAR_CONTENT
+        // 服务端 reason id 可能变更；用文案再推断一次，避免全部退化为“仅当前视频”。
+        else -> inferRecommendationFeedbackLocalActionFromName(reasonName)
+    }
+}
+
+internal fun inferRecommendationFeedbackLocalActionFromName(
+    reasonName: String
+): RecommendationFeedbackLocalAction {
+    val normalized = reasonName.trim().lowercase()
+    if (normalized.isBlank()) return RecommendationFeedbackLocalAction.VIDEO_ONLY
+    return when {
+        normalized.contains("up主") ||
+            normalized.startsWith("up:") ||
+            normalized.startsWith("up：") ||
+            normalized.contains("up主:") ||
+            normalized.contains("up主：") -> RecommendationFeedbackLocalAction.CREATOR
+        normalized.contains("分区") -> RecommendationFeedbackLocalAction.CATEGORY
+        normalized.contains("此类") ||
+            normalized.contains("相似") ||
+            normalized.contains("过多") ||
+            normalized.contains("同类") -> RecommendationFeedbackLocalAction.SIMILAR_CONTENT
         else -> RecommendationFeedbackLocalAction.VIDEO_ONLY
     }
 }
