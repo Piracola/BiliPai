@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,8 +22,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.purebilibili.core.store.HomeFeedCardStyle
+import com.android.purebilibili.core.store.SettingsManager
+import com.android.purebilibili.feature.home.resolveHomeFeedCardLayout
 
 /**
  *  骨架屏组件 - iOS 风格加载占位
@@ -227,20 +233,33 @@ private fun VideoDetailRelatedHeaderSkeleton() {
 
 @Composable
 private fun RelatedVideoGridRowSkeleton() {
+    val context = LocalContext.current
+    val homeFeedCardStyle by SettingsManager
+        .getHomeFeedCardStyle(context)
+        .collectAsStateWithLifecycle(initialValue = HomeFeedCardStyle.OFFICIAL)
+    val cardLayout = remember(homeFeedCardStyle) {
+        resolveHomeFeedCardLayout(homeFeedCardStyle)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = cardLayout.outerPaddingDp.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp)
     ) {
         repeat(2) {
-            RelatedVideoItemSkeleton(modifier = Modifier.weight(1f))
+            RelatedVideoItemSkeleton(
+                modifier = Modifier.weight(1f),
+                coverAspectRatio = cardLayout.coverAspectRatio,
+            )
         }
     }
 }
 
 @Composable
-private fun RelatedVideoItemSkeleton(modifier: Modifier = Modifier) {
+private fun RelatedVideoItemSkeleton(
+    modifier: Modifier = Modifier,
+    coverAspectRatio: Float = RELATED_VIDEO_CARD_COVER_ASPECT_RATIO,
+) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -249,7 +268,7 @@ private fun RelatedVideoItemSkeleton(modifier: Modifier = Modifier) {
         SkeletonBlock(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(RELATED_VIDEO_CARD_COVER_ASPECT_RATIO),
+                .aspectRatio(coverAspectRatio),
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
         )
         Column(

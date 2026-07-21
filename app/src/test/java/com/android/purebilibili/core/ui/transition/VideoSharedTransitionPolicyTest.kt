@@ -697,7 +697,7 @@ class VideoSharedTransitionPolicyTest {
 
     @Test
     fun sharedCoverAspectRatio_defaultsToHomeCardSixteenByTen() {
-        assertEquals(16f / 9f, VIDEO_SHARED_COVER_ASPECT_RATIO, 0.0001f)
+        assertEquals(16f / 10f, VIDEO_SHARED_COVER_ASPECT_RATIO, 0.0001f)
     }
 
     @Test

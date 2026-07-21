@@ -1491,7 +1491,8 @@ fun AppearanceSettingsContent(
                         Column(modifier = Modifier.padding(16.dp)) {
                             IOSSlidingSegmentedSetting(
                                 title = "首页卡片样式：${homeFeedCardStyle.label}",
-                                subtitle = "当前样式使用 16:9；官方样式使用更宽的 4:3 卡片与紧凑信息区",
+                                subtitle = homeFeedCardStyle.subtitle +
+                                    "（粉版 4:3 / PiliPlus 16:10 / 16:9 完整，均居中裁切）",
                                 options = HomeFeedCardStyle.entries.map {
                                     PlaybackSegmentOption(it, it.label)
                                 },
