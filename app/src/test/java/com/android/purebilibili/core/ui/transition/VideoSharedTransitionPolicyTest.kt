@@ -394,13 +394,11 @@ class VideoSharedTransitionPolicyTest {
                 transitionDurationMillis = 360,
             )
         )
-        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("home"))
-        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("dynamic"))
-        // 分区竖卡与首页一样：返回延后淡入源卡。
-        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("partition"))
-        // 相关推荐竖卡与首页一样：返回延后淡入源卡。
-        assertTrue(shouldDelaySourceCardEnterForLiveReturnMorph("video/BV_A"))
-        // 快速返回：不延后，标题/UP 与封面同步落位。
+        // 整卡同步落位：任何路由/快速返回都不延后源卡 Enter。
+        assertFalse(shouldDelaySourceCardEnterForLiveReturnMorph("home"))
+        assertFalse(shouldDelaySourceCardEnterForLiveReturnMorph("dynamic"))
+        assertFalse(shouldDelaySourceCardEnterForLiveReturnMorph("partition"))
+        assertFalse(shouldDelaySourceCardEnterForLiveReturnMorph("video/BV_A"))
         assertFalse(
             shouldDelaySourceCardEnterForLiveReturnMorph(
                 sourceRoute = "home",
@@ -415,16 +413,9 @@ class VideoSharedTransitionPolicyTest {
                 delaySourceCardEnterForLiveReturn = false,
             ),
         )
-        // 竖卡：源卡返回 Enter 延后淡入，避免封面盖住实时画面。
-        assertTrue(
-            resolveVideoCardShellSharedBoundsEnter(
-                role = VideoCardShellSharedBoundsRole.SourceCard,
-                transitionDurationMillis = 360,
-                delaySourceCardEnterForLiveReturn = true,
-            ) != EnterTransition.None
-        )
-        // 360 * 0.16 = 57.6 → 57
-        assertEquals(57, resolveVideoCardShellSourceEnterFadeDelayMillis(360))
+        // 即便旧调用传入 delay=true，delay ratio=0 时仍应等价于同步（测试契约：delay 参数 true 时
+        // 实现仍可走 fadeIn 分支，但产品路径 delay 恒 false → Enter.None）。
+        assertEquals(0, resolveVideoCardShellSourceEnterFadeDelayMillis(360))
         assertEquals(
             ExitTransition.None,
             resolveVideoCardShellSharedBoundsExit(

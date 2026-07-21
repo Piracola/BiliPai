@@ -15,23 +15,22 @@ package com.android.purebilibili.core.ui.transition
 
 /**
  * 源卡 sharedBounds Enter 延后淡入起点（占 morph 总时长）。
- * 略延后避免封面一上来盖住 live 画面，但不宜过晚——过大会像「壳先落位、封面再弹一下」。
- * 与 [VIDEO_CARD_RETURN_CHROME_REVEAL_START] 对齐：字略晚于壳出现。
+ * 整卡（封面+标题）同步落位：不再延后 Enter，否则封面/壳先到位、字晚一拍。
+ * 预测返回松手后景深与 morph 结束不同步时，延后 Enter 会放大「字后出」偶发。
  */
-internal const val VIDEO_CARD_RETURN_SOURCE_ENTER_FADE_DELAY_RATIO = 0.16f
+internal const val VIDEO_CARD_RETURN_SOURCE_ENTER_FADE_DELAY_RATIO = 0f
 
 /**
  * 源卡 chrome（标题/UP）在返回 settle 进度上的淡入起点。
- * 略高于 source enter delay；live 正文在此点起让位，避免字叠实时画面。
+ * 0 = 与壳/封面同拍出现，禁止「封面落位 → 标题再淡入」。
  */
-internal const val VIDEO_CARD_RETURN_CHROME_REVEAL_START = 0.22f
+internal const val VIDEO_CARD_RETURN_CHROME_REVEAL_START = 0f
 
 /**
  * live morph 详情次要内容（简介/推荐等）开始让位的 settle 进度。
- * 与 chrome 同源，保证标题出现时下方已不是叠层实时页。
+ * 标题与壳同步出现时，详情正文应尽早让位，避免叠字。
  */
-internal const val VIDEO_CARD_RETURN_LIVE_CONTENT_YIELD_START =
-    VIDEO_CARD_RETURN_CHROME_REVEAL_START
+internal const val VIDEO_CARD_RETURN_LIVE_CONTENT_YIELD_START = 0f
 
 /**
  * 详情侧返回时封面视觉主导权。
@@ -106,11 +105,12 @@ internal fun resolveVideoCardReturnTimeline(
 }
 
 /**
- * 快速返回：源卡 Enter 不延后，标题/UP 与封面同步落位，避免「先占位后出字」。
+ * 源卡 Enter 是否延后。整卡同步落位后恒为 false（封面+标题与 bounds 同拍）。
  */
+@Suppress("UNUSED_PARAMETER")
 internal fun shouldDelaySourceCardEnterOnReturn(
     isQuickReturnFromDetail: Boolean,
-): Boolean = !isQuickReturnFromDetail
+): Boolean = false
 
 /**
  * 统一返回 settle 进度 0→1（刚开始缩回 → 完全落位）。

@@ -45,8 +45,9 @@ internal const val VIDEO_CARD_SHELL_SOURCE_ENTER_FADE_DELAY_RATIO =
 internal const val VIDEO_CARD_SHELL_SOURCE_EXIT_FADE_RATIO = 0.28f
 
 /**
- * 普通返回：延后淡入源卡，避免封面过早盖住 live 画面。
- * 快速返回：不延后（见 [shouldDelaySourceCardEnterOnReturn]）。
+ * 源卡 Enter 是否延后淡入。
+ * 整卡（封面+标题）同步落位要求 Enter.None：任何 fadeIn 都会让字/壳在 t=0 透明，
+ * 预测返回落位时表现为「封面先到位、标题晚出」。
  */
 internal fun shouldDelaySourceCardEnterForLiveReturnMorph(
     sourceRoute: String?,
@@ -54,7 +55,9 @@ internal fun shouldDelaySourceCardEnterForLiveReturnMorph(
 ): Boolean {
     @Suppress("UNUSED_PARAMETER")
     val ignored = sourceRoute
-    return shouldDelaySourceCardEnterOnReturn(isQuickReturnFromDetail)
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredQuick = isQuickReturnFromDetail
+    return false
 }
 
 /**

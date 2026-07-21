@@ -233,6 +233,7 @@ fun GlassVideoCard(
         )
     }
     
+    val cardShellShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
             baseAnimationEnabled = animationEnabled,
@@ -244,6 +245,15 @@ fun GlassVideoCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+                motionSpec = cardSharedTransitionMotionSpec,
+                clipShape = cardShellShape
+            )
             .padding(6.dp)
             //  [修复] 进场动画 - 使用 Unit 作为 key，避免分类切换时重新动画
             .animateEnter(
@@ -305,19 +315,10 @@ fun GlassVideoCard(
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                //  封面区域（shell 只绑封面，标题留在卡片信息区）
+                //  封面区域（整卡 shell 在外层，封面不再单独绑 sharedBounds）
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .videoCardShellSharedBoundsOrEmpty(
-                            enabled = useCardShellSharedBounds,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            bvid = video.bvid,
-                            sourceRoute = effectiveSharedElementSourceRoute,
-                            motionSpec = cardSharedTransitionMotionSpec,
-                            clipShape = RoundedCornerShape(coverCornerRadius)
-                        )
                         .aspectRatio(VIDEO_SHARED_COVER_ASPECT_RATIO)
                         .padding(10.dp)
                 ) {

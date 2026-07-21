@@ -114,7 +114,9 @@ internal fun resolveHomeCardChromeEarlyRevealAlpha(
 ): Float {
     val clampedSettle = settleProgress.coerceIn(0f, 1f)
     val start = revealStart.coerceIn(0f, 1f)
-    if (clampedSettle <= start) return 0f
+    // revealStart=0：与壳同步，始终满显（禁止按 settle 渐显造成晚一拍）
+    if (start <= 0f) return 1f
+    if (clampedSettle < start) return 0f
     if (start >= 1f) return if (clampedSettle >= 1f) 1f else 0f
     return ((clampedSettle - start) / (1f - start)).coerceIn(0f, 1f)
 }
@@ -161,10 +163,13 @@ internal fun resolveHomeCardChromeOpenProgress(
 /**
  * shell morph 期间源卡 **chrome**（标题/UP/信息区）的 alpha。
  *
- * - morph 未进行：始终 1，避免相关推荐等落位后标题空白
- * - 进场飞向详情：随 OPENING 进度 **柔和淡出**（不再硬切 0），封面先动、字后收
- * - 返回落位：按 settle 进度在末段淡入，与封面同步出现，且中段不盖住实时画面
- * - 快速返回：直接 1
+ * 整卡 shell（封面+标题）一起飞/一起落：
+ * - morph 未进行 / 结束后：始终 1
+ * - 进场 / 返回 morph 中：始终 1（标题是壳的一部分，禁止单独晚一拍）
+ * - 快速返回：1
+ *
+ * 旧策略「返回末段才 reveal 标题」会造成预测返回落位时封面先到位、字后出；
+ * 详情侧叠字改由 live content yield（[VIDEO_CARD_RETURN_LIVE_CONTENT_YIELD_START]=0）承担。
  */
 internal fun resolveHomeCardChromeAlphaDuringShellReturnMorph(
     useCardContainerSharedBounds: Boolean,
@@ -177,27 +182,20 @@ internal fun resolveHomeCardChromeAlphaDuringShellReturnMorph(
     transitionBackgroundProgress: Float = 0f,
     isQuickReturnFromDetail: Boolean = false,
 ): Float {
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredPhase = transitionBackgroundPhase
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredReturning = isReturningFromDetail
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredGesture = isVideoCardReturnGestureInProgress
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredActive = isSharedTransitionActive
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredProgress = transitionBackgroundProgress
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredQuick = isQuickReturnFromDetail
     if (!useCardContainerSharedBounds || !isSharedMorphSourceCard) return 1f
-    if (isQuickReturnFromDetail) return 1f
-
-    val morphActive = isSharedTransitionActive || isVideoCardReturnGestureInProgress
-    // morph 已结束：立刻恢复（哪怕景深 phase 仍短暂停留在 RETURNING）
-    if (!morphActive) return 1f
-
-    val isReturnMorph = isReturningFromDetail ||
-        isVideoCardReturnGestureInProgress ||
-        transitionBackgroundPhase == VideoCardTransitionBackgroundPhase.RETURNING
-    if (!isReturnMorph) {
-        // 进场：标题已不在 shell 内（仅封面 morph），信息区全程保留，避免与详情骨架抢戏。
-        // 叠字问题由封面 sharedBounds 单独承担，不再藏标题。
-        return 1f
-    }
-
-    // 返回：与详情 content yield 共用 settle 解析（景深 1→0 → settle 0→1）。
-    val settleProgress = resolveVideoCardReturnSettleProgress(
-        depthBlurProgress = transitionBackgroundProgress,
-    )
-    return resolveHomeCardChromeEarlyRevealAlpha(settleProgress = settleProgress)
+    return 1f
 }
 
 /**
