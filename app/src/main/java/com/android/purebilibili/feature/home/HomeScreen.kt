@@ -1191,7 +1191,8 @@ fun HomeScreen(
         searchBarHeight = searchBarHeightDp,
         tabRowHeight = tabRowHeightDp,
         uiPreset = uiPreset,
-        androidNativeVariant = androidNativeVariant
+        androidNativeVariant = androidNativeVariant,
+        isTabFloating = topTabStyle.floating
     )
     
     // Pixels

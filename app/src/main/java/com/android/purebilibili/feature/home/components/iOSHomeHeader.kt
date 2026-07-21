@@ -338,13 +338,15 @@ internal fun resolveHomeTopTabOverlayAlpha(
 }
 
 internal fun resolveHomeTopTabVerticalPaddingDp(isTabFloating: Boolean): Float {
-    return if (isTabFloating) 2f else 0f
+    // Keep a hairline inset so floating glass doesn't weld to the reserved track edge.
+    return if (isTabFloating) 1f else 0f
 }
 
 internal fun resolveNonNegativeHomeTopPadding(padding: Dp): Dp = padding.coerceAtLeast(0.dp)
 
 internal fun resolveHomeTopTabYOffsetDp(isTabFloating: Boolean): Float {
-    return if (isTabFloating) (-4f) else 0f
+    // Mild lift toward search; list padding subtracts the same amount so tabs↔cards stays even.
+    return if (isTabFloating) (-2f) else 0f
 }
 
 internal fun resolveHomeTopSearchBarHeight(
@@ -663,6 +665,13 @@ internal fun resolveHomeTopSearchToTabsSpacing(
     return resolveHomeTopPresetStyle(uiPreset, androidNativeVariant, labelMode = 2).searchToTabsSpacing
 }
 
+internal fun resolveHomeTopTabsToContentSpacing(
+    uiPreset: UiPreset = UiPreset.IOS,
+    androidNativeVariant: AndroidNativeVariant = AndroidNativeVariant.MATERIAL3
+): Dp {
+    return resolveHomeTopPresetStyle(uiPreset, androidNativeVariant, labelMode = 2).tabsToContentSpacing
+}
+
 internal fun resolveHomeTopSearchCollapseExtraSpacing(
     uiPreset: UiPreset = UiPreset.IOS,
     androidNativeVariant: AndroidNativeVariant = AndroidNativeVariant.MATERIAL3
@@ -703,24 +712,24 @@ internal fun resolveHomeTopReservedListPadding(
     searchBarHeight: Dp,
     tabRowHeight: Dp,
     uiPreset: UiPreset = UiPreset.IOS,
-    androidNativeVariant: AndroidNativeVariant = AndroidNativeVariant.MATERIAL3
+    androidNativeVariant: AndroidNativeVariant = AndroidNativeVariant.MATERIAL3,
+    isTabFloating: Boolean = false
 ): Dp {
     val useUnifiedPanel = shouldUseUnifiedHomeTopPanel(uiPreset)
-    val reservedListGap = if (androidNativeVariant == AndroidNativeVariant.MIUIX) {
-        4.dp
-    } else {
-        0.dp
-    }
+    val searchToTabs = resolveHomeTopSearchToTabsSpacing(uiPreset, androidNativeVariant)
+    val tabsToContent = resolveHomeTopTabsToContentSpacing(uiPreset, androidNativeVariant)
+    // Floating dock is shifted up via [resolveHomeTopTabYOffsetDp]; fold the same delta into
+    // list padding so the visual gap under the dock matches [tabsToContent], not tabsToContent+|offset|.
+    val floatingDockLift = resolveHomeTopTabYOffsetDp(isTabFloating).dp
     val chromeHeight = if (useUnifiedPanel) {
         searchBarHeight +
             tabRowHeight +
             (resolveHomeTopUnifiedPanelInnerPadding(uiPreset, androidNativeVariant) * 2) +
-            resolveHomeTopSearchToTabsSpacing(uiPreset, androidNativeVariant) +
-            reservedListGap
+            searchToTabs
     } else {
-        searchBarHeight + resolveHomeTopSearchToTabsSpacing(uiPreset, androidNativeVariant) + tabRowHeight
+        searchBarHeight + searchToTabs + tabRowHeight
     }
-    return statusBarHeight + chromeHeight
+    return statusBarHeight + chromeHeight + tabsToContent + floatingDockLift
 }
 
 internal fun resolveHomeTopBlurContainerColors(

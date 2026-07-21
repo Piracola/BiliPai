@@ -244,6 +244,10 @@ class TopTabStylePolicyTest {
                 androidNativeVariant = AndroidNativeVariant.MIUIX
             )
         )
+        // Feed air under dock is owned by tabsToContent (list padding), not panel bottom gap.
+        assertEquals(6.dp, ios.tabsToContentSpacing)
+        assertEquals(6.dp, material3.tabsToContentSpacing)
+        assertEquals(6.dp, miuix.tabsToContentSpacing)
     }
 
     @Test

@@ -60,6 +60,7 @@ data class HomeTopPresetStyle(
     val tabHorizontalPaddingDocked: Dp get() = tabs.horizontalPadding.docked
     val tabHorizontalPaddingFloating: Dp get() = tabs.horizontalPadding.floating
     val searchToTabsSpacing: Dp get() = spacing.searchToTabs
+    val tabsToContentSpacing: Dp get() = spacing.tabsToContent
     val searchCollapseExtraSpacing: Dp get() = spacing.searchCollapseExtra
     val continuousSlabOverlap: Dp get() = spacing.continuousSlabOverlap
     val tabRowHeightDocked: Dp get() = tabs.rowHeight.docked
@@ -98,7 +99,13 @@ data class HomeTopPanelStyle(
 data class HomeTopSpacingStyle(
     val edgeControlGap: Dp,
     val embeddedTabHorizontalPadding: Dp,
+    /** Vertical gap between search row and top tab dock. */
     val searchToTabs: Dp,
+    /**
+     * Intentional air under the tab dock before the first feed row.
+     * Kept near [searchToTabs] so search↔tabs and tabs↔cards feel balanced.
+     */
+    val tabsToContent: Dp,
     val searchCollapseExtra: Dp,
     val continuousSlabOverlap: Dp
 )
@@ -155,7 +162,8 @@ internal fun resolveHomeTopPresetStyle(
                 spacing = HomeTopSpacingStyle(
                     edgeControlGap = 6.dp,
                     embeddedTabHorizontalPadding = 0.dp,
-                    searchToTabs = 4.dp,
+                    searchToTabs = 6.dp,
+                    tabsToContent = 6.dp,
                     searchCollapseExtra = 0.dp,
                     continuousSlabOverlap = 0.dp
                 ),
@@ -214,7 +222,8 @@ internal fun resolveHomeTopPresetStyle(
                 spacing = HomeTopSpacingStyle(
                     edgeControlGap = 7.dp,
                     embeddedTabHorizontalPadding = 0.dp,
-                    searchToTabs = 4.dp,
+                    searchToTabs = 6.dp,
+                    tabsToContent = 6.dp,
                     searchCollapseExtra = 5.dp,
                     continuousSlabOverlap = 20.dp
                 ),
@@ -274,6 +283,7 @@ internal fun resolveHomeTopPresetStyle(
                     edgeControlGap = 8.dp,
                     embeddedTabHorizontalPadding = 0.dp,
                     searchToTabs = 6.dp,
+                    tabsToContent = 6.dp,
                     searchCollapseExtra = 5.dp,
                     continuousSlabOverlap = 24.dp
                 ),

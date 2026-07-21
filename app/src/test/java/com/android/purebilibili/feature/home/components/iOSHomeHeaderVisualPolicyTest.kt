@@ -490,14 +490,14 @@ class iOSHomeHeaderVisualPolicyTest {
     @Test
     fun `home header collapse distance includes search spacing before pinned tabs`() {
         assertEquals(
-            52.dp,
+            54.dp, // 48 search + 6 searchToTabs
             resolveHomeTopSearchCollapseDistance(
                 searchBarHeight = 48.dp,
                 uiPreset = UiPreset.IOS
             )
         )
         assertEquals(
-            63.dp,
+            63.dp, // 52 search + 6 searchToTabs + 5 collapseExtra
             resolveHomeTopSearchCollapseDistance(
                 searchBarHeight = 52.dp,
                 uiPreset = UiPreset.MD3
@@ -513,8 +513,10 @@ class iOSHomeHeaderVisualPolicyTest {
         assertEquals(56.dp, resolveHomeTopSearchPillHeight(UiPreset.MD3))
         assertEquals(2.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true))
         assertEquals(2.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true, uiPreset = UiPreset.MD3))
-        assertEquals(4.dp, resolveHomeTopSearchToTabsSpacing())
+        assertEquals(6.dp, resolveHomeTopSearchToTabsSpacing())
         assertEquals(6.dp, resolveHomeTopSearchToTabsSpacing(UiPreset.MD3))
+        assertEquals(6.dp, resolveHomeTopTabsToContentSpacing())
+        assertEquals(6.dp, resolveHomeTopTabsToContentSpacing(UiPreset.MD3))
     }
 
     @Test
@@ -576,9 +578,12 @@ class iOSHomeHeaderVisualPolicyTest {
         assertEquals(32.dp, ios.unifiedPanelCornerRadius)
         assertEquals(16.dp, material3.unifiedPanelCornerRadius)
         assertEquals(18.dp, miuix.unifiedPanelCornerRadius)
-        assertEquals(4.dp, ios.searchToTabsSpacing)
+        assertEquals(6.dp, ios.searchToTabsSpacing)
         assertEquals(6.dp, material3.searchToTabsSpacing)
-        assertEquals(4.dp, miuix.searchToTabsSpacing)
+        assertEquals(6.dp, miuix.searchToTabsSpacing)
+        assertEquals(6.dp, ios.tabsToContentSpacing)
+        assertEquals(6.dp, material3.tabsToContentSpacing)
+        assertEquals(6.dp, miuix.tabsToContentSpacing)
         assertFalse(ios.showUnifiedPanelDivider)
         assertTrue(material3.showUnifiedPanelDivider)
         assertFalse(miuix.showUnifiedPanelDivider)
@@ -620,8 +625,10 @@ class iOSHomeHeaderVisualPolicyTest {
 
     @Test
     fun `home list top padding reserves full unified header height without underlapping md3 tabs`() {
+        // status + search + tabs + panelInner*2 + searchToTabs + tabsToContent (+ floating lift)
+        // iOS docked: 44+48+56+12+6+6 = 172
         assertEquals(
-            164.dp,
+            172.dp,
             resolveHomeTopReservedListPadding(
                 statusBarHeight = 44.dp,
                 searchBarHeight = 48.dp,
@@ -629,8 +636,9 @@ class iOSHomeHeaderVisualPolicyTest {
                 uiPreset = UiPreset.IOS
             )
         )
+        // MD3 docked: 44+52+44+20+6+6 = 172
         assertEquals(
-            166.dp,
+            172.dp,
             resolveHomeTopReservedListPadding(
                 statusBarHeight = 44.dp,
                 searchBarHeight = 52.dp,
@@ -638,14 +646,26 @@ class iOSHomeHeaderVisualPolicyTest {
                 uiPreset = UiPreset.MD3
             )
         )
+        // MIUIX docked: 44+50+48+18+6+6 = 172
         assertEquals(
-            168.dp,
+            172.dp,
             resolveHomeTopReservedListPadding(
                 statusBarHeight = 44.dp,
                 searchBarHeight = 50.dp,
                 tabRowHeight = 48.dp,
                 uiPreset = UiPreset.MD3,
                 androidNativeVariant = AndroidNativeVariant.MIUIX
+            )
+        )
+        // Floating iOS: same chrome + tabsToContent(6) + yOffset(-2) = 170
+        assertEquals(
+            170.dp,
+            resolveHomeTopReservedListPadding(
+                statusBarHeight = 44.dp,
+                searchBarHeight = 48.dp,
+                tabRowHeight = 56.dp,
+                uiPreset = UiPreset.IOS,
+                isTabFloating = true
             )
         )
     }
@@ -751,14 +771,14 @@ class iOSHomeHeaderVisualPolicyTest {
             )
         )
         assertEquals(
-            4.dp,
+            6.dp,
             resolveHomeTopSearchToTabsSpacing(
                 uiPreset = UiPreset.MD3,
                 androidNativeVariant = AndroidNativeVariant.MIUIX
             )
         )
         assertEquals(
-            59.dp,
+            61.dp, // 50 search + 6 searchToTabs + 5 collapseExtra
             resolveHomeTopSearchCollapseDistance(
                 searchBarHeight = 50.dp,
                 uiPreset = UiPreset.MD3,
@@ -1742,8 +1762,8 @@ class iOSHomeHeaderVisualPolicyTest {
 
     @Test
     fun `floating top tabs use tighter spacing beneath search`() {
-        assertEquals(2f, resolveHomeTopTabVerticalPaddingDp(isTabFloating = true), 0.0001f)
-        assertEquals(-4f, resolveHomeTopTabYOffsetDp(isTabFloating = true), 0.0001f)
+        assertEquals(1f, resolveHomeTopTabVerticalPaddingDp(isTabFloating = true), 0.0001f)
+        assertEquals(-2f, resolveHomeTopTabYOffsetDp(isTabFloating = true), 0.0001f)
     }
 
     @Test
@@ -1836,6 +1856,7 @@ class iOSHomeHeaderVisualPolicyTest {
             .substringBefore(")")
 
         assertTrue(reservedPaddingCall.contains("androidNativeVariant = androidNativeVariant"))
+        assertTrue(reservedPaddingCall.contains("isTabFloating = topTabStyle.floating"))
     }
 
     @Test
