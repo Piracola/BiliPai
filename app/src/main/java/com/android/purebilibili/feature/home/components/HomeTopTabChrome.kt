@@ -4,12 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -70,6 +73,13 @@ internal fun HomeTopTabChrome(
     drawChromeSurface: Boolean = true,
     useBottomBarMatchedSurface: Boolean = false,
     drawMatchedShellLens: Boolean = true,
+    /**
+     * When true, the floating dock shell shrinks to tab content width (icon/text density ×
+     * count) and centers in the padded track — no full-bleed empty glass on the right.
+     */
+    wrapDockWidth: Boolean = false,
+    dockCategoryCount: Int = 0,
+    dockLabelMode: Int = 2,
     content: @Composable () -> Unit
 ) {
     val density = LocalDensity.current
@@ -123,109 +133,137 @@ internal fun HomeTopTabChrome(
                 }
             )
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = safeTabHorizontalPadding, vertical = safeTabVerticalPadding)
-                .then(
-                    if (drawChromeSurface && isTabFloating) {
-                        Modifier.shadow(
-                            elevation = effectiveTabShadowElevation,
-                            shape = tabShape,
-                            ambientColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            spotColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                        )
-                    } else {
-                        Modifier
-                    }
+        ) {
+            val shouldWrap = wrapDockWidth &&
+                dockCategoryCount > 0 &&
+                maxWidth > 0.dp
+            val dockWidth = if (shouldWrap) {
+                val preferredItem = resolveTopTabWrapItemWidthDp(
+                    labelMode = dockLabelMode,
+                    isFloatingStyle = isTabFloating
                 )
-                .then(
-                    if (drawChromeSurface) {
-                        if (useBottomBarMatchedSurface) {
-                            Modifier.homeTopBottomBarMatchedSurface(
-                                renderMode = tabChromeRenderMode,
+                resolveTopTabDockWrapWidthDp(
+                    itemWidthDp = preferredItem,
+                    categoryCount = dockCategoryCount,
+                    maxWidthDp = maxWidth.value
+                ).dp
+            } else {
+                maxWidth
+            }
+            val dockAlignment = if (shouldWrap && dockWidth < maxWidth) {
+                Alignment.Center
+            } else {
+                Alignment.CenterStart
+            }
+            val dockModifier = Modifier
+                .align(dockAlignment)
+                .width(dockWidth)
+                .fillMaxHeight()
+
+            Box(
+                modifier = dockModifier
+                    .then(
+                        if (drawChromeSurface && isTabFloating) {
+                            Modifier.shadow(
+                                elevation = effectiveTabShadowElevation,
                                 shape = tabShape,
-                                hazeState = hazeState,
-                                backdrop = backdrop,
-                                liquidGlassStyle = liquidStyle,
-                                liquidGlassTuning = liquidGlassTuning,
-                                liquidGlassPreset = liquidGlassPreset,
-                                motionTier = motionTier,
-                                isTransitionRunning = isTransitionRunning,
-                                forceLowBlurBudget = forceLowBlurBudget,
-                                drawShellLens = drawMatchedShellLens
+                                ambientColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                spotColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                             )
                         } else {
-                            Modifier.homeTopChromeSurface(
-                                renderMode = tabChromeRenderMode,
-                                shape = tabShape,
-                                surfaceColor = tabSurfaceColor,
-                                hazeState = hazeState,
-                                backdrop = backdrop,
-                                liquidStyle = liquidStyle,
-                                liquidGlassTuning = liquidGlassTuning,
-                                liquidGlassPreset = liquidGlassPreset,
-                                motionTier = motionTier,
-                                isScrolling = isScrolling,
-                                isTransitionRunning = isTransitionRunning,
-                                forceLowBlurBudget = forceLowBlurBudget,
-                                preferFlatGlass = preferFlatGlass
-                            )
+                            Modifier
                         }
-                    } else {
-                        Modifier
-                    }
-                )
-                .then(
-                    if (drawChromeSurface && isTabFloating) {
-                        Modifier.border(
-                            width = 0.8.dp,
-                            color = Color.White.copy(alpha = tabBorderAlpha),
-                            shape = tabShape
-                        )
-                    } else {
-                        Modifier
-                    }
-                )
-                .graphicsLayer { alpha = tabContentAlpha }
-        ) {
-            if (drawChromeSurface) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(tabContentUnderlayColor, tabShape)
-                )
-                if (isTabFloating) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(16.dp)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        tabHighlightColor,
-                                        Color.Transparent
-                                    )
-                                ),
+                    )
+                    .then(
+                        if (drawChromeSurface) {
+                            if (useBottomBarMatchedSurface) {
+                                Modifier.homeTopBottomBarMatchedSurface(
+                                    renderMode = tabChromeRenderMode,
+                                    shape = tabShape,
+                                    hazeState = hazeState,
+                                    backdrop = backdrop,
+                                    liquidGlassStyle = liquidStyle,
+                                    liquidGlassTuning = liquidGlassTuning,
+                                    liquidGlassPreset = liquidGlassPreset,
+                                    motionTier = motionTier,
+                                    isTransitionRunning = isTransitionRunning,
+                                    forceLowBlurBudget = forceLowBlurBudget,
+                                    drawShellLens = drawMatchedShellLens
+                                )
+                            } else {
+                                Modifier.homeTopChromeSurface(
+                                    renderMode = tabChromeRenderMode,
+                                    shape = tabShape,
+                                    surfaceColor = tabSurfaceColor,
+                                    hazeState = hazeState,
+                                    backdrop = backdrop,
+                                    liquidStyle = liquidStyle,
+                                    liquidGlassTuning = liquidGlassTuning,
+                                    liquidGlassPreset = liquidGlassPreset,
+                                    motionTier = motionTier,
+                                    isScrolling = isScrolling,
+                                    isTransitionRunning = isTransitionRunning,
+                                    forceLowBlurBudget = forceLowBlurBudget,
+                                    preferFlatGlass = preferFlatGlass
+                                )
+                            }
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .then(
+                        if (drawChromeSurface && isTabFloating) {
+                            Modifier.border(
+                                width = 0.8.dp,
+                                color = Color.White.copy(alpha = tabBorderAlpha),
                                 shape = tabShape
                             )
+                        } else {
+                            Modifier
+                        }
                     )
+                    .graphicsLayer { alpha = tabContentAlpha }
+            ) {
+                if (drawChromeSurface) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(tabContentUnderlayColor, tabShape)
+                    )
+                    if (isTabFloating) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(16.dp)
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            tabHighlightColor,
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = tabShape
+                                )
+                        )
+                    }
                 }
             }
-        }
 
-        // Do not clip: liquid capsule drag-scale should slightly overflow the dock like bottom bar.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = safeTabHorizontalPadding, vertical = safeTabVerticalPadding)
-                .graphicsLayer {
-                    alpha = tabContentAlpha
-                    clip = false
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            content()
+            // Do not clip: liquid capsule drag-scale should slightly overflow the dock like bottom bar.
+            Box(
+                modifier = dockModifier
+                    .graphicsLayer {
+                        alpha = tabContentAlpha
+                        clip = false
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                content()
+            }
         }
 
         if (showCollapsedHandle) {

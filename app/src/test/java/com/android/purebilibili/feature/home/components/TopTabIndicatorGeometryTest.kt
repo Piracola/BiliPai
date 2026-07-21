@@ -1,7 +1,6 @@
 package com.android.purebilibili.feature.home.components
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TopTabIndicatorGeometryTest {
@@ -181,7 +180,7 @@ class TopTabIndicatorGeometryTest {
     }
 
     @Test
-    fun `top tab dock indicator nearly fills dock track without aspect clamp`() {
+    fun `top tab dock indicator leaves gap inside each slot`() {
         val horizontalGap = resolveTopTabDockIndicatorHorizontalGapDp(
             hasOuterChromeSurface = true
         )
@@ -199,31 +198,21 @@ class TopTabIndicatorGeometryTest {
         )
 
         assertEquals(92f, width, 0.01f)
-        // row 56 - 2*1 gap = 54; no width/1.6 clamp
+        // Near-full dock fill at rest when width is unbounded; drag scale still overflows chrome.
         assertEquals(54f, height, 0.01f)
     }
 
     @Test
-    fun `top tab dock indicator fills tall multi-tab dock even when slot is narrow`() {
-        // MIUIX/MD3 icon+text floating: row ~64dp, 5-tab slot width ~68 after gap
+    fun `top tab dock indicator keeps bottom bar capsule aspect ratio with min floor`() {
         assertEquals(
-            62f,
+            48f,
             resolveTopTabDockIndicatorHeightDp(
-                rowHeightDp = 64f,
+                rowHeightDp = 56f,
                 verticalGapDp = 1f,
                 minHeightDp = 48f,
-                indicatorWidthDp = 68f
+                indicatorWidthDp = 54f
             ),
             0.01f
-        )
-        // Old aspect clamp would be 68/1.6 ≈ 42.5 → floor 48, leaving empty dock
-        assertTrue(
-            resolveTopTabDockIndicatorHeightDp(
-                rowHeightDp = 64f,
-                verticalGapDp = 1f,
-                minHeightDp = 48f,
-                indicatorWidthDp = 68f
-            ) > 48f
         )
     }
 

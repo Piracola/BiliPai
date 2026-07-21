@@ -1978,6 +1978,16 @@ fun iOSHomeHeader(
                     topTabDockChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_HAZE
             )
     val drawTopTabDockChrome = drawTopTabOuterChromeSurface || useTopTabBottomBarMatchedDock || useDetachedTopTabDock
+    val topTabLabelMode = homeSettings?.topTabLabelMode
+        ?: com.android.purebilibili.core.store.SettingsManager.TopTabLabelMode.TEXT_ONLY
+    // Floating dock shell + tabs share one wrap decision so glass length matches content.
+    val wrapTopTabDockFloatingStyle = if (embedTopTabsInUnifiedPanel) false else isTabFloating
+    val wrapTopTabDockHasOuterChrome = drawTopTabDockChrome && !embedTopTabsInUnifiedPanel
+    val wrapTopTabDockWidth = shouldWrapTopTabDockWidth(
+        isFloatingStyle = wrapTopTabDockFloatingStyle,
+        hasOuterChromeSurface = wrapTopTabDockHasOuterChrome,
+        edgeToEdge = integratedCollapsedTopBar
+    )
     val currentTabToSearchSpacing = currentSearchToTabsSpacing + if (drawTopSearchDivider) {
         1.dp + currentUnifiedDividerBottomSpacing
     } else {
@@ -2070,7 +2080,11 @@ fun iOSHomeHeader(
             onTabsCollapsedChange = onTopTabsCollapsedChange,
             drawChromeSurface = drawTopTabDockChrome,
             useBottomBarMatchedSurface = useTopTabBottomBarMatchedDock,
-            drawMatchedShellLens = useTopTabBottomBarMatchedDock
+            drawMatchedShellLens = useTopTabBottomBarMatchedDock,
+            // Floating / matched dock: length follows icon+text × tab count (no full-bleed empty glass).
+            wrapDockWidth = wrapTopTabDockWidth,
+            dockCategoryCount = topCategories.size,
+            dockLabelMode = topTabLabelMode
         ) {
             CategoryTabRow(
                 categories = topCategories,
@@ -2083,8 +2097,7 @@ fun iOSHomeHeader(
                     if (topTabsVisible) onPartitionClick()
                 },
                 pagerState = pagerState,
-                labelMode = homeSettings?.topTabLabelMode
-                    ?: com.android.purebilibili.core.store.SettingsManager.TopTabLabelMode.TEXT_ONLY,
+                labelMode = topTabLabelMode,
                 isLiquidGlassEnabled = resolveHomeTopTabIndicatorLiquidGlassEnabled(
                     homeSettings = homeSettings,
                     uiPreset = uiPreset
@@ -2096,6 +2109,8 @@ fun iOSHomeHeader(
                 isFloatingStyle = isTabFloating,
                 edgeToEdge = integratedCollapsedTopBar,
                 hasOuterChromeSurface = drawTopTabDockChrome,
+                // Same wrap decision as HomeTopTabChrome so shell length matches tab content.
+                wrapDockWidth = wrapTopTabDockWidth,
                 interactionBudget = interactionBudget,
                 motionTier = motionTier,
                 isTransitionRunning = isTransitionRunning,

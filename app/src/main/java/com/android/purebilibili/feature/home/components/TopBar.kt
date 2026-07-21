@@ -126,13 +126,12 @@ internal fun resolveTopTabRowHorizontalPaddingDp(
     return if (normalizeTopTabLabelMode(labelMode) == 2) 0f else 4f
 }
 
-// Rest capsule nearly fills the dock (bottom-bar feel); drag scale may still overflow chrome.
+// Slightly tighter than before so rest capsule nearly fills the dock (bottom-bar feel),
+// while drag scale still overflows the chrome edge.
 internal fun resolveTopTabDockIndicatorHorizontalGapDp(hasOuterChromeSurface: Boolean): Float =
     if (hasOuterChromeSurface) 2f else 2f
 
-// Keep a hairline inset so the capsule doesn't weld to the dock edge.
-internal fun resolveTopTabDockIndicatorVerticalGapDp(hasOuterChromeSurface: Boolean): Float =
-    if (hasOuterChromeSurface) 1f else 1f
+internal fun resolveTopTabDockIndicatorVerticalGapDp(hasOuterChromeSurface: Boolean): Float = 1f
 
 internal fun resolveTopTabDockIndicatorWidthDp(
     itemWidthDp: Float,
@@ -146,23 +145,92 @@ internal fun resolveTopTabDockIndicatorWidthDp(
     return maxWidth.coerceAtLeast(minWidth)
 }
 
-/**
- * Dock indicator height: fill [rowHeight - 2*gap], do **not** clamp with bottom-bar
- * capsule aspect ratio (width/1.6). Multi-tab slots are narrow (~52–72dp); that clamp
- * forced ~40–48dp pills inside a 58–64dp dock ("占不满顶部 dock").
- */
 internal fun resolveTopTabDockIndicatorHeightDp(
     rowHeightDp: Float,
     verticalGapDp: Float,
     minHeightDp: Float,
-    @Suppress("UNUSED_PARAMETER") indicatorWidthDp: Float = Float.POSITIVE_INFINITY
+    indicatorWidthDp: Float = Float.POSITIVE_INFINITY
 ): Float {
     if (rowHeightDp <= 0f) return 0f
     val maxHeight = (rowHeightDp - verticalGapDp.coerceAtLeast(0f) * 2f)
         .coerceAtLeast(0f)
-    // Prefer full track fill; minHeight only floors pathological tiny rows.
-    val minHeight = minHeightDp.coerceIn(0f, maxHeight.coerceAtLeast(0f))
-    return maxHeight.coerceAtLeast(minHeight)
+    val minHeight = minHeightDp.coerceIn(0f, rowHeightDp)
+    return resolveSegmentedControlIndicatorHeightDp(
+        slotWidthDp = indicatorWidthDp,
+        indicatorHeightDp = maxHeight
+    ).coerceAtLeast(minHeight)
+}
+
+/**
+ * Preferred per-tab width when the floating dock **wraps content** instead of stretching
+ * full width (icon / text density drives dock length).
+ */
+internal fun resolveTopTabWrapItemWidthDp(
+    labelMode: Int,
+    isFloatingStyle: Boolean = true
+): Float {
+    return when (normalizeTopTabLabelMode(labelMode)) {
+        0 -> if (isFloatingStyle) 74f else 70f // icon + text
+        1 -> if (isFloatingStyle) 56f else 52f // icon only
+        else -> if (isFloatingStyle) 66f else 62f // text only
+    }
+}
+
+/**
+ * Whether the top dock should shrink to tab content instead of fillMaxWidth.
+ * Floating / bottom-bar-matched docks: wrap so right side isn't empty chrome.
+ * Embedded / full-bleed rows keep stretch.
+ */
+internal fun shouldWrapTopTabDockWidth(
+    isFloatingStyle: Boolean,
+    hasOuterChromeSurface: Boolean,
+    edgeToEdge: Boolean
+): Boolean {
+    if (edgeToEdge) return false
+    return isFloatingStyle || hasOuterChromeSurface
+}
+
+/**
+ * Dock content width = itemWidth × tabCount (+ optional horizontal content padding).
+ * Clamped to [maxWidthDp] so small phones still fill when content is wider.
+ */
+internal fun resolveTopTabDockWrapWidthDp(
+    itemWidthDp: Float,
+    categoryCount: Int,
+    maxWidthDp: Float,
+    contentPaddingHorizontalDp: Float = 0f
+): Float {
+    if (itemWidthDp <= 0f || categoryCount <= 0) return 0f
+    val content = itemWidthDp * categoryCount + contentPaddingHorizontalDp.coerceAtLeast(0f) * 2f
+    if (maxWidthDp <= 0f) return content
+    return content.coerceIn(0f, maxWidthDp)
+}
+
+/**
+ * Item width for wrap dock: use content-driven preferred width when it fits;
+ * otherwise fall back to dividing the available max width (scrollable denser slots).
+ */
+internal fun resolveTopTabDockItemWidthDp(
+    maxWidthDp: Float,
+    categoryCount: Int,
+    labelMode: Int,
+    isFloatingStyle: Boolean,
+    wrapContent: Boolean,
+    fillItemWidthDp: Float
+): Float {
+    if (!wrapContent || categoryCount <= 0) return fillItemWidthDp
+    val preferred = resolveTopTabWrapItemWidthDp(labelMode, isFloatingStyle)
+    val wrapWidth = resolveTopTabDockWrapWidthDp(
+        itemWidthDp = preferred,
+        categoryCount = categoryCount,
+        maxWidthDp = maxWidthDp
+    )
+    // Preferred pack fits: use content-driven item width.
+    if (wrapWidth <= maxWidthDp + 0.01f && preferred * categoryCount <= maxWidthDp + 0.01f) {
+        return preferred
+    }
+    // Overflow: pack into available width.
+    return fillItemWidthDp
 }
 
 internal fun resolveTopTabDockIndicatorOffsetPx(
@@ -715,6 +783,8 @@ private fun LightweightHomeTopTabs(
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
     partitionSkinIconPath: String? = null,
     hasOuterChromeSurface: Boolean = false,
+    /** When non-null, overrides [shouldWrapTopTabDockWidth] so shell and tabs share one decision. */
+    wrapDockWidth: Boolean? = null,
     isTransitionRunning: Boolean = false,
     showPartitionAction: Boolean = true,
     forceMaterialUnderline: Boolean = false
@@ -847,13 +917,18 @@ private fun LightweightHomeTopTabs(
                     labelMode = normalizedLabelMode
                 ).dp
             )
-        ) {
-        val itemWidth = when (effectiveRenderer) {
+    ) {
+        val wrapDock = wrapDockWidth ?: shouldWrapTopTabDockWidth(
+            isFloatingStyle = isFloatingStyle,
+            hasOuterChromeSurface = hasOuterChromeSurface,
+            edgeToEdge = edgeToEdge
+        )
+        val fillItemWidthDp = when (effectiveRenderer) {
             HomeTopTabRenderer.IOS -> resolveIosTopTabItemWidthDp(
                 containerWidthDp = maxWidth.value,
                 categoryCount = categories.size,
                 labelMode = normalizedLabelMode
-            ).dp
+            )
             HomeTopTabRenderer.MD3,
             HomeTopTabRenderer.MIUIX -> resolveMd3TopTabItemWidthDp(
                 containerWidthDp = maxWidth.value,
@@ -862,13 +937,34 @@ private fun LightweightHomeTopTabs(
                     labelMode = normalizedLabelMode,
                     showPartitionAction = showPartitionAction
                 )
-            ).dp
+            )
+        }
+        val itemWidthDp = resolveTopTabDockItemWidthDp(
+            maxWidthDp = maxWidth.value,
+            categoryCount = categories.size,
+            labelMode = normalizedLabelMode,
+            isFloatingStyle = isFloatingStyle,
+            wrapContent = wrapDock,
+            fillItemWidthDp = fillItemWidthDp
+        )
+        val itemWidth = itemWidthDp.dp
+        // Prefer content-driven dock length; parent chrome also uses this policy so shell + tabs match.
+        val dockContentWidthDp = if (wrapDock) {
+            resolveTopTabDockWrapWidthDp(
+                itemWidthDp = itemWidthDp,
+                categoryCount = categories.size,
+                maxWidthDp = maxWidth.value
+            )
+        } else {
+            maxWidth.value
         }
         val density = LocalDensity.current
         val isDarkTheme = isSystemInDarkTheme()
+        // When dock wraps content, no leftover to center — lead padding is always 0.
         val md3ContentPadding = if (
-            effectiveRenderer == HomeTopTabRenderer.MD3 ||
-            effectiveRenderer == HomeTopTabRenderer.MIUIX
+            (effectiveRenderer == HomeTopTabRenderer.MD3 ||
+                effectiveRenderer == HomeTopTabRenderer.MIUIX) &&
+            !wrapDock
         ) {
             resolveMd3TopTabContentPaddingDp(
                 containerWidthDp = maxWidth.value,
@@ -1192,7 +1288,16 @@ private fun LightweightHomeTopTabs(
         }
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .then(
+                    if (wrapDock) {
+                        Modifier
+                            .width(dockContentWidthDp.dp)
+                            .fillMaxHeight()
+                            .align(Alignment.Center)
+                    } else {
+                        Modifier.fillMaxSize()
+                    }
+                )
                 .graphicsLayer {
                     translationY = if (effectiveRenderer == HomeTopTabRenderer.MD3) {
                         md3TopTabRowVerticalTranslationPx
@@ -1733,6 +1838,8 @@ fun CategoryTabRow(
     isFloatingStyle: Boolean = false,
     edgeToEdge: Boolean = false,
     hasOuterChromeSurface: Boolean = false,
+    /** Shared with [HomeTopTabChrome.wrapDockWidth] so glass shell and tabs stay the same length. */
+    wrapDockWidth: Boolean? = null,
     interactionBudget: HomeInteractionMotionBudget = HomeInteractionMotionBudget.FULL,
     motionTier: MotionTier = MotionTier.Normal,
     isTransitionRunning: Boolean = false,
@@ -1771,6 +1878,7 @@ fun CategoryTabRow(
         topTabSkinIconPaths = topTabSkinIconPaths,
         partitionSkinIconPath = partitionSkinIconPath,
         hasOuterChromeSurface = hasOuterChromeSurface,
+        wrapDockWidth = wrapDockWidth,
         isTransitionRunning = isTransitionRunning,
         showPartitionAction = showPartitionAction,
         forceMaterialUnderline = forceMaterialUnderline
