@@ -980,8 +980,10 @@ class VideoDetailLayoutModePolicyTest {
     }
 
     @Test
-    fun autoPortraitRoutePolicy_entersStandalone_whenRouteRequestsInitialVerticalDespiteInline() {
-        assertTrue(
+    fun autoPortraitRoutePolicy_keepsOfficialInline_whenOnlySoftInitialVerticalHint() {
+        // Home always passes autoPortrait + initialVertical for vertical cards; that must
+        // not force standalone when official inline detail is active.
+        assertFalse(
             shouldAutoEnterPortraitFullscreenFromRoute(
                 autoEnterPortraitFromRoute = true,
                 startAudioFromRoute = false,
@@ -1014,13 +1016,21 @@ class VideoDetailLayoutModePolicyTest {
     }
 
     @Test
-    fun startPortraitHint_directPortraitEntryIgnoresAutoPortraitPairing() {
+    fun startPortraitHint_onlyDirectPortraitEntryStartsInFullscreen() {
         assertTrue(
             shouldStartInPortraitFullscreenFromRouteHint(
                 autoEnterPortraitFromRoute = false,
                 startAudioFromRoute = false,
                 initialVerticalFromRoute = false,
                 directPortraitEntryFromRoute = true,
+            )
+        )
+        assertFalse(
+            shouldStartInPortraitFullscreenFromRouteHint(
+                autoEnterPortraitFromRoute = true,
+                startAudioFromRoute = false,
+                initialVerticalFromRoute = true,
+                directPortraitEntryFromRoute = false,
             )
         )
         assertFalse(

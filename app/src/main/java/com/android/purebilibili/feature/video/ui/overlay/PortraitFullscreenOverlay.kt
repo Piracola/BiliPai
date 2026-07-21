@@ -79,6 +79,7 @@ fun PortraitFullscreenOverlay(
     // 互动数据
     statView: Int = 0,
     statLike: Int = 0,
+    statCoin: Int = 0,
     statDanmaku: Int = 0,
     statReply: Int = 0,
     statFavorite: Int = 0,
@@ -207,12 +208,15 @@ fun PortraitFullscreenOverlay(
                 PortraitInteractionBar(
                     isLiked = isLiked,
                     likeCount = statLike,
+                    isCoined = isCoined,
+                    coinCount = statCoin,
                     isFavorited = isFavorited,
                     favoriteCount = statFavorite,
                     commentCount = statReply.takeIf { it > 0 } ?: statDanmaku, // 优先用评论数，没有则用弹幕数代替展示
                     shareCount = statShare,
                     onLikeClick = onLikeClick,
                     onLikeLongClick = onLikeLongClick,
+                    onCoinClick = onCoinClick,
                     onFavoriteClick = onFavoriteClick,
                     onCommentClick = onCommentClick,
                     onShareClick = onShareClick,

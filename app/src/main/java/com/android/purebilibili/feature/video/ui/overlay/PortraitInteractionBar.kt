@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.purebilibili.core.theme.BiliPink
+import com.android.purebilibili.core.ui.rememberAppCoinIcon
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.util.HapticType
 import com.android.purebilibili.core.util.rememberHapticFeedback
@@ -69,18 +70,21 @@ internal fun shouldCancelPortraitTriplePressOnRelease(
 /**
  * 竖屏播放器右侧互动栏 (Refined Style)
  *
- * 移除了头像，仅保留操作按钮：点赞、评论、收藏、分享
+ * 操作：点赞（长按三连）、投币、评论、收藏、分享
  */
 @Composable
 fun PortraitInteractionBar(
     isLiked: Boolean,
     likeCount: Int,
+    isCoined: Boolean = false,
+    coinCount: Int = 0,
     isFavorited: Boolean,
     favoriteCount: Int,
     commentCount: Int,
     shareCount: Int,
     onLikeClick: () -> Unit,
     onLikeLongClick: () -> Unit = {},
+    onCoinClick: () -> Unit = {},
     onFavoriteClick: () -> Unit,
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
@@ -92,6 +96,7 @@ fun PortraitInteractionBar(
             widthDp = configuration.screenWidthDp
         )
     }
+    val coinIcon = rememberAppCoinIcon()
     val haptic = rememberHapticFeedback()
     var isTriplePressing by remember { mutableStateOf(false) }
     var tripleCompleted by remember { mutableStateOf(false) }
@@ -160,6 +165,21 @@ fun PortraitInteractionBar(
                     isTriplePressing = false
                 }
             }
+        )
+
+        // 投币
+        InteractionButton(
+            icon = coinIcon,
+            countText = when {
+                isCoined && coinCount > 0 -> FormatUtils.formatStat(coinCount.toLong())
+                isCoined -> "已投"
+                coinCount > 0 -> FormatUtils.formatStat(coinCount.toLong())
+                else -> "投币"
+            },
+            isActive = isCoined,
+            activeColor = BiliPink,
+            layoutPolicy = layoutPolicy,
+            onClick = onCoinClick
         )
         
         // 评论

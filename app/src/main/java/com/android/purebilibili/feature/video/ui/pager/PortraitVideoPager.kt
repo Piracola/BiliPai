@@ -1178,6 +1178,7 @@ fun PortraitVideoPager(
                 onToggleFollow = engagementViewModel::toggleFollow,
                 onToggleLike = engagementViewModel::toggleLike,
                 onTripleAction = engagementViewModel::doTripleAction,
+                onOpenCoinDialog = engagementViewModel::openCoinDialog,
                 exoPlayer = exoPlayer, // [核心] 传递共享播放器
                 currentPlayingBvid = currentPlayingBvid, // [修复] 传递当前播放的 BVID 用于校验
                 currentPlayingCid = currentPlayingCid,
@@ -1253,6 +1254,16 @@ fun PortraitVideoPager(
             )
         }
     }
+
+    com.android.purebilibili.feature.video.ui.components.CoinDialog(
+        visible = engagementState.coinDialogVisible,
+        currentCoinCount = engagementState.coinCount,
+        userBalance = engagementState.userCoinBalance,
+        onDismiss = { engagementViewModel.setCoinDialogVisible(false) },
+        onConfirm = { count, alsoLike ->
+            engagementViewModel.doCoin(count = count, alsoLike = alsoLike)
+        }
+    )
 }
 
 @UnstableApi
@@ -1268,6 +1279,7 @@ private fun VideoPageItem(
     onToggleFollow: (Long?, Boolean?) -> Unit,
     onToggleLike: (Long?, String?, Boolean?, ((Boolean) -> Unit)?) -> Unit,
     onTripleAction: (Long?, String?, Boolean?, Int?, Boolean?, ((TripleActionResult) -> Unit)?) -> Unit,
+    onOpenCoinDialog: () -> Unit,
     exoPlayer: ExoPlayer,
     currentPlayingBvid: String?, // [新增]
     currentPlayingCid: Long,
@@ -2304,13 +2316,20 @@ private fun VideoPageItem(
             
             statView = if(isCurrentModelVideo && currentSuccess != null) currentSuccess.info.stat.view else stat.view,
             statLike = resolvedInteractionState.likeCount,
+            statCoin = if (isCurrentModelVideo) {
+                engagementState.coinCount.takeIf { it > 0 }
+                    ?: currentSuccess?.info?.stat?.coin
+                    ?: stat.coin
+            } else {
+                stat.coin
+            },
             statDanmaku = if(isCurrentModelVideo && currentSuccess != null) currentSuccess.info.stat.danmaku else stat.danmaku,
             statReply = if(isCurrentModelVideo && currentSuccess != null) currentSuccess.info.stat.reply else stat.reply,
             statFavorite = resolvedInteractionState.favoriteCount,
             statShare = if(isCurrentModelVideo && currentSuccess != null) currentSuccess.info.stat.share else stat.share,
             
             isLiked = resolvedInteractionState.isLiked,
-            isCoined = false,
+            isCoined = isCurrentModelVideo && engagementState.coinCount > 0,
             isFavorited = resolvedInteractionState.isFavorited,
             
             isFollowing = isFollowing,
@@ -2378,7 +2397,11 @@ private fun VideoPageItem(
                     }
                 }
             },
-            onCoinClick = { },
+            onCoinClick = {
+                if (canHandlePortraitInteraction) {
+                    onOpenCoinDialog()
+                }
+            },
             onFavoriteClick = {
                 if (canHandlePortraitInteraction) {
                     when (resolvePortraitFavoriteAction()) {
