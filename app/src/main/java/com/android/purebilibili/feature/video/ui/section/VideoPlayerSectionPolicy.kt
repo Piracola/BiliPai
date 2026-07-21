@@ -970,6 +970,14 @@ internal data class VideoPlayerCoverBootstrapState(
     val hasStartedSmoothReveal: Boolean
 )
 
+/**
+ * 进场封面 bootstrap。
+ *
+ * - 可复用已渲染首帧时：跳过等待 FIRST_FRAME 事件，但 **不** 直接把 smooth reveal 置 true。
+ *   否则「详情已出画 → 回首页 → 再进详情」会瞬间揭开画面，封面→画面过渡丢失。
+ * - 快速返回再进时若首帧标志短暂清空，会重新走完整 reveal；两条路径应统一为：
+ *   先垫封面，再 delay 后 hasStartedSmoothReveal=true。
+ */
 internal fun resolveVideoPlayerCoverBootstrapState(
     forceCoverDuringReturnAnimation: Boolean,
     shouldKeepCoverForManualStart: Boolean,
@@ -980,7 +988,8 @@ internal fun resolveVideoPlayerCoverBootstrapState(
         hasPersistedRenderedFirstFrame
     return VideoPlayerCoverBootstrapState(
         isFirstFrameRendered = shouldReuseRenderedFrame,
-        hasStartedSmoothReveal = shouldReuseRenderedFrame
+        // 始终从封面垫底起步，由 shouldStartSmoothCoverReveal + hold delay 触发过渡。
+        hasStartedSmoothReveal = false,
     )
 }
 

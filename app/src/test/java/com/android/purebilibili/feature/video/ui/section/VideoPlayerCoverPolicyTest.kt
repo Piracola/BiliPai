@@ -54,6 +54,49 @@ class VideoPlayerCoverPolicyTest {
     }
 
     @Test
+    fun coverBootstrap_reusesFirstFrameButStillStartsFromCoverForReentry() {
+        // 已出画后回首页再进：可跳过等首帧，但必须再走 smooth reveal，否则无封面过渡。
+        val reused = resolveVideoPlayerCoverBootstrapState(
+            forceCoverDuringReturnAnimation = false,
+            shouldKeepCoverForManualStart = false,
+            hasPersistedRenderedFirstFrame = true,
+        )
+        assertTrue(reused.isFirstFrameRendered)
+        assertFalse(reused.hasStartedSmoothReveal)
+        assertTrue(
+            shouldStartSmoothCoverReveal(
+                isFirstFrameRendered = reused.isFirstFrameRendered,
+                forceCoverDuringReturnAnimation = false,
+                shouldKeepCoverForManualStart = false,
+            )
+        )
+        assertTrue(
+            shouldHoldEntryCoverUnderlay(
+                isFirstFrameRendered = true,
+                forceCoverDuringReturnAnimation = false,
+                shouldKeepCoverForManualStart = false,
+                hasStartedSmoothReveal = false,
+            )
+        )
+
+        val forcedReturn = resolveVideoPlayerCoverBootstrapState(
+            forceCoverDuringReturnAnimation = true,
+            shouldKeepCoverForManualStart = false,
+            hasPersistedRenderedFirstFrame = true,
+        )
+        assertFalse(forcedReturn.isFirstFrameRendered)
+        assertFalse(forcedReturn.hasStartedSmoothReveal)
+
+        val fresh = resolveVideoPlayerCoverBootstrapState(
+            forceCoverDuringReturnAnimation = false,
+            shouldKeepCoverForManualStart = false,
+            hasPersistedRenderedFirstFrame = false,
+        )
+        assertFalse(fresh.isFirstFrameRendered)
+        assertFalse(fresh.hasStartedSmoothReveal)
+    }
+
+    @Test
     fun immediatePlayback_holdsOpaqueCoverUnderlayUntilFirstFrameReveal() {
         assertTrue(
             shouldHoldEntryCoverUnderlay(
