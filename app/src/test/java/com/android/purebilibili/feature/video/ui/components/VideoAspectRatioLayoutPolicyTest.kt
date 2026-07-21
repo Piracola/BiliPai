@@ -69,11 +69,41 @@ class VideoAspectRatioLayoutPolicyTest {
     fun `fullscreen ratios should map to expected player resize modes`() {
         assertEquals(AspectRatioFrameLayout.RESIZE_MODE_FIT, VideoAspectRatio.FIT.playerResizeMode)
         assertEquals(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, VideoAspectRatio.FILL.playerResizeMode)
-        assertEquals(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, VideoAspectRatio.RATIO_16_9.playerResizeMode)
-        assertEquals(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, VideoAspectRatio.RATIO_4_3.playerResizeMode)
+        // Fixed frames letterbox the outer viewport; content FITs inside (no accidental crop).
+        assertEquals(AspectRatioFrameLayout.RESIZE_MODE_FIT, VideoAspectRatio.RATIO_16_9.playerResizeMode)
+        assertEquals(AspectRatioFrameLayout.RESIZE_MODE_FIT, VideoAspectRatio.RATIO_4_3.playerResizeMode)
         assertEquals(AspectRatioFrameLayout.RESIZE_MODE_FILL, VideoAspectRatio.STRETCH.playerResizeMode)
         assertEquals(16f / 9f, VideoAspectRatio.RATIO_16_9.targetAspectRatio)
         assertEquals(4f / 3f, VideoAspectRatio.RATIO_4_3.targetAspectRatio)
+    }
+
+    @Test
+    fun `fixed ratio layout plus fit content leaves 4 to 3 video uncropped in 16 to 9 frame`() {
+        // Phone landscape 21:9-ish → 16:9 frame is width-limited.
+        val frame = resolveVideoViewportLayout(
+            containerWidth = 2340,
+            containerHeight = 1080,
+            aspectRatio = VideoAspectRatio.RATIO_16_9
+        )
+        assertEquals(1920, frame.width)
+        assertEquals(1080, frame.height)
+        // Inner PlayerView uses FIT so a 4:3 source letterboxes inside this frame.
+        assertEquals(AspectRatioFrameLayout.RESIZE_MODE_FIT, VideoAspectRatio.RATIO_16_9.playerResizeMode)
+    }
+
+    @Test
+    fun `stretch fill fit and zoom cover common landscape source shapes`() {
+        // Ultrawide container, 16:9 source: FIT keeps full frame, FILL/ZOOM crop sides.
+        val full = resolveVideoViewportLayout(2400, 1080, VideoAspectRatio.FIT)
+        assertEquals(2400, full.width)
+        assertEquals(1080, full.height)
+        val fill = resolveVideoViewportLayout(2400, 1080, VideoAspectRatio.FILL)
+        assertEquals(2400, fill.width)
+        assertEquals(1080, fill.height)
+        // 4:3 forced frame on same container is pillarboxed.
+        val fourThree = resolveVideoViewportLayout(2400, 1080, VideoAspectRatio.RATIO_4_3)
+        assertEquals(1440, fourThree.width)
+        assertEquals(1080, fourThree.height)
     }
 
     @Test

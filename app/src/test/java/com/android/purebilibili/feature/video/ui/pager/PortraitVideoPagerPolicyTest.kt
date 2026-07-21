@@ -218,6 +218,41 @@ class PortraitVideoPagerPolicyTest {
                 isVerticalContent = true
             )
         )
+        assertEquals(
+            AspectRatioFrameLayout.RESIZE_MODE_FIT,
+            resolvePortraitPagerResizeMode(
+                aspectRatio = VideoAspectRatio.RATIO_16_9,
+                isVerticalContent = true
+            )
+        )
+    }
+
+    @Test
+    fun portraitPager_fixedRatioUsesTargetViewportAspect() {
+        assertEquals(
+            16f / 9f,
+            resolvePortraitPagerViewportAspect(
+                aspectRatio = VideoAspectRatio.RATIO_16_9,
+                currentVideoAspect = 9f / 16f,
+                isVerticalContent = true
+            )
+        )
+        assertEquals(
+            4f / 3f,
+            resolvePortraitPagerViewportAspect(
+                aspectRatio = VideoAspectRatio.RATIO_4_3,
+                currentVideoAspect = 9f / 16f,
+                isVerticalContent = true
+            )
+        )
+        assertEquals(
+            9f / 16f,
+            resolvePortraitPagerViewportAspect(
+                aspectRatio = VideoAspectRatio.FIT,
+                currentVideoAspect = 9f / 16f,
+                isVerticalContent = true
+            )
+        )
     }
 
     @Test

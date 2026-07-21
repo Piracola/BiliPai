@@ -1010,6 +1010,13 @@ fun VideoPlayerSection(
         )
     }
 
+    // Changing forced aspect ratio invalidates free pinch/pan offsets from the prior frame.
+    LaunchedEffect(currentAspectRatio) {
+        scale = 1f
+        panX = 0f
+        panY = 0f
+    }
+
     DisposableEffect(Unit) {
         onDispose { playerViewRef = null }
     }

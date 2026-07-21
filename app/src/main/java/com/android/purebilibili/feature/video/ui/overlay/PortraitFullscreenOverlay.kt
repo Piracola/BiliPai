@@ -132,6 +132,9 @@ fun PortraitFullscreenOverlay(
     onSpeedClick: () -> Unit,
     onQualityClick: () -> Unit,
     onRatioClick: () -> Unit,
+    showSubtitleChip: Boolean = false,
+    subtitleEnabled: Boolean = false,
+    onSubtitleClick: () -> Unit = {},
     onDanmakuToggle: () -> Unit,
     onDanmakuInputClick: () -> Unit,
     onToggleStatusBar: () -> Unit,
@@ -259,9 +262,12 @@ fun PortraitFullscreenOverlay(
                         currentSpeed = currentSpeed,
                         currentQualityLabel = currentQualityLabel,
                         currentRatioLabel = currentRatio.displayName,
+                        showSubtitleChip = showSubtitleChip,
+                        subtitleEnabled = subtitleEnabled,
                         onSpeedClick = onSpeedClick,
                         onQualityClick = onQualityClick,
                         onRatioClick = onRatioClick,
+                        onSubtitleClick = onSubtitleClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = progressLayoutPolicy.horizontalPaddingDp.dp)
@@ -405,9 +411,12 @@ private fun PortraitProgressControlStrip(
     currentSpeed: Float,
     currentQualityLabel: String,
     currentRatioLabel: String,
+    showSubtitleChip: Boolean = false,
+    subtitleEnabled: Boolean = false,
     onSpeedClick: () -> Unit,
     onQualityClick: () -> Unit,
     onRatioClick: () -> Unit,
+    onSubtitleClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -421,6 +430,14 @@ private fun PortraitProgressControlStrip(
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.weight(1f))
+        if (showSubtitleChip) {
+            PortraitChromeChip(
+                label = "字幕",
+                highlighted = subtitleEnabled,
+                onClick = onSubtitleClick
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         PortraitChromeChip(
             label = currentQualityLabel,
             highlighted = false,

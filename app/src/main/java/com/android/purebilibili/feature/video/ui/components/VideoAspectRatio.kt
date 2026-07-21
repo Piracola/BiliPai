@@ -34,17 +34,24 @@ enum class VideoAspectRatio(
 ) {
     FIT("适应", AspectRatioFrameLayout.RESIZE_MODE_FIT),
     FILL("填充", AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
+    /**
+     * Fixed 16:9 frame: outer viewport is letterboxed to 16:9, content [FIT]s inside.
+     * (Using ZOOM would crop non-16:9 sources and look like accidental FILL.)
+     */
     RATIO_16_9(
         "16:9",
         AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH,
         targetAspectRatio = 16f / 9f,
-        playerResizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        playerResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     ),
+    /**
+     * Fixed 4:3 frame: outer viewport is letterboxed to 4:3, content [FIT]s inside.
+     */
     RATIO_4_3(
         "4:3",
         AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT,
         targetAspectRatio = 4f / 3f,
-        playerResizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        playerResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     ),
     STRETCH("拉伸", AspectRatioFrameLayout.RESIZE_MODE_FILL);
     

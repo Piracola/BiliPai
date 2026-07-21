@@ -146,6 +146,10 @@ import com.android.purebilibili.feature.video.ui.components.SpeedSelectionMenuDi
 import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
 import com.android.purebilibili.feature.video.ui.components.resolveSafeVideoAspectRatio
 import com.android.purebilibili.feature.video.ui.overlay.PortraitFullscreenOverlay
+import com.android.purebilibili.feature.video.ui.overlay.PortraitSubtitleHost
+import com.android.purebilibili.feature.video.ui.overlay.shouldShowPortraitSubtitleChip
+import com.android.purebilibili.feature.video.subtitle.SubtitleAutoPreference
+import com.android.purebilibili.feature.video.subtitle.isSubtitleFeatureEnabledForUser
 import com.android.purebilibili.feature.video.player.resolveHandleAudioFocusByPolicy
 import com.android.purebilibili.feature.video.ui.section.FOREGROUND_SURFACE_RECOVERY_DELAY_MS
 import com.android.purebilibili.feature.video.ui.section.resolveLongPressPlaybackParameters
@@ -1500,6 +1504,12 @@ private fun VideoPageItem(
     var showSpeedMenu by rememberSaveable(bvid) { mutableStateOf(false) }
     var showQualityMenu by rememberSaveable(bvid) { mutableStateOf(false) }
     var showRatioMenu by rememberSaveable(bvid) { mutableStateOf(false) }
+    var showSubtitlePanel by rememberSaveable(bvid) { mutableStateOf(false) }
+    var subtitleTrackAvailable by remember(bvid) { mutableStateOf(false) }
+    var subtitleOverlayEnabled by remember(bvid) { mutableStateOf(false) }
+    val subtitleAutoPreference by SettingsManager
+        .getSubtitleAutoPreference(context)
+        .collectAsStateWithLifecycle(initialValue = SubtitleAutoPreference.OFF)
     var keepPortraitPagerAwake by remember(exoPlayer) {
         mutableStateOf(
             shouldKeepVideoPlaybackAwake(
@@ -1692,13 +1702,18 @@ private fun VideoPageItem(
         aspectRatio = aspectRatio,
         isVerticalContent = isVerticalContent
     )
+    val portraitPagerViewportAspect = resolvePortraitPagerViewportAspect(
+        aspectRatio = aspectRatio,
+        currentVideoAspect = currentVideoAspect,
+        isVerticalContent = isVerticalContent
+    )
     val portraitPagerResizeMode = resolvePortraitPagerResizeMode(
         aspectRatio = aspectRatio,
         isVerticalContent = isVerticalContent
     )
     val portraitViewportVerticalOffsetPx = with(density) {
         resolvePortraitVideoViewportVerticalOffsetDp(
-            currentVideoAspect = currentVideoAspect,
+            currentVideoAspect = portraitPagerViewportAspect,
             fillContainer = portraitPagerFillContainer,
             isLandscape = portraitPageWidthPx > portraitPageHeightPx
         ).dp.toPx()
@@ -1707,7 +1722,7 @@ private fun VideoPageItem(
         commentVisibilityProgress = commentSheetVisibilityProgress,
         containerWidthPx = portraitPageWidthPx,
         containerHeightPx = portraitPageHeightPx,
-        currentVideoAspect = currentVideoAspect,
+        currentVideoAspect = portraitPagerViewportAspect,
         viewportVerticalOffsetPx = portraitViewportVerticalOffsetPx,
         fillContainer = portraitPagerFillContainer
     )
@@ -1716,6 +1731,10 @@ private fun VideoPageItem(
         if (!isCurrentPage) {
             showCommentSheet = false
             showDetailSheet = false
+            showSubtitlePanel = false
+            showQualityMenu = false
+            showRatioMenu = false
+            showSpeedMenu = false
             commentSheetVisibilityProgress = 0f
             onCommentOverlayActiveChange(false)
         }
@@ -2072,7 +2091,7 @@ private fun VideoPageItem(
         
         if (isCurrentPage && isPlayerReadyForThisVideo) {
             PortraitVideoViewportContainer(
-                currentVideoAspect = currentVideoAspect,
+                currentVideoAspect = portraitPagerViewportAspect,
                 modifier = mediaLayerModifier,
                 fillContainer = portraitPagerFillContainer
             ) {
@@ -2661,18 +2680,35 @@ private fun VideoPageItem(
             onSpeedClick = {
                 if (isCurrentPage) {
                     showSpeedMenu = true
+                    showSubtitlePanel = false
                     onPortraitOverlayVisibleChange(true)
                 }
             },
             onQualityClick = {
                 if (isCurrentPage) {
                     showQualityMenu = true
+                    showSubtitlePanel = false
                     onPortraitOverlayVisibleChange(true)
                 }
             },
             onRatioClick = {
                 if (isCurrentPage) {
                     showRatioMenu = true
+                    showSubtitlePanel = false
+                    onPortraitOverlayVisibleChange(true)
+                }
+            },
+            showSubtitleChip = shouldShowPortraitSubtitleChip(
+                featureEnabled = isSubtitleFeatureEnabledForUser(),
+                trackAvailable = subtitleTrackAvailable
+            ),
+            subtitleEnabled = subtitleOverlayEnabled,
+            onSubtitleClick = {
+                if (isCurrentPage) {
+                    showSubtitlePanel = !showSubtitlePanel
+                    showQualityMenu = false
+                    showRatioMenu = false
+                    showSpeedMenu = false
                     onPortraitOverlayVisibleChange(true)
                 }
             },
@@ -2700,6 +2736,37 @@ private fun VideoPageItem(
                 showDetailSheet = showDetailSheet
             ),
             commentExpansionProgress = commentSheetVisibilityProgress
+        )
+
+        val pageCidForSubtitle = snapshotCid.takeIf { it > 0L }
+            ?: portraitDetailInfo?.cid
+            ?: 0L
+        PortraitSubtitleHost(
+            success = currentSuccess,
+            player = exoPlayer,
+            pageBvid = bvid,
+            pageCid = pageCidForSubtitle,
+            isCurrentPage = isCurrentPage,
+            controlsVisible = resolvePortraitOverlayControlsVisible(
+                portraitOverlayVisible = portraitOverlayVisible,
+                showDetailSheet = showDetailSheet
+            ),
+            commentExpansionProgress = commentSheetVisibilityProgress,
+            subtitleAutoPreference = subtitleAutoPreference,
+            isMuted = exoPlayer.volume <= 0f,
+            onSubtitleTrackSelected = { trackKey ->
+                viewModel.selectSubtitleTrack(trackKey)
+            },
+            showSubtitlePanel = showSubtitlePanel && isCurrentPage,
+            onShowSubtitlePanelChange = { show ->
+                showSubtitlePanel = show
+            },
+            onSubtitleEnabledChange = { enabled ->
+                subtitleOverlayEnabled = enabled
+            },
+            onTrackAvailableChange = { available ->
+                subtitleTrackAvailable = available
+            }
         )
 
         if (showQualityMenu && isCurrentPage) {
@@ -3050,6 +3117,25 @@ internal fun resolvePortraitPagerFillContainer(
         isVerticalVideo = isVerticalContent
     )
     return safe == VideoAspectRatio.FILL || safe == VideoAspectRatio.STRETCH
+}
+
+/**
+ * Viewport aspect used when not filling the whole page.
+ * Fixed 16:9 / 4:3 modes force that frame (parity with landscape fullscreen).
+ * FIT uses the source video aspect so letterboxing stays natural.
+ */
+internal fun resolvePortraitPagerViewportAspect(
+    aspectRatio: VideoAspectRatio = VideoAspectRatio.FIT,
+    currentVideoAspect: Float,
+    isVerticalContent: Boolean = true
+): Float {
+    val safe = resolveSafeVideoAspectRatio(
+        preferred = aspectRatio,
+        isVerticalVideo = isVerticalContent
+    )
+    val fixed = safe.targetAspectRatio?.takeIf { it.isFinite() && it > 0f }
+    if (fixed != null) return fixed
+    return currentVideoAspect.coerceAtLeast(0.1f)
 }
 
 internal fun resolvePortraitPagerResizeMode(
