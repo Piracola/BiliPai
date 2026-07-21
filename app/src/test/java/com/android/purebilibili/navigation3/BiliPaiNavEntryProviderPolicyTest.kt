@@ -90,8 +90,8 @@ class BiliPaiNavEntryProviderPolicyTest {
         )
 
         assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.forward)
-        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.pop)
-        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.predictivePop)
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.pop)
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.predictivePop)
     }
 
     @Test
@@ -140,8 +140,8 @@ class BiliPaiNavEntryProviderPolicyTest {
         )
 
         assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.forward)
-        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.pop)
-        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.predictivePop)
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.pop)
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.predictivePop)
     }
 
     @Test
@@ -465,8 +465,9 @@ class BiliPaiNavEntryProviderPolicyTest {
         )
 
         assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.forward)
-        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.pop)
-        assertEquals(BiliPaiNavRouteTransition.FALLBACK, transitions.predictivePop)
+        // 有 sourceRoute 的 VideoDetail：pop 默认即 NO_OP，完整观看后也不依赖 CardPosition 二次判定。
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.pop)
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transitions.predictivePop)
     }
 
     @Test
@@ -541,6 +542,26 @@ class BiliPaiNavEntryProviderPolicyTest {
                 sourceKey = "home:BV1",
                 sourceRoute = "home",
                 clickedBoundsRecorded = true,
+                cardFullyVisible = false
+            ),
+            activeMainHostRoute = "home"
+        )
+
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, transition)
+    }
+
+    @Test
+    fun entryPopToMainHostUsesSessionSourceRouteEvenWhenCardPositionLost() {
+        // 完整进入详情后 CardPosition 可能清空；session sourceRoute 仍应 NO_OP。
+        val transition = resolveBiliPaiNavEntryPopRouteTransition(
+            defaultTransition = BiliPaiNavRouteTransition.FALLBACK,
+            fromRoute = "video",
+            toRoute = "main_host",
+            cardTransitionEnabled = true,
+            sourceMetadata = BiliPaiNavSourceMetadata(
+                sourceKey = null,
+                sourceRoute = "home",
+                clickedBoundsRecorded = false,
                 cardFullyVisible = false
             ),
             activeMainHostRoute = "home"

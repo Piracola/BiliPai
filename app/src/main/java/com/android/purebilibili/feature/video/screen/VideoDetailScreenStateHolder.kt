@@ -482,6 +482,9 @@ internal fun VideoDetailScreenStateHolder(
         hasSharedTransitionScope = entryRootSharedTransitionScope != null,
         hasAnimatedVisibilityScope = entryRootAnimatedVisibilityScope != null
     )
+    // 有列表来源时默认按 shell morph 进场：即使首帧 AVS 尚未挂上，也先 defer 重内容。
+    val shellSharedBoundsLikely =
+        transitionEnabled && !sourceRouteForSharedElement.isNullOrBlank()
     val reuseFromMiniPlayerAtEntry = remember(currentBvid, playbackTargetCid, miniPlayerManager) {
         val manager = miniPlayerManager
         if (manager == null) {
@@ -499,7 +502,8 @@ internal fun VideoDetailScreenStateHolder(
     }
     val deferVideoDetailEntryLoad = shouldDeferVideoDetailLoadUntilEntryTransitionFinished(
         transitionEnabled = transitionEnabled,
-        detailShellSharedBoundsEnabled = detailShellSharedBoundsEnabledForEntry,
+        detailShellSharedBoundsEnabled = detailShellSharedBoundsEnabledForEntry ||
+            shellSharedBoundsLikely,
         reuseFromMiniPlayerAtEntry = reuseFromMiniPlayerAtEntry,
         isReturningFromDetail = isReturningFromDetail,
     )
@@ -635,17 +639,15 @@ internal fun VideoDetailScreenStateHolder(
         runCatching { uriHandler.openUri(url) }
     }
 
-    // 🎭 [性能优化] 进场视觉帧 + 重型组件延迟加载
-    // 卡片 shell morph 进场时：loadVideo 与 Tab 内容均等待 entryTransitionFinished，
-    // 但不再叠加二级 fadeIn/slide，避免与 sharedBounds 冲突。
-    val shellSharedBoundsLikely = transitionEnabled && !sourceRouteForSharedElement.isNullOrBlank()
-    val entryVisualEnabled = transitionEnabled && !deferVideoDetailEntryLoad && !shellSharedBoundsLikely
+    // 🎭 [性能优化] 进场以动画为主：shell morph 期间不挂载简介/相关/评论等重型内容，
+    // loadVideo 也等 entryTransitionFinished。不再叠加二级 fadeIn/slide，避免与 sharedBounds 冲突。
+    val entryVisualEnabled = transitionEnabled && !deferVideoDetailEntryLoad
     // 注意：不要把 entryTransitionFinished 放进 remember key，否则返回时 finished 回抖会重建状态并隐藏内容。
-    var isTransitionFinished by remember(deferVideoDetailEntryLoad, entryVisualEnabled, shellSharedBoundsLikely) {
+    var isTransitionFinished by remember(deferVideoDetailEntryLoad, entryVisualEnabled) {
         mutableStateOf(
             when {
-                deferVideoDetailEntryLoad -> entryTransitionFinished
-                !transitionEnabled || shellSharedBoundsLikely -> true
+                deferVideoDetailEntryLoad -> false
+                !transitionEnabled -> true
                 else -> false
             }
         )
@@ -659,7 +661,6 @@ internal fun VideoDetailScreenStateHolder(
         entryTransitionFinished,
         entryVisualEnabled,
         motionSpec.entryPhaseDurationMillis,
-        shellSharedBoundsLikely,
         transitionEnabled
     ) {
         when {
@@ -673,7 +674,7 @@ internal fun VideoDetailScreenStateHolder(
                 }
             }
 
-            !transitionEnabled || shellSharedBoundsLikely -> {
+            !transitionEnabled -> {
                 entryVisualProgress.snapTo(1f)
                 isTransitionFinished = true
             }
@@ -1105,15 +1106,20 @@ internal fun VideoDetailScreenStateHolder(
         miniPlayerManager,
         currentBvid,
         coverTakeoverBeforeBackDelayMillis,
-        topBarActionHandler
+        topBarActionHandler,
+        detailShellSharedBoundsEnabled,
     ) {
         action@{ action: VideoDetailTopBarAction ->
             if (isActuallyLeaving) return@action
             isActuallyLeaving = true // 标记确实是用户通过点击或返回键离开
             isScreenActive = false  // 标记页面正在退出
             latestOnMarkReturningFromDetail()
-            // 🎯 通知小窗管理器这是用户主动导航离开（用于控制后台音频）
-            miniPlayerManager?.markLeavingByNavigation(expectedBvid = currentBvid)
+            // 🎯 通知小窗管理器这是用户主动导航离开。
+            // 有 shell sharedBounds 时延后停播，避免一镜到底落位前 surface 被掐掉。
+            miniPlayerManager?.markLeavingByNavigation(
+                expectedBvid = currentBvid,
+                deferPlaybackStop = detailShellSharedBoundsEnabled,
+            )
 
             restoreStatusBar() // 立即恢复状态栏（动画开始前）
             pendingTopBarActionRunnable?.let(topBarActionHandler::removeCallbacks)

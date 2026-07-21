@@ -177,17 +177,11 @@ internal fun resolveBiliPaiNavDisplayPopRouteTransition(
         }
 
         val morphSourceRoute = resolveCardMorphDestinationSourceRoute(fromKey)
-        val normalizedSourceRoute = sourceMetadata.sourceRoute?.substringBefore("?")
         val normalizedMorphRoute = morphSourceRoute?.substringBefore("?")
-        val morphBvid = (fromKey as? BiliPaiNavKey.VideoDetail)?.bvid
-        val sourceMatchesCurrentMorph = morphBvid != null &&
-            normalizedSourceRoute != null &&
-            normalizedMorphRoute == normalizedSourceRoute &&
-            sourceMetadata.sourceKey == "$normalizedSourceRoute:$morphBvid"
-        val sharedReadyMorphToSourceCard = sourceMetadata.sharedTransitionEntryReady &&
-            sourceMatchesCurrentMorph &&
-            toIsCardReturnTarget
-        if (sharedReadyMorphToSourceCard) {
+        // VideoDetail.sourceRoute 在 push 时写入 key，完整观看后仍可靠。
+        // 不再依赖 CardPosition / sharedTransitionEntryReady：任一过期都会把 pop 打成
+        // CLASSIC_CARD fade，表现为「卡片已在原位、没有落位动画」。
+        if (toIsCardReturnTarget && !normalizedMorphRoute.isNullOrBlank()) {
             return BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
         }
         return BiliPaiNavRouteTransition.CLASSIC_CARD

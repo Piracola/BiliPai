@@ -124,7 +124,8 @@ class BiliPaiNavMotionPolicyTest {
     }
 
     @Test
-    fun staleVideoReturnUsesClassicCardRouteLayer() {
+    fun videoReturnUsesNoOpWhenKeyHasSourceRouteEvenIfSessionKeyStale() {
+        // session key 可能仍指向上一支视频；key 自身 sourceRoute 足以驱动 shell morph。
         val decision = resolveBiliPaiBackGestureDecision(
             cardTransitionEnabled = true,
             systemBackAction = AppSystemBackAction.NAVIGATE_UP,
@@ -135,6 +136,25 @@ class BiliPaiNavMotionPolicyTest {
                 sourceRoute = "home",
                 clickedBoundsRecorded = true,
                 cardFullyVisible = true
+            )
+        )
+
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, decision.routeTransition)
+        assertFalse(decision.interceptSystemBack)
+    }
+
+    @Test
+    fun videoReturnWithoutMorphSourceUsesClassicCardRouteLayer() {
+        val decision = resolveBiliPaiBackGestureDecision(
+            cardTransitionEnabled = true,
+            systemBackAction = AppSystemBackAction.NAVIGATE_UP,
+            currentKey = BiliPaiNavKey.VideoDetail("BV2", sourceRoute = null),
+            previousKey = BiliPaiNavKey.Home,
+            sourceMetadata = BiliPaiNavSourceMetadata(
+                sourceKey = null,
+                sourceRoute = null,
+                clickedBoundsRecorded = false,
+                cardFullyVisible = false
             )
         )
 

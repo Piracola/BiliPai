@@ -1537,7 +1537,16 @@ class MiniPlayerManager private constructor(private val context: Context) :
      * 🎯 标记通过导航离开（在返回按钮点击时调用）
      *  [修复] 在默认模式和画中画模式下立即暂停播放，解决生命周期时序问题
      */
-    fun markLeavingByNavigation(expectedBvid: String? = null, forceStop: Boolean = false) {
+    /**
+     * @param deferPlaybackStop 为 true 时只打离开标记，不立刻 pause/清 player。
+     * 卡片 sharedBounds 返回（一镜到底）需要表面跟壳缩；过早停播会让落位变成
+     * 「黑壳瞬间卸掉、列表卡已在原位」。dispose / 返回结束后仍会释放。
+     */
+    fun markLeavingByNavigation(
+        expectedBvid: String? = null,
+        forceStop: Boolean = false,
+        deferPlaybackStop: Boolean = false,
+    ) {
         if (!shouldHandleNavigationLeaveForBvid(expectedBvid = expectedBvid, currentBvid = currentBvid)) {
             Logger.d(
                 TAG,
@@ -1546,11 +1555,19 @@ class MiniPlayerManager private constructor(private val context: Context) :
             return
         }
         isLeavingByNavigation = true
-        Logger.d(TAG, "🎯 markLeavingByNavigation: isLeavingByNavigation=true")
+        Logger.d(
+            TAG,
+            "🎯 markLeavingByNavigation: isLeavingByNavigation=true deferStop=$deferPlaybackStop"
+        )
         
         //  [修复] 默认模式和画中画模式下，通过导航离开时应立即停止播放
         // 原因：ON_PAUSE 事件可能在此标志设置之前触发，导致音频继续播放
         // 画中画模式说明："切到桌面进入系统画中画"，返回主页时应停止
+        // shared 返回 morph：deferPlaybackStop=true，等壳落位后再由 dispose 收尾。
+        if (deferPlaybackStop && !forceStop) {
+            Logger.d(TAG, "🎬 defer playback stop for shared return morph")
+            return
+        }
         val mode = getCurrentMode()
         val stopPlaybackOnExit = SettingsManager.getStopPlaybackOnExitSync(context)
         if (forceStop || shouldClearPlaybackNotificationOnNavigationExit(mode, stopPlaybackOnExit)) {

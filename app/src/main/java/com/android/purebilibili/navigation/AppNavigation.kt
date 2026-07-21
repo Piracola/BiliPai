@@ -1362,7 +1362,12 @@ fun AppNavigation(
                 if (manager.shouldShowInAppMiniPlayer()) {
                     manager.enterMiniMode()
                 } else if (shouldMarkNavigationLeaveBeforeVideoExit(isMiniMode = manager.isMiniMode)) {
-                    manager.markLeavingByNavigation(expectedBvid = videoKey.bvid)
+                    // 卡片过渡开启时延后停播：完整进入后再返回需要 live surface 跟壳缩。
+                    manager.markLeavingByNavigation(
+                        expectedBvid = videoKey.bvid,
+                        deferPlaybackStop = cardTransitionEnabled &&
+                            !videoKey.sourceRoute.isNullOrBlank(),
+                    )
                 }
             }
 
