@@ -458,6 +458,7 @@ fun VideoPlayerSection(
     hasFavoritePlaylist: Boolean = false,
     onFavoritePlaylistClick: () -> Unit = {},
     forceCoverOnly: Boolean = false,
+    preserveCurrentFrameOnFullscreenChange: Boolean = false,
     liveBackPreview: Boolean = false,
     useTextureSurfaceForNavigation: Boolean = false,
     predictiveBackCancelRecoveryGeneration: Int = 0,
@@ -2600,11 +2601,13 @@ fun VideoPlayerSection(
             forceCoverDuringReturnAnimation,
             persistedRenderedFirstFrame,
             keepCoverForManualStart,
+            preserveCurrentFrameOnFullscreenChange,
         ) {
             resolveVideoPlayerCoverBootstrapState(
                 forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
                 shouldKeepCoverForManualStart = keepCoverForManualStart,
-                hasPersistedRenderedFirstFrame = persistedRenderedFirstFrame
+                hasPersistedRenderedFirstFrame = persistedRenderedFirstFrame,
+                preserveCurrentFrameOnFullscreenChange = preserveCurrentFrameOnFullscreenChange,
             )
         }
         var isFirstFrameRendered by remember(bvid) {

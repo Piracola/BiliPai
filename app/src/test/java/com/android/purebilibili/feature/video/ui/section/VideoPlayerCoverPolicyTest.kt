@@ -104,6 +104,27 @@ class VideoPlayerCoverPolicyTest {
     }
 
     @Test
+    fun coverBootstrap_fullscreenSwitchKeepsCurrentFrameVisible() {
+        val fullscreenSwitch = resolveVideoPlayerCoverBootstrapState(
+            forceCoverDuringReturnAnimation = false,
+            shouldKeepCoverForManualStart = false,
+            hasPersistedRenderedFirstFrame = false,
+            preserveCurrentFrameOnFullscreenChange = true,
+        )
+
+        assertTrue(fullscreenSwitch.isFirstFrameRendered)
+        assertTrue(fullscreenSwitch.hasStartedSmoothReveal)
+        assertFalse(
+            shouldShowCoverImage(
+                isFirstFrameRendered = fullscreenSwitch.isFirstFrameRendered,
+                forceCoverDuringReturnAnimation = false,
+                shouldKeepCoverForManualStart = false,
+                hasStartedSmoothReveal = fullscreenSwitch.hasStartedSmoothReveal,
+            )
+        )
+    }
+
+    @Test
     fun smoothRevealReset_onlyWhenForcedCoverOrManualStart() {
         assertTrue(
             shouldResetSmoothCoverReveal(

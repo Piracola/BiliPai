@@ -822,6 +822,7 @@ internal fun VideoDetailScreenStateHolder(
     // 使用 rememberSaveable 确保状态在横竖屏切换时保持
     var userRequestedFullscreen by rememberSaveable { mutableStateOf(false) }
     var manualPortraitHoldActive by rememberSaveable { mutableStateOf(false) }
+    var preserveCurrentFrameOnFullscreenChange by remember { mutableStateOf(false) }
     val activity = remember { context.findActivity() }
     val isActivityInMultiWindowMode = activity?.let { host ->
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && host.isInMultiWindowMode
@@ -855,6 +856,11 @@ internal fun VideoDetailScreenStateHolder(
         isFullscreenMode = isFullscreenMode,
         onReleaseManualFullscreenRequest = { userRequestedFullscreen = false }
     )
+    LaunchedEffect(isFullscreenMode) {
+        if (preserveCurrentFrameOnFullscreenChange) {
+            preserveCurrentFrameOnFullscreenChange = false
+        }
+    }
     var previousPipMode by remember { mutableStateOf(isInPipMode) }
     LaunchedEffect(isInPipMode) { presentationState.syncPipMode(isInPipMode) }
     LaunchedEffect(isPipMode, subReplyState.visible) {
@@ -2145,6 +2151,10 @@ internal fun VideoDetailScreenStateHolder(
     // 辅助函数：切换全屏状态
     val toggleFullscreen = {
         val activity = context.findActivity()
+        preserveCurrentFrameOnFullscreenChange = activity != null &&
+            (!isVerticalVideo || isFullscreenMode) &&
+            playerState.player.playWhenReady &&
+            playerState.player.currentPosition > 0L
         toggleVideoDetailFullscreen(
             activity = activity,
             isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
@@ -2400,6 +2410,7 @@ internal fun VideoDetailScreenStateHolder(
                         showExternalPlaylistQueueSheet = true
                     },
                     forceCoverOnly = forceCoverOnlyForLiveSafeReturn,
+                    preserveCurrentFrameOnFullscreenChange = preserveCurrentFrameOnFullscreenChange,
                     useTextureSurfaceForNavigation = transitionEnabled,
                     predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,
                     allowLivePlayerSharedElement = true,
@@ -2927,6 +2938,7 @@ internal fun VideoDetailScreenStateHolder(
                                         keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
                                         bindLivePlayerForBackPreview = bindLivePlayerForBackPreview
                                     ),
+                                preserveCurrentFrameOnFullscreenChange = preserveCurrentFrameOnFullscreenChange,
                                 liveBackPreview = bindLivePlayerForBackPreview,
                                 useTextureSurfaceForNavigation = transitionEnabled,
                                 predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,

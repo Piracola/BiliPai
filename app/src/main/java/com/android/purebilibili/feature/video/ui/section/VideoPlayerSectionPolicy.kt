@@ -980,14 +980,18 @@ internal data class VideoPlayerCoverBootstrapState(
 internal fun resolveVideoPlayerCoverBootstrapState(
     forceCoverDuringReturnAnimation: Boolean,
     shouldKeepCoverForManualStart: Boolean,
-    hasPersistedRenderedFirstFrame: Boolean
+    hasPersistedRenderedFirstFrame: Boolean,
+    preserveCurrentFrameOnFullscreenChange: Boolean = false,
 ): VideoPlayerCoverBootstrapState {
     val shouldReuseRenderedFrame = !forceCoverDuringReturnAnimation &&
         !shouldKeepCoverForManualStart &&
         hasPersistedRenderedFirstFrame
+    val shouldKeepCurrentFrameVisible = !forceCoverDuringReturnAnimation &&
+        !shouldKeepCoverForManualStart &&
+        preserveCurrentFrameOnFullscreenChange
     return VideoPlayerCoverBootstrapState(
-        isFirstFrameRendered = shouldReuseRenderedFrame,
-        hasStartedSmoothReveal = false,
+        isFirstFrameRendered = shouldReuseRenderedFrame || shouldKeepCurrentFrameVisible,
+        hasStartedSmoothReveal = shouldKeepCurrentFrameVisible,
     )
 }
 
