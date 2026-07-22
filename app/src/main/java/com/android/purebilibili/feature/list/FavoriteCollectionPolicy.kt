@@ -128,7 +128,7 @@ internal fun filterFavoriteFoldersByQuery(
 internal fun resolveFavoriteCollectionRoute(item: VideoItem): FavoriteCollectionRoute? {
     if (!item.isCollectionResource || item.collectionId <= 0L) return null
     return FavoriteCollectionRoute(
-        type = "season",
+        type = "favorite_season",
         id = item.collectionId,
         mid = item.collectionMid,
         title = item.title,
