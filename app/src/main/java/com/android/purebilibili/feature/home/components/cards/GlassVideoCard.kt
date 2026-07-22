@@ -259,6 +259,10 @@ fun GlassVideoCard(
                 motionSpec = cardSharedTransitionMotionSpec,
                 clipShape = cardShellShape
             )
+            .videoCardSiblingDepthScale(
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+            )
             .padding(6.dp)
             .animateEnter(
                 index = index,

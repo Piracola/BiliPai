@@ -214,7 +214,7 @@ internal fun BiliPaiNavDisplayHost(
             withFrameNanos { }
         }
     }
-    // 仅系统减弱动画时降为 scrim-only；不按机型降级，保证完整 20px 景深观感。
+    // 仅系统减弱动画时降为 scrim-only；不按机型降级，保证完整 12dp 景深观感。
     val transitionBackgroundMotionTier =
         if (rememberSystemReduceMotion()) MotionTier.Reduced else MotionTier.Normal
     var previousVideoCardTransitionBackStack by remember {

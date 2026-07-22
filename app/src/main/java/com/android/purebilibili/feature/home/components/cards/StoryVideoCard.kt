@@ -251,6 +251,10 @@ fun StoryVideoCard(
                 motionSpec = cardSharedTransitionMotionSpec,
                 clipShape = cardShellShape
             )
+            .videoCardSiblingDepthScale(
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+            )
             .padding(horizontal = cardHorizontalPadding, vertical = 8.dp)
             .animateEnter(
                 index = index,

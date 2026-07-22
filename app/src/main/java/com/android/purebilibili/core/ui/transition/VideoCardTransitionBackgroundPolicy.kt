@@ -3,8 +3,12 @@ package com.android.purebilibili.core.ui.transition
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -15,31 +19,44 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalView
 import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.navigation.isVideoCardReturnTargetRoute
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-// 景深三层（与 Hero 卡片放大配合，progress 0→1 同源）：
-// 1) scale 下沉：列表「退后」；过小无感，过大返回像回弹 → 标定 ~5.5%
-// 2) blur：空间纵深（冻结层 + BlurEffect 20px）
-// 3) scrim 压暗：聚焦/可读；纯 blur 偏发灰发飘，压暗把注意力钉在飞卡上
-// - 冻结层：首帧 record 一次后只改 BlurEffect/scale，禁止 live 重录
+// 景深层（与 Hero 卡片放大配合，progress 0→1 同源）：
+// 1) **页面层不缩放**：整页 scale 会把状态栏外框缩进黑边；纵深改由 sibling 卡片承担
+// 2) blur：空间纵深（冻结层 + BlurEffect）。半径按 **dp** 定义、按密度换算
+// 3) scrim 压暗：聚焦/可读
+// 4) 页面圆角：仅在整页缩放开启时启用；当前关闭，避免四角啃边
+// - sibling 卡片：非飞卡随 depth 缩约 8%，飞卡保持 1（sharedBounds 接管）
+// - 冻结层：首帧 record 一次后只改 BlurEffect，禁止 live 重录
 // - 压暗全程保留（含 HELD），避免打开完成后景深断裂
 // - 返回：景深 progress 与 shared morph 同墙钟、同 Linear
-private const val VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_PX = 20f
+private const val VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_DP = 12f
 private const val VIDEO_CARD_TRANSITION_BLUR_QUANTUM_PX = 1f
-// 压暗：配合更大下沉仍要可读，略强于旧 0.22/0.11，但低于半透明模态（避免脏）。
+// 压暗：配合 sibling 下沉仍要可读，略强于旧 0.22/0.11，但低于半透明模态（避免脏）。
 private const val VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA_DARK = 0.28f
 private const val VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA_LIGHT = 0.14f
 private const val VIDEO_CARD_TRANSITION_LIGHT_REDUCED_OPENING_SCRIM_ALPHA = 0.08f
-// 列表下沉：0.022 几乎看不出；0.055 与卡片放大对仗清晰，返回 Linear 清回仍不「弹」。
-private const val VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION = 0.055f
+// 列表下沉：整页缩放会把状态栏/页面外框一起缩进黑边，观感像「整页在抖」。
+// 页面层恒为 1；下沉改由首页其他卡片组件（sibling）跟随 depthProgress。
+private const val VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION = 0f
+/** 首页非飞卡组件在满深度时的缩放减量（约 8%），跟随景深、不带动整页。 */
+internal const val VIDEO_CARD_TRANSITION_SIBLING_SCALE_REDUCTION = 0.08f
 /** 景深缩放露出的边缘：至少压到这个 tint 强度，避免浅色主题读成「白条」。 */
 private const val VIDEO_CARD_TRANSITION_SCALE_GAP_MIN_TINT_LIGHT = 0.36f
 private const val VIDEO_CARD_TRANSITION_SCALE_GAP_MIN_TINT_DARK = 0.44f
 private val VIDEO_CARD_TRANSITION_LIGHT_SCRIM_TINT = Color(0xFF8E8E93)
 private val VIDEO_CARD_TRANSITION_DARK_GAP_BASE = Color(0xFF121212)
+
+/**
+ * 退后页满深度圆角兜底（dp）。
+ * 优先用设备物理圆角（API 31+ WindowInsets）；未上报 / OEM 返回 0 时用此值。
+ * 取 max(设备, 兜底)：缩到 90% 后过小的物理圆角读成尖角卡片。
+ */
+internal const val VIDEO_CARD_TRANSITION_BACKGROUND_CORNER_FALLBACK_DP = 24f
 
 // 开场与返回时长由共享元素速度设置提供；取消仍固定为短恢复动画。
 // 与共享元素标准时长对齐，避免景深先清完、封面还在赶路。
@@ -58,6 +75,8 @@ internal data class VideoCardTransitionBackgroundFrame(
     val scrimAlpha: Float,
     val contentScale: Float,
     val useLightScrimTint: Boolean = false,
+    /** 退后页面（冻结层）的圆角半径，随景深线性建立。 */
+    val cornerRadiusPx: Float = 0f,
 )
 
 internal data class VideoCardTransitionBackgroundState(
@@ -101,6 +120,8 @@ internal fun resolveVideoCardTransitionContentScale(
     motionTier: MotionTier,
     isGestureRestoreInProgress: Boolean,
 ): Float {
+    // 页面层禁止缩放：黑边/整页抖动来源。纵深交给 sibling 组件缩放。
+    if (VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION <= 0f) return 1f
     if (phase == VideoCardTransitionBackgroundPhase.IDLE || motionTier == MotionTier.Reduced) {
         return 1f
     }
@@ -111,6 +132,25 @@ internal fun resolveVideoCardTransitionContentScale(
     return 1f - VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION * depthProgress
 }
 
+/**
+ * 首页其他卡片（非当前飞卡）的景深缩放。
+ * 飞卡本身由 sharedBounds 接管几何，这里必须保持 1，避免双重缩放。
+ */
+internal fun resolveVideoCardSiblingDepthScale(
+    depthProgress: Float,
+    phase: VideoCardTransitionBackgroundPhase,
+    isSharedMorphSourceCard: Boolean,
+    motionTier: MotionTier,
+    maxReduction: Float = VIDEO_CARD_TRANSITION_SIBLING_SCALE_REDUCTION,
+): Float {
+    if (isSharedMorphSourceCard) return 1f
+    if (phase == VideoCardTransitionBackgroundPhase.IDLE || motionTier == MotionTier.Reduced) {
+        return 1f
+    }
+    if (maxReduction <= 0f) return 1f
+    return 1f - maxReduction * depthProgress.coerceIn(0f, 1f)
+}
+
 internal fun resolveVideoCardTransitionBackgroundFrame(
     progress: Float,
     phase: VideoCardTransitionBackgroundPhase,
@@ -118,6 +158,10 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
     isLightBackground: Boolean = false,
     isGestureRestoreInProgress: Boolean = false,
     sdkInt: Int = Build.VERSION.SDK_INT,
+    /** 屏幕密度（px/dp）。模糊/圆角按 dp 标定，调用方须传 DrawScope density。 */
+    density: Float = 1f,
+    /** 设备物理屏圆角（px）；0 表示未知，走 24dp 兜底。 */
+    deviceCornerRadiusPx: Float = 0f,
 ): VideoCardTransitionBackgroundFrame {
     val clamped = progress.coerceIn(0f, 1f)
     val depthProgress = resolveVideoCardTransitionDepthProgress(
@@ -125,7 +169,7 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
         phase = phase,
     )
     val blurStrength = resolveVideoCardTransitionBlurStrength(depthProgress)
-    val maxBlurRadiusPx = resolveVideoCardTransitionMaxBlurRadiusPx(motionTier)
+    val maxBlurRadiusPx = resolveVideoCardTransitionMaxBlurRadiusPx(motionTier, density)
     // 仅系统减弱动画(Reduced) / API<31 跳过 GPU 模糊；不按机型降级峰值。
     val rawBlurRadiusPx = if (
         phase != VideoCardTransitionBackgroundPhase.IDLE &&
@@ -160,7 +204,76 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
             isGestureRestoreInProgress = isGestureRestoreInProgress,
         ),
         useLightScrimTint = isLightBackground,
+        cornerRadiusPx = resolveVideoCardTransitionBackgroundCornerRadiusPx(
+            depthProgress = if (phase == VideoCardTransitionBackgroundPhase.IDLE) 0f else depthProgress,
+            motionTier = motionTier,
+            density = density,
+            deviceCornerRadiusPx = deviceCornerRadiusPx,
+        ),
     )
+}
+
+/**
+ * 读设备物理屏圆角（px）。取四角最大值。
+ * API < 31 或 insets 未就绪 / OEM 返回 0 → 0（由 fallback dp 兜底）。
+ */
+internal fun resolveDeviceDisplayCornerRadiusPx(
+    rootWindowInsets: android.view.WindowInsets?,
+    sdkInt: Int = Build.VERSION.SDK_INT,
+): Float {
+    if (sdkInt < Build.VERSION_CODES.S || rootWindowInsets == null) return 0f
+    val positions = intArrayOf(
+        android.view.RoundedCorner.POSITION_TOP_LEFT,
+        android.view.RoundedCorner.POSITION_TOP_RIGHT,
+        android.view.RoundedCorner.POSITION_BOTTOM_LEFT,
+        android.view.RoundedCorner.POSITION_BOTTOM_RIGHT,
+    )
+    var maxRadius = 0
+    for (position in positions) {
+        val radius = rootWindowInsets.getRoundedCorner(position)?.radius ?: 0
+        if (radius > maxRadius) maxRadius = radius
+    }
+    return maxRadius.toFloat()
+}
+
+/**
+ * 满深度圆角（dp）：max(设备物理圆角换算 dp, [fallbackDp])。
+ */
+internal fun resolveVideoCardTransitionBackgroundCornerRadiusDp(
+    deviceCornerRadiusPx: Float,
+    density: Float,
+    fallbackDp: Float = VIDEO_CARD_TRANSITION_BACKGROUND_CORNER_FALLBACK_DP,
+): Float {
+    val densitySafe = density.coerceAtLeast(0.01f)
+    val deviceDp = if (deviceCornerRadiusPx > 0f) {
+        deviceCornerRadiusPx / densitySafe
+    } else {
+        0f
+    }
+    return maxOf(deviceDp, fallbackDp.coerceAtLeast(0f))
+}
+
+/**
+ * 退后页面圆角半径（px）：随景深线性建立。
+ * 满深度 = max(设备圆角, 24dp 兜底) × density。
+ * Reduced 档不缩放也不模糊，圆角同样跳过。
+ */
+internal fun resolveVideoCardTransitionBackgroundCornerRadiusPx(
+    depthProgress: Float,
+    motionTier: MotionTier,
+    density: Float,
+    deviceCornerRadiusPx: Float = 0f,
+): Float {
+    if (motionTier == MotionTier.Reduced) return 0f
+    // 无整页缩放时不加页面圆角，否则四角会啃出黑角，像又缩了一圈。
+    if (VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION <= 0f) return 0f
+    val fullRadiusDp = resolveVideoCardTransitionBackgroundCornerRadiusDp(
+        deviceCornerRadiusPx = deviceCornerRadiusPx,
+        density = density,
+    )
+    return fullRadiusDp *
+        density.coerceAtLeast(0f) *
+        depthProgress.coerceIn(0f, 1f)
 }
 
 /**
@@ -427,6 +540,8 @@ private class VideoCardTransitionBackgroundFrameCache {
     private var lastMotionTier: MotionTier? = null
     private var lastIsLightBackground: Boolean? = null
     private var lastGestureRestoreInProgress: Boolean? = null
+    private var lastDensity = Float.NaN
+    private var lastDeviceCornerRadiusPx = Float.NaN
     private var cached = VideoCardTransitionBackgroundFrame(
         blurRadiusPx = 0f,
         scrimAlpha = 0f,
@@ -439,25 +554,33 @@ private class VideoCardTransitionBackgroundFrameCache {
         motionTier: MotionTier,
         isLightBackground: Boolean,
         isGestureRestoreInProgress: Boolean,
+        density: Float,
+        deviceCornerRadiusPx: Float,
     ): VideoCardTransitionBackgroundFrame {
         if (
             progress != lastProgress ||
             phase != lastPhase ||
             motionTier != lastMotionTier ||
             isLightBackground != lastIsLightBackground ||
-            isGestureRestoreInProgress != lastGestureRestoreInProgress
+            isGestureRestoreInProgress != lastGestureRestoreInProgress ||
+            density != lastDensity ||
+            deviceCornerRadiusPx != lastDeviceCornerRadiusPx
         ) {
             lastProgress = progress
             lastPhase = phase
             lastMotionTier = motionTier
             lastIsLightBackground = isLightBackground
             lastGestureRestoreInProgress = isGestureRestoreInProgress
+            lastDensity = density
+            lastDeviceCornerRadiusPx = deviceCornerRadiusPx
             cached = resolveVideoCardTransitionBackgroundFrame(
                 progress = progress,
                 phase = phase,
                 motionTier = motionTier,
                 isLightBackground = isLightBackground,
                 isGestureRestoreInProgress = isGestureRestoreInProgress,
+                density = density,
+                deviceCornerRadiusPx = deviceCornerRadiusPx,
             )
         }
         return cached
@@ -473,11 +596,13 @@ private class VideoCardTransitionSnapshotLayerState {
     var freezeRecording: Boolean = false
     var hasRecordedContent: Boolean = false
     var lastBlurRadiusPx: Float = Float.NaN
+    var lastCornerRadiusPx: Float = Float.NaN
 
     fun reset() {
         freezeRecording = false
         hasRecordedContent = false
         lastBlurRadiusPx = Float.NaN
+        lastCornerRadiusPx = Float.NaN
     }
 }
 
@@ -496,7 +621,7 @@ internal fun shouldLiveRecordVideoCardTransitionSnapshot(
 
 /**
  * 卡片开合景深：
- * - OPENING：首帧 record 一次后立刻冻结，BlurEffect/scale 跟进度（完整 20px 观感）
+ * - OPENING：首帧 record 一次后立刻冻结，BlurEffect/scale/圆角跟进度（完整 12dp 观感）
  * - HELD / RETURNING：复用冻结层，不每帧重录 feed
  * - IDLE：释放并恢复普通绘制
  * - Reduced / API 31 以下：不模糊，仅 scrim（无障碍/系统设置，非机型降级）
@@ -512,6 +637,12 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
 ): Modifier {
     val contentLayer = rememberGraphicsLayer()
     val snapshotState = remember { VideoCardTransitionSnapshotLayerState() }
+    val view = LocalView.current
+    var deviceCornerRadiusPx by remember { mutableFloatStateOf(0f) }
+    // insets 首帧可能为空；每次重组刷新，开场前通常已就绪。
+    SideEffect {
+        deviceCornerRadiusPx = resolveDeviceDisplayCornerRadiusPx(view.rootWindowInsets)
+    }
     val phase = phaseProvider()
     val motionTier = motionTierProvider()
     val useSnapshotBlur = shouldUseVideoCardTransitionSnapshotBlur(
@@ -564,6 +695,8 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
             motionTier = activeMotionTier,
             isLightBackground = isLightBackgroundProvider(),
             isGestureRestoreInProgress = isGestureRestoreInProgressProvider(),
+            density = density,
+            deviceCornerRadiusPx = deviceCornerRadiusPx,
         )
         val snapshotBlurActive = shouldUseVideoCardTransitionSnapshotBlur(
             phase = activePhase,
@@ -599,6 +732,16 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
         contentLayer.pivotOffset = Offset(size.width / 2f, size.height / 2f)
         contentLayer.scaleX = frame.contentScale
         contentLayer.scaleY = frame.contentScale
+        if (frame.cornerRadiusPx != snapshotState.lastCornerRadiusPx) {
+            snapshotState.lastCornerRadiusPx = frame.cornerRadiusPx
+            if (frame.cornerRadiusPx > 0.01f) {
+                contentLayer.setRoundRectOutline(cornerRadius = frame.cornerRadiusPx)
+                contentLayer.clip = true
+            } else {
+                contentLayer.setRectOutline()
+                contentLayer.clip = false
+            }
+        }
         if (frame.blurRadiusPx != snapshotState.lastBlurRadiusPx) {
             snapshotState.lastBlurRadiusPx = frame.blurRadiusPx
             contentLayer.renderEffect = if (frame.blurRadiusPx > 0.01f) {
@@ -663,17 +806,21 @@ private fun resolveVideoCardTransitionBlurStrength(progress: Float): Float {
 }
 
 /**
- * 开合景深峰值模糊半径。
+ * 开合景深峰值模糊半径（px）。
  * - Reduced（仅系统减弱动画）：0
- * - Normal / Enhanced：统一 20px，**不按机型降级**
+ * - Normal / Enhanced：统一 **12dp × 密度**，**不按机型降级**。
+ *   旧值固定 20px 在高密度手机上仅 ≈7dp（景深偏弱）、低密度平板上 ≈13dp（偏强），
+ *   按 dp 标定后各密度观感一致。
  */
 internal fun resolveVideoCardTransitionMaxBlurRadiusPx(
     motionTier: MotionTier,
+    density: Float = 1f,
 ): Float {
     return when (motionTier) {
         MotionTier.Reduced -> 0f
         MotionTier.Normal,
-        MotionTier.Enhanced -> VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_PX
+        MotionTier.Enhanced ->
+            VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_DP * density.coerceAtLeast(0f)
     }
 }
 

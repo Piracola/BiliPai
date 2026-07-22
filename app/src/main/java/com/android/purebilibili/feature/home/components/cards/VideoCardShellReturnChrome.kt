@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardTransitionBackgroundState
+import com.android.purebilibili.core.ui.transition.resolveVideoCardSiblingDepthScale
 import com.android.purebilibili.core.util.CardPositionManager
 
 /**
@@ -49,5 +50,39 @@ internal fun Modifier.videoCardShellReturnChromeAlpha(
             isQuickReturnFromDetail = isQuickReturnFromDetail ||
                 bgState.isQuickReturnFromDetailProvider(),
         )
+    }
+}
+
+/**
+ * 首页其他卡片跟随景深轻微收缩；当前飞卡（shared morph 源）保持 1，
+ * 避免与 sharedBounds 双重缩放。进度在绘制阶段读取。
+ */
+@Composable
+internal fun Modifier.videoCardSiblingDepthScale(
+    bvid: String,
+    sourceRoute: String?,
+): Modifier {
+    if (bvid.isBlank()) return this
+    val bgState = LocalVideoCardTransitionBackgroundState.current
+    val isSharedMorphSourceCard = remember(
+        bvid,
+        sourceRoute,
+        CardPositionManager.lastClickedVideoSourceKey,
+    ) {
+        isVideoCardSharedReturnTarget(
+            bvid = bvid,
+            sourceRoute = sourceRoute,
+            lastClickedVideoSourceKey = CardPositionManager.lastClickedVideoSourceKey,
+        )
+    }
+    return graphicsLayer {
+        val scale = resolveVideoCardSiblingDepthScale(
+            depthProgress = bgState.progressProvider(),
+            phase = bgState.phaseProvider(),
+            isSharedMorphSourceCard = isSharedMorphSourceCard,
+            motionTier = bgState.motionTierProvider(),
+        )
+        scaleX = scale
+        scaleY = scale
     }
 }

@@ -246,6 +246,10 @@ fun CinematicVideoCard(
                     motionSpec = cardSharedTransitionMotionSpec,
                     clipShape = cardShellShape
                 )
+                .videoCardSiblingDepthScale(
+                    bvid = video.bvid,
+                    sourceRoute = effectiveSharedElementSourceRoute,
+                )
                 .clip(RoundedCornerShape(cardCornerRadius))
                 .background(Color.Black) // 纯黑底色
                 .pointerInput(Unit) {

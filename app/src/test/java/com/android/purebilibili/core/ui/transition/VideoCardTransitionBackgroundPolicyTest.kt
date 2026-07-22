@@ -100,8 +100,10 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertEquals(0f, opening.blurRadiusPx)
         assertTrue(opening.scrimAlpha > 0f)
         assertEquals(1f, opening.contentScale)
+        assertEquals(0f, opening.cornerRadiusPx)
         assertEquals(0f, returning.blurRadiusPx)
         assertTrue(returning.scrimAlpha > 0f)
+        assertEquals(0f, returning.cornerRadiusPx)
     }
 
     @Test
@@ -114,12 +116,14 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(20f, frame.blurRadiusPx)
+        // density=1 时 12dp → 12px；真实机型由 DrawScope.density 换算。
+        assertEquals(12f, frame.blurRadiusPx)
         assertEquals(0f, frame.blurRadiusPx % 1f)
         assertEquals(0.28f, frame.scrimAlpha)
         assertFalse(frame.useLightScrimTint)
-        // 1 - 0.055 = 0.945
-        assertEquals(0.945f, frame.contentScale, 0.0001f)
+        // 页面层禁止缩放/圆角，避免整页缩进黑边
+        assertEquals(1f, frame.contentScale, 0.0001f)
+        assertEquals(0f, frame.cornerRadiusPx, 0.0001f)
     }
 
     @Test
@@ -137,13 +141,141 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35,
         )
 
-        assertEquals(20f, normal.blurRadiusPx)
-        assertEquals(20f, enhanced.blurRadiusPx)
-        assertEquals(20f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Normal))
-        assertEquals(20f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Enhanced))
+        assertEquals(12f, normal.blurRadiusPx)
+        assertEquals(12f, enhanced.blurRadiusPx)
+        assertEquals(12f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Normal))
+        assertEquals(12f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Enhanced))
         assertEquals(0f, resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Reduced))
         assertEquals(1f, resolveVideoCardTransitionBlurQuantumPx(MotionTier.Normal))
         assertEquals(1f, resolveVideoCardTransitionBlurQuantumPx(MotionTier.Enhanced))
+    }
+
+    @Test
+    fun blurRadiusScalesWithDensity_forConsistentDpFeel() {
+        val phone = resolveVideoCardTransitionBackgroundFrame(
+            progress = 1f,
+            phase = VideoCardTransitionBackgroundPhase.OPENING,
+            motionTier = MotionTier.Normal,
+            sdkInt = 35,
+            density = 2.75f,
+        )
+        val tablet = resolveVideoCardTransitionBackgroundFrame(
+            progress = 1f,
+            phase = VideoCardTransitionBackgroundPhase.OPENING,
+            motionTier = MotionTier.Normal,
+            sdkInt = 35,
+            density = 1.5f,
+        )
+
+        // 12dp × 2.75 ≈ 33px；12dp × 1.5 = 18px
+        assertEquals(33f, phone.blurRadiusPx, 0.51f)
+        assertEquals(18f, tablet.blurRadiusPx, 0.51f)
+        // 页面层缩放关闭时圆角恒为 0
+        assertEquals(0f, phone.cornerRadiusPx, 0.0001f)
+        assertEquals(0f, tablet.cornerRadiusPx, 0.0001f)
+        assertEquals(
+            33f,
+            resolveVideoCardTransitionMaxBlurRadiusPx(MotionTier.Normal, density = 2.75f),
+            0.01f,
+        )
+    }
+
+    @Test
+    fun backgroundCornerUsesDeviceRadiusWhenLargerThanFallback() {
+        // 页面缩放关闭时，页面圆角解析恒为 0（避免四角啃边）。
+        assertEquals(
+            0f,
+            resolveVideoCardTransitionBackgroundCornerRadiusPx(
+                depthProgress = 1f,
+                motionTier = MotionTier.Normal,
+                density = 2.75f,
+                deviceCornerRadiusPx = 80f,
+            ),
+            0.0001f,
+        )
+        // dp 策略仍保留：max(设备, 24dp 兜底)，供整页缩放重新开启时复用。
+        assertEquals(
+            80f / 2.75f,
+            resolveVideoCardTransitionBackgroundCornerRadiusDp(
+                deviceCornerRadiusPx = 80f,
+                density = 2.75f,
+            ),
+            0.0001f,
+        )
+        assertEquals(
+            24f,
+            resolveVideoCardTransitionBackgroundCornerRadiusDp(
+                deviceCornerRadiusPx = 40f,
+                density = 2.75f,
+            ),
+            0.0001f,
+        )
+        assertEquals(
+            24f,
+            resolveVideoCardTransitionBackgroundCornerRadiusDp(
+                deviceCornerRadiusPx = 0f,
+                density = 2.75f,
+            ),
+            0.0001f,
+        )
+        assertEquals(
+            0f,
+            resolveDeviceDisplayCornerRadiusPx(
+                rootWindowInsets = null,
+                sdkInt = 35,
+            ),
+        )
+        assertEquals(
+            0f,
+            resolveDeviceDisplayCornerRadiusPx(
+                rootWindowInsets = null,
+                sdkInt = 30,
+            ),
+        )
+    }
+
+    @Test
+    fun siblingCardsShrinkWithDepth_butMorphSourceStaysOne() {
+        assertEquals(
+            0.92f,
+            resolveVideoCardSiblingDepthScale(
+                depthProgress = 1f,
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+                isSharedMorphSourceCard = false,
+                motionTier = MotionTier.Normal,
+            ),
+            0.0001f,
+        )
+        assertEquals(
+            0.96f,
+            resolveVideoCardSiblingDepthScale(
+                depthProgress = 0.5f,
+                phase = VideoCardTransitionBackgroundPhase.RETURNING,
+                isSharedMorphSourceCard = false,
+                motionTier = MotionTier.Normal,
+            ),
+            0.0001f,
+        )
+        assertEquals(
+            1f,
+            resolveVideoCardSiblingDepthScale(
+                depthProgress = 1f,
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+                isSharedMorphSourceCard = true,
+                motionTier = MotionTier.Normal,
+            ),
+            0.0001f,
+        )
+        assertEquals(
+            1f,
+            resolveVideoCardSiblingDepthScale(
+                depthProgress = 1f,
+                phase = VideoCardTransitionBackgroundPhase.IDLE,
+                isSharedMorphSourceCard = false,
+                motionTier = MotionTier.Normal,
+            ),
+            0.0001f,
+        )
     }
 
     @Test
@@ -154,9 +286,11 @@ class VideoCardTransitionBackgroundPolicyTest {
             motionTier = MotionTier.Normal,
             sdkInt = 35,
         )
-        assertEquals(2f, early.blurRadiusPx, 1f)
+        // 0.1 × 12dp = 1.2 → 量化到 1px
+        assertEquals(1f, early.blurRadiusPx, 1f)
         assertTrue(early.scrimAlpha > 0f)
         assertTrue(early.blurRadiusPx > 0f)
+        assertEquals(0f, early.cornerRadiusPx, 0.0001f)
     }
 
     @Test
@@ -169,7 +303,7 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(20f, frame.blurRadiusPx)
+        assertEquals(12f, frame.blurRadiusPx)
         assertEquals(0.14f, frame.scrimAlpha)
         assertTrue(frame.useLightScrimTint)
     }
@@ -282,18 +416,20 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(20f, start.blurRadiusPx)
-        // 线性锁步：progress=0.5 → blur 10px
-        assertEquals(10f, middle.blurRadiusPx, 1f)
+        assertEquals(12f, start.blurRadiusPx)
+        // 线性锁步：progress=0.5 → blur 6px（density1）
+        assertEquals(6f, middle.blurRadiusPx, 1f)
         assertTrue(middle.blurRadiusPx in 1f..<start.blurRadiusPx)
         assertEquals(0f, end.blurRadiusPx)
         assertTrue(start.scrimAlpha > middle.scrimAlpha)
         assertTrue(middle.scrimAlpha > 0f)
         assertEquals(0f, end.scrimAlpha)
-        assertEquals(0.945f, start.contentScale, 0.0001f)
-        // 线性：p=0.5 → scale = 1 - 0.055*0.5 = 0.9725
-        assertEquals(0.9725f, middle.contentScale, 0.0001f)
+        assertEquals(1f, start.contentScale, 0.0001f)
+        assertEquals(1f, middle.contentScale, 0.0001f)
         assertEquals(1f, end.contentScale)
+        assertEquals(0f, start.cornerRadiusPx, 0.0001f)
+        assertEquals(0f, middle.cornerRadiusPx, 0.0001f)
+        assertEquals(0f, end.cornerRadiusPx, 0.0001f)
     }
 
     @Test
@@ -317,10 +453,11 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(20f, frame.blurRadiusPx)
+        assertEquals(12f, frame.blurRadiusPx)
         // HELD 保留与满进度开场一致的压暗，避免详情停留时景深断裂。
         assertEquals(0.28f, frame.scrimAlpha)
-        assertEquals(0.945f, frame.contentScale, 0.0001f)
+        assertEquals(1f, frame.contentScale, 0.0001f)
+        assertEquals(0f, frame.cornerRadiusPx, 0.0001f)
     }
 
     @Test
@@ -338,8 +475,8 @@ class VideoCardTransitionBackgroundPolicyTest {
             isGestureRestoreInProgress = true,
         )
 
-        assertEquals(0.945f, openingScale, 0.0001f)
-        assertEquals(0.9725f, restoreScale, 0.002f)
+        assertEquals(1f, openingScale, 0.0001f)
+        assertEquals(1f, restoreScale, 0.002f)
     }
 
     @Test
@@ -353,6 +490,7 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertEquals(0f, frame.blurRadiusPx)
         assertEquals(0f, frame.scrimAlpha)
         assertEquals(1f, frame.contentScale)
+        assertEquals(0f, frame.cornerRadiusPx)
     }
 
     @Test
@@ -384,8 +522,8 @@ class VideoCardTransitionBackgroundPolicyTest {
 
         assertTrue(frame.blurRadiusPx > 0f)
         assertTrue(frame.scrimAlpha > 0f)
-        // 线性：p=0.25 → scale = 1 - 0.055*0.25 = 0.98625
-        assertEquals(0.98625f, frame.contentScale, 0.0001f)
+        assertEquals(1f, frame.contentScale, 0.0001f)
+        assertEquals(0f, frame.cornerRadiusPx, 0.0001f)
     }
 
     @Test

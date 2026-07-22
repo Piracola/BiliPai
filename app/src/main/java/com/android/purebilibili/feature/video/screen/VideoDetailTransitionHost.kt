@@ -119,28 +119,15 @@ internal fun rememberVideoDetailTransitionState(
     ) && !sourceRoute.isNullOrBlank()
     val sharedBoundsActive = detailShellSharedBoundsEnabled || coverSharedBoundsActive
     // 单时钟回灌：与 sharedBounds 共用 AVS Transition 的 progress。
-    val morphReporter = LocalVideoCardMorphProgressReporter.current
-    val morphFraction = progress.value
-    val morphActive = detailShellSharedBoundsEnabled && (
-        sharedTransitionScope?.isTransitionActive == true ||
-            animatedVisibilityScope?.transition?.isRunning == true ||
-            isExitTransitionInProgress
-        )
-    SideEffect {
-        if (detailShellSharedBoundsEnabled) {
-            morphReporter?.report(
-                morphFraction = morphFraction,
-                active = morphActive,
-            )
-        }
-    }
-    DisposableEffect(detailShellSharedBoundsEnabled, morphReporter) {
-        onDispose {
-            if (detailShellSharedBoundsEnabled) {
-                morphReporter?.report(morphFraction = morphFraction, active = false)
-            }
-        }
-    }
+    // progress.value 每帧变化，必须圈在独立重组作用域内读取：本函数带返回值、
+    // 不可重启，若在这里读会把每帧重组放大到整个详情 StateHolder，
+    // morph 期间掉帧直接表现为进场/返回画面抖动。
+    ReportVideoDetailMorphProgressToClock(
+        enabled = detailShellSharedBoundsEnabled,
+        progress = progress,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+    )
     val routeSheetFrameProvider = rememberVideoDetailRouteSheetFrameProvider(
         motion = routeSheetMotion,
         isExitTransitionInProgress = isExitTransitionInProgress,
@@ -158,6 +145,41 @@ internal fun rememberVideoDetailTransitionState(
         sharedBoundsActive = sharedBoundsActive,
         routeSheetFrameProvider = routeSheetFrameProvider,
     )
+}
+
+/**
+ * 把详情 AVS 的 morph progress 逐帧回灌 [VideoCardTransitionClock]（单时钟）。
+ *
+ * 独立 Unit composable：progress / isTransitionActive / isRunning 这些每帧
+ * 变化的快照读取被圈在这个近零成本的重组作用域内，宿主（详情 StateHolder）
+ * 不再随 morph 每帧重组。仍用 [SideEffect] 回灌，保证发生在本帧组合完成后、
+ * 绘制前，与 sharedBounds overlay 同帧同源，不引入一帧滞后。
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun ReportVideoDetailMorphProgressToClock(
+    enabled: Boolean,
+    progress: State<Float>,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+) {
+    val morphReporter = LocalVideoCardMorphProgressReporter.current
+    if (!enabled || morphReporter == null) return
+    val morphFraction = progress.value
+    val morphActive = sharedTransitionScope?.isTransitionActive == true ||
+        animatedVisibilityScope?.transition?.isRunning == true ||
+        animatedVisibilityScope?.transition?.targetState == EnterExitState.PostExit
+    SideEffect {
+        morphReporter.report(
+            morphFraction = morphFraction,
+            active = morphActive,
+        )
+    }
+    DisposableEffect(morphReporter) {
+        onDispose {
+            morphReporter.report(morphFraction = progress.value, active = false)
+        }
+    }
 }
 
 @Composable
