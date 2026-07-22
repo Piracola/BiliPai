@@ -192,8 +192,8 @@ class MainActivityAppCompatContractTest {
             }
             val foregroundWidthRatio = (opaqueXs.max() - opaqueXs.min() + 1).toFloat() / imageWidth
             assertTrue(
-                foregroundWidthRatio in 0.50f..0.54f,
-                "$fileName should occupy about 52% of the 108dp adaptive layer so Android's foreground zoom still reveals the white shell"
+                foregroundWidthRatio in 0.57f..0.60f,
+                "$fileName should occupy about 58% of the 108dp adaptive layer so the portrait stays prominent without losing the white shell"
             )
         }
 
