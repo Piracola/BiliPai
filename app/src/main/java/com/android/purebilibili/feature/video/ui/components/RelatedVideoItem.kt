@@ -90,6 +90,11 @@ internal const val RELATED_VIDEO_CARD_COVER_ASPECT_RATIO = 4f / 3f
 
 internal const val RELATED_VIDEO_GRID_COLUMNS = 2
 
+internal fun shouldEnableRelatedVideoGridSharedTransition(
+    sharedTransitionEnabled: Boolean,
+    isListScrolling: Boolean,
+): Boolean = sharedTransitionEnabled && !isListScrolling
+
 /**
  * Related Videos Header
  */
@@ -379,6 +384,7 @@ fun RelatedVideoGridRow(
     videos: List<RelatedVideo>,
     followingMids: Set<Long> = emptySet(),
     transitionEnabled: Boolean = false,
+    isListScrolling: Boolean = false,
     showUpBadge: Boolean = true,
     columns: Int = RELATED_VIDEO_GRID_COLUMNS,
     onVideoClick: (RelatedVideo) -> Unit,
@@ -393,6 +399,10 @@ fun RelatedVideoGridRow(
         resolveHomeFeedCardLayout(homeFeedCardStyle)
     }
     val safeColumns = columns.coerceAtLeast(1)
+    val cardTransitionEnabled = shouldEnableRelatedVideoGridSharedTransition(
+        sharedTransitionEnabled = transitionEnabled,
+        isListScrolling = isListScrolling,
+    )
     var actionVideo by remember { mutableStateOf<RelatedVideo?>(null) }
     Row(
         modifier = Modifier
@@ -404,7 +414,7 @@ fun RelatedVideoGridRow(
             RelatedVideoItem(
                 video = video,
                 isFollowed = video.owner.mid in followingMids,
-                transitionEnabled = transitionEnabled,
+                transitionEnabled = cardTransitionEnabled,
                 showUpBadge = showUpBadge,
                 coverAspectRatio = cardLayout.coverAspectRatio,
                 modifier = Modifier.weight(1f),

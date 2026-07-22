@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -23,9 +24,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -40,8 +44,16 @@ import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.data.model.response.DynamicItem
 import com.android.purebilibili.data.repository.DynamicRepository
 import com.android.purebilibili.feature.dynamic.components.DynamicCardV2
-import com.android.purebilibili.feature.dynamic.components.DynamicCommentOverlayHost
+import com.android.purebilibili.feature.dynamic.components.DynamicInlineCommentComposer
+import com.android.purebilibili.feature.dynamic.components.DynamicInlineCommentHeader
+import com.android.purebilibili.feature.dynamic.components.DynamicSubReplyPreviewHost
+import com.android.purebilibili.feature.dynamic.components.ImagePreviewDialog
+import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextContent
+import com.android.purebilibili.feature.dynamic.components.dynamicInlineCommentItems
 import com.android.purebilibili.feature.dynamic.components.RepostDialog
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 
 private sealed interface DynamicDetailUiState {
     data object Loading : DynamicDetailUiState
@@ -85,9 +97,21 @@ fun DynamicDetailScreen(
     val context = LocalContext.current
     val gifImageLoader = context.imageLoader
     val likedDynamics by interactionViewModel.likedDynamics.collectAsStateWithLifecycle()
+    val comments by interactionViewModel.comments.collectAsStateWithLifecycle()
+    val commentsLoading by interactionViewModel.commentsLoading.collectAsStateWithLifecycle()
+    val commentsLoadingMore by interactionViewModel.commentsLoadingMore.collectAsStateWithLifecycle()
+    val commentTotalCount by interactionViewModel.commentTotalCount.collectAsStateWithLifecycle()
+    val commentSortMode by interactionViewModel.dynamicCommentSortMode.collectAsStateWithLifecycle()
+    val subReplyState by interactionViewModel.subReplyState.collectAsStateWithLifecycle()
     var showRepostDialog by remember { mutableStateOf<String?>(null) }
-    // Open comments once when detail loads (or when route targets a specific reply).
-    // Do not re-open after the user dismisses the sheet.
+    val detailListState = rememberLazyListState()
+    val detailScrollScope = rememberCoroutineScope()
+    var showImagePreview by remember { mutableStateOf(false) }
+    var previewImages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var previewInitialIndex by remember { mutableIntStateOf(0) }
+    var previewSourceRect by remember { mutableStateOf<Rect?>(null) }
+    var previewTextContent by remember { mutableStateOf<ImagePreviewTextContent?>(null) }
+    // Load comments once when detail loads (or when route targets a specific reply).
     var hasAutoOpenedComments by rememberSaveable(
         dynamicId,
         openCommentRootRpid,
@@ -156,7 +180,29 @@ fun DynamicDetailScreen(
                     }
                 }
 
+                LaunchedEffect(
+                    detailListState,
+                    comments.size,
+                    commentTotalCount,
+                    commentsLoading,
+                    commentsLoadingMore,
+                ) {
+                    snapshotFlow {
+                        val lastVisibleIndex = detailListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+                        val itemCount = detailListState.layoutInfo.totalItemsCount
+                        itemCount > 0 && lastVisibleIndex >= itemCount - 4
+                    }
+                        .distinctUntilChanged()
+                        .filter { it }
+                        .collect {
+                            if (comments.size < commentTotalCount && !commentsLoading && !commentsLoadingMore) {
+                                interactionViewModel.loadMoreComments()
+                            }
+                        }
+                }
+
                 LazyColumn(
+                    state = detailListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -173,7 +219,9 @@ fun DynamicDetailScreen(
                             onLiveClick = onLiveClick,
                             isDetail = true,
                             gifImageLoader = gifImageLoader,
-                            onCommentClick = { interactionViewModel.openCommentSheet(state.item) },
+                            onCommentClick = {
+                                detailScrollScope.launch { detailListState.animateScrollToItem(1) }
+                            },
                             onRepostClick = { showRepostDialog = it },
                             onLikeClick = { targetDynamicId ->
                                 interactionViewModel.likeDynamic(targetDynamicId) { _, msg ->
@@ -189,13 +237,55 @@ fun DynamicDetailScreen(
                             isLiked = likedDynamics.contains(state.item.id_str)
                         )
                     }
+                    item(key = "dynamic_detail_comment_header") {
+                        DynamicInlineCommentHeader(
+                            totalCount = commentTotalCount,
+                            sortMode = commentSortMode,
+                            onSortModeChange = interactionViewModel::setDynamicCommentSortMode,
+                        )
+                    }
+                    dynamicInlineCommentItems(
+                        comments = comments,
+                        isLoading = commentsLoading,
+                        isLoadingMore = commentsLoadingMore,
+                        onViewReplies = { reply -> interactionViewModel.openSubReply(reply) },
+                        onImagePreview = { images, index, sourceRect, textContent ->
+                            previewImages = images
+                            previewInitialIndex = index
+                            previewSourceRect = sourceRect
+                            previewTextContent = textContent
+                            showImagePreview = true
+                        },
+                    )
+                    item(key = "dynamic_detail_comment_composer") {
+                        DynamicInlineCommentComposer(
+                            onPostComment = { message ->
+                                interactionViewModel.postComment(state.item.id_str, message) { _, toastMessage ->
+                                    android.widget.Toast.makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                        )
+                    }
                 }
 
-                DynamicCommentOverlayHost(
-                    viewModel = interactionViewModel,
-                    primaryItems = listOf(state.item),
-                    toastContext = context
+                DynamicSubReplyPreviewHost(
+                    state = subReplyState,
+                    onDismiss = interactionViewModel::closeSubReply,
+                    onLoadMore = interactionViewModel::loadMoreSubReplies,
                 )
+
+                if (showImagePreview && previewImages.isNotEmpty()) {
+                    ImagePreviewDialog(
+                        images = previewImages,
+                        initialIndex = previewInitialIndex,
+                        sourceRect = previewSourceRect,
+                        textContent = previewTextContent,
+                        onDismiss = {
+                            showImagePreview = false
+                            previewTextContent = null
+                        },
+                    )
+                }
 
                 showRepostDialog?.let { repostDynamicId ->
                     RepostDialog(

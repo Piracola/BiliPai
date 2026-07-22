@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -311,6 +312,123 @@ fun DynamicCommentSheet(
     }
 }
 
+/** Inline comments for dynamic detail, rendered by the detail screen's LazyColumn. */
+@Composable
+fun DynamicInlineCommentHeader(
+    totalCount: Int,
+    sortMode: CommentSortMode,
+    onSortModeChange: (CommentSortMode) -> Unit,
+) {
+    val sortModes = remember { listOf(CommentSortMode.HOT, CommentSortMode.NEWEST) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "评论 ${if (totalCount > 0) "($totalCount)" else ""}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        iOSSegmentedControl(
+            items = sortModes.map { it.label },
+            selectedIndex = sortModes.indexOf(sortMode).coerceAtLeast(0),
+            onScaleChange = { index ->
+                sortModes.getOrNull(index)?.let(onSortModeChange)
+            },
+        )
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+}
+
+fun LazyListScope.dynamicInlineCommentItems(
+    comments: List<ReplyItem>,
+    isLoading: Boolean,
+    isLoadingMore: Boolean,
+    onViewReplies: (ReplyItem) -> Unit,
+    onImagePreview: (List<String>, Int, Rect?, ImagePreviewTextContent?) -> Unit,
+) {
+    when {
+        isLoading -> item(key = "dynamic_inline_comment_loading") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                AdaptiveLoadingIndicator(size = 32.dp)
+            }
+        }
+
+        comments.isEmpty() -> item(key = "dynamic_inline_comment_empty") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("暂无评论", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            }
+        }
+
+        else -> items(comments, key = { it.rpid }) { reply ->
+            CommentItem(
+                reply = reply,
+                onViewReplies = onViewReplies,
+                onImagePreview = onImagePreview,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
+    if (isLoadingMore) {
+        item(key = "dynamic_inline_comment_loading_more") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                AdaptiveLoadingIndicator(size = 24.dp)
+            }
+        }
+    }
+}
+
+@Composable
+fun DynamicInlineCommentComposer(
+    onPostComment: (String) -> Unit,
+) {
+    var commentText by remember { mutableStateOf("") }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = commentText,
+            onValueChange = { commentText = it },
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("发一条友善的评论", fontSize = 14.sp) },
+            shape = RoundedCornerShape(24.dp),
+            singleLine = true,
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Button(
+            onClick = {
+                onPostComment(commentText)
+                commentText = ""
+            },
+            enabled = commentText.isNotBlank(),
+            shape = RoundedCornerShape(20.dp),
+        ) {
+            Text("发送")
+        }
+    }
+}
+
 /**
  *  单条评论项
  */
@@ -318,7 +436,8 @@ fun DynamicCommentSheet(
 private fun CommentItem(
     reply: ReplyItem,
     onViewReplies: (ReplyItem) -> Unit,
-    onImagePreview: (List<String>, Int, Rect?, ImagePreviewTextContent?) -> Unit
+    onImagePreview: (List<String>, Int, Rect?, ImagePreviewTextContent?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val member = reply.member
     var isSubPreviewExpanded by remember(reply.rpid) { mutableStateOf(false) }
@@ -338,7 +457,7 @@ private fun CommentItem(
         )
     }
     
-    Row(modifier = Modifier.fillMaxWidth()) {
+    Row(modifier = modifier.fillMaxWidth()) {
         // 头像
         AsyncImage(
             model = member.avatar.let { 

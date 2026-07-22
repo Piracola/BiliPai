@@ -781,6 +781,9 @@ private fun VideoIntroTab(
     val visibleRelatedVideos = remember(relatedVideos, hiddenRelatedBvids) {
         filterRelatedVideosByHiddenBvids(relatedVideos, hiddenRelatedBvids)
     }
+    val isRelatedListScrolling by remember(listState) {
+        derivedStateOf { listState.isScrollInProgress }
+    }
     LazyColumn(
         state = listState,
         modifier = modifier
@@ -884,6 +887,7 @@ private fun VideoIntroTab(
                     videos = row,
                     followingMids = followingMids,
                     transitionEnabled = relatedVideoTransitionEnabled,
+                    isListScrolling = isRelatedListScrolling,
                     showUpBadge = showUpBadge,
                     onVideoClick = { video ->
                         val navOptions = if (video.cid > 0L) {
