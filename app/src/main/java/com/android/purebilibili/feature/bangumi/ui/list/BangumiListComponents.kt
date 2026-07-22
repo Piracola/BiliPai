@@ -25,6 +25,7 @@ import com.android.purebilibili.core.theme.iOSYellow
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.data.model.response.BangumiItem
 import com.android.purebilibili.data.model.response.BangumiSearchItem
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 
 /**
  * 番剧卡片组件 - 用于列表/网格显示
@@ -392,8 +393,8 @@ fun BangumiGrid(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
+                    AdaptiveLoadingIndicator(
+                        size = 24.dp,
                         strokeWidth = 2.dp
                     )
                 }

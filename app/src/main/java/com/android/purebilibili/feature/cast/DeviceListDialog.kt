@@ -18,6 +18,7 @@ import com.android.purebilibili.core.plugin.CastPluginRoute
 import com.android.purebilibili.core.plugin.PluginManager
 import kotlinx.coroutines.flow.combine
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 
 private data class PluginRouteEntry(
     val plugin: CastPluginApi,
@@ -122,7 +123,7 @@ fun DeviceListDialog(
             } else if (!hasDevices && isDiscovering) {
                 Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        AdaptiveLoadingIndicator(size = 32.dp)
                         Spacer(Modifier.height(8.dp))
                         Text("搜索设备中...", style = MaterialTheme.typography.bodyMedium)
                     }

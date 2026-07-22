@@ -34,6 +34,7 @@ import com.android.purebilibili.core.ui.components.UserLevelBadge
 import com.android.purebilibili.core.util.ShareUtils
 import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -330,8 +331,8 @@ private fun BlockedListSyncAction(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (refreshingProfiles) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
+                            AdaptiveLoadingIndicator(
+                                size = 16.dp,
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(6.dp))

@@ -141,6 +141,7 @@ import com.android.purebilibili.data.model.response.SearchTopicItem
 import kotlinx.coroutines.launch
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 
 internal fun shouldShowSearchHotSection(
     hotItemCount: Int,
@@ -1080,8 +1081,8 @@ fun SearchScreen(
                                                     .padding(16.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
+                                                AdaptiveLoadingIndicator(
+                                                    size = 24.dp,
                                                     strokeWidth = 2.dp
                                                 )
                                             }
@@ -1170,8 +1171,8 @@ fun SearchScreen(
                                                     .padding(vertical = 16.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
+                                                AdaptiveLoadingIndicator(
+                                                    size = 24.dp,
                                                     strokeWidth = 2.dp
                                                 )
                                             }
@@ -1226,8 +1227,8 @@ fun SearchScreen(
                                                     .padding(vertical = 16.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
+                                                AdaptiveLoadingIndicator(
+                                                    size = 24.dp,
                                                     strokeWidth = 2.dp
                                                 )
                                             }
@@ -1326,8 +1327,8 @@ fun SearchScreen(
                                                     .padding(vertical = 16.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
+                                                AdaptiveLoadingIndicator(
+                                                    size = 24.dp,
                                                     strokeWidth = 2.dp
                                                 )
                                             }
@@ -1448,8 +1449,8 @@ fun SearchScreen(
                                                     .padding(vertical = 16.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
+                                                AdaptiveLoadingIndicator(
+                                                    size = 24.dp,
                                                     strokeWidth = 2.dp
                                                 )
                                             }
@@ -3201,10 +3202,10 @@ private fun SearchLoadMoreIndicator() {
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(24.dp),
-            strokeWidth = 2.dp
-        )
+        AdaptiveLoadingIndicator(
+                                                    size = 24.dp,
+                                                    strokeWidth = 2.dp
+                                                )
     }
 }
 

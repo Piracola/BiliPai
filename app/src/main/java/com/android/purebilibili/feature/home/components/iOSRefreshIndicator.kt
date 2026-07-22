@@ -9,7 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
@@ -29,6 +29,7 @@ import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalAndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.theme.UiPreset
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 import com.android.purebilibili.core.ui.PresetPrimitiveRenderer
 import com.android.purebilibili.core.ui.resolvePresetPrimitiveRenderer
 import com.android.purebilibili.feature.home.resolvePullRefreshHintText
@@ -36,13 +37,13 @@ import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
 
 /**
  * Renderer kind for [iOSRefreshIndicator]. iOS keeps its Cupertino spinner with
- * the rubber-band overshoot; MD3 falls back to Material's [CircularProgressIndicator];
- * the Miuix bridge currently reuses the Material indicator (BiliPai routes Miuix
- * refresh visuals through the same Material PullToRefresh container).
+ * the rubber-band overshoot; MD3 uses the official morphing [LoadingIndicator];
+ * the Miuix bridge uses Miuix compact progress via [AdaptiveLoadingIndicator]
+ * when this composable is still mounted (home Miuix uses native pull-to-refresh).
  */
 enum class IOSRefreshIndicatorRenderer {
     CUPERTINO_IOS,
-    MATERIAL3_CIRCULAR,
+    MATERIAL3_LOADING,
     MIUIX_BRIDGED
 }
 
@@ -53,7 +54,7 @@ fun resolveRefreshIndicatorRenderer(
     resolvePresetPrimitiveRenderer(uiPreset, androidNativeVariant)
 ) {
     PresetPrimitiveRenderer.IOS -> IOSRefreshIndicatorRenderer.CUPERTINO_IOS
-    PresetPrimitiveRenderer.MATERIAL3 -> IOSRefreshIndicatorRenderer.MATERIAL3_CIRCULAR
+    PresetPrimitiveRenderer.MATERIAL3 -> IOSRefreshIndicatorRenderer.MATERIAL3_LOADING
     PresetPrimitiveRenderer.MIUIX_BRIDGED -> IOSRefreshIndicatorRenderer.MIUIX_BRIDGED
 }
 
@@ -85,7 +86,7 @@ fun Md3ScreenshotRefreshIndicator(
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 360f),
         label = "md3_screenshot_pull_scale"
     )
-    val strokeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.68f)
+    val strokeColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
 
     Box(
@@ -104,10 +105,9 @@ fun Md3ScreenshotRefreshIndicator(
             verticalArrangement = Arrangement.Center
         ) {
             if (isRefreshing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(42.dp),
-                    color = strokeColor,
-                    strokeWidth = 3.dp
+                // Official M3 morphing LoadingIndicator (dynamic primary).
+                LoadingIndicator(
+                    color = MaterialTheme.colorScheme.primary,
                 )
             } else {
                 Box(
@@ -219,19 +219,28 @@ fun iOSRefreshIndicator(
                 .padding(vertical = 12.dp)
         ) {
             if (isRefreshing) {
-                //  iOS uses the Cupertino spinner; MD3/Miuix fall back to Material's
-                //  CircularProgressIndicator so the indicator reads as native chrome.
-                if (renderer == IOSRefreshIndicatorRenderer.CUPERTINO_IOS) {
-                    CupertinoActivityIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 2.dp
-                    )
+                // iOS: Cupertino spinner. MD3: morphing LoadingIndicator.
+                // Miuix: AdaptiveLoadingIndicator compact (native circular/orbit).
+                when (renderer) {
+                    IOSRefreshIndicatorRenderer.CUPERTINO_IOS -> {
+                        CupertinoActivityIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IOSRefreshIndicatorRenderer.MATERIAL3_LOADING -> {
+                        // Compact morphing indicator beside the hint text (default is 48.dp).
+                        AdaptiveLoadingIndicator(
+                            size = 36.dp,
+                            density = com.android.purebilibili.core.ui.AdaptiveLoadingDensity.PAGE,
+                        )
+                    }
+                    IOSRefreshIndicatorRenderer.MIUIX_BRIDGED -> {
+                        AdaptiveLoadingIndicator(
+                            size = 22.dp,
+                            strokeWidth = 2.dp,
+                        )
+                    }
                 }
             } else if (progress > 0.1f) {
                 //  箭头图标（旋转表示状态变化）

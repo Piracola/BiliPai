@@ -307,8 +307,8 @@ fun OfficialWallpaperSheet(
                             )
                         ) {
                             if (saveState is WallpaperSaveState.Loading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
+                                AdaptiveLoadingIndicator(
+                                    size = 20.dp,
                                     strokeWidth = 2.dp
                                 )
                             } else {

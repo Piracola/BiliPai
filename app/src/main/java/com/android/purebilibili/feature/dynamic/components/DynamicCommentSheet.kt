@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 
 @Composable
 fun DynamicCommentOverlayHost(
@@ -206,7 +207,7 @@ fun DynamicCommentSheet(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    AdaptiveLoadingIndicator(size = 32.dp)
                 }
             } else if (comments.isEmpty()) {
                 Box(
@@ -259,7 +260,7 @@ fun DynamicCommentSheet(
                                     .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                AdaptiveLoadingIndicator(size = 24.dp)
                             }
                         }
                     }

@@ -1537,7 +1537,9 @@ fun HomeScreen(
                              indicator = {
                                 when (pullRefreshIndicatorStyle) {
                                     HomePullRefreshIndicatorStyle.MATERIAL_DEFAULT -> {
-                                        PullToRefreshDefaults.Indicator(
+                                        // Official M3 expressive ContainedLoadingIndicator
+                                        // (dynamic color) for Android Native Material 3.
+                                        PullToRefreshDefaults.LoadingIndicator(
                                             modifier = Modifier
                                                 .align(Alignment.TopCenter)
                                                 .padding(top = homeRefreshIndicatorTopInset),

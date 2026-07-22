@@ -41,12 +41,10 @@ fun AdaptivePullToRefreshBox(
     state: PullToRefreshState = rememberPullToRefreshState(),
     contentAlignment: Alignment = Alignment.TopStart,
     indicator: @Composable BoxScope.() -> Unit = {
-        PullToRefreshDefaults.Indicator(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = indicatorTopInset),
+        AdaptivePullToRefreshDefaultIndicator(
             isRefreshing = isRefreshing,
             state = state,
+            indicatorTopInset = indicatorTopInset,
         )
     },
     content: @Composable BoxScope.() -> Unit,
@@ -92,6 +90,45 @@ fun AdaptivePullToRefreshBox(
                 contentAlignment = contentAlignment,
                 indicator = indicator,
                 content = content,
+            )
+        }
+    }
+}
+
+/**
+ * Default pull-to-refresh chrome for [AdaptivePullToRefreshBox].
+ *
+ * - Material 3: official expressive [PullToRefreshDefaults.LoadingIndicator]
+ *   (ContainedLoadingIndicator + dynamic colors).
+ * - iOS: classic Material circular [PullToRefreshDefaults.Indicator] when a
+ *   screen does not supply a custom Cupertino indicator.
+ * - Miuix: unused — the Miuix branch mounts native [MiuixPullToRefresh] instead.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BoxScope.AdaptivePullToRefreshDefaultIndicator(
+    isRefreshing: Boolean,
+    state: PullToRefreshState,
+    indicatorTopInset: Dp = 0.dp,
+    modifier: Modifier = Modifier,
+) {
+    val indicatorModifier = modifier
+        .align(Alignment.TopCenter)
+        .padding(top = indicatorTopInset)
+    when (rememberPresetPrimitiveRenderer()) {
+        PresetPrimitiveRenderer.MATERIAL3 -> {
+            PullToRefreshDefaults.LoadingIndicator(
+                modifier = indicatorModifier,
+                isRefreshing = isRefreshing,
+                state = state,
+            )
+        }
+        PresetPrimitiveRenderer.IOS,
+        PresetPrimitiveRenderer.MIUIX_BRIDGED -> {
+            PullToRefreshDefaults.Indicator(
+                modifier = indicatorModifier,
+                isRefreshing = isRefreshing,
+                state = state,
             )
         }
     }

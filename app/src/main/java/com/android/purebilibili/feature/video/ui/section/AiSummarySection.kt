@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 import com.android.purebilibili.data.model.response.AiSummaryData
 import com.android.purebilibili.feature.video.viewmodel.AiSummaryPromptState
 import com.android.purebilibili.feature.video.viewmodel.AiSummaryPromptTone
@@ -192,8 +193,8 @@ fun AiSummaryPromptCard(
                     contentAlignment = Alignment.Center
                 ) {
                     if (promptState.tone == AiSummaryPromptTone.INFO) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
+                        AdaptiveLoadingIndicator(
+                            size = 16.dp,
                             strokeWidth = 2.dp,
                             color = accentColor
                         )

@@ -28,7 +28,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.android.purebilibili.core.ui.AdaptiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -127,7 +127,7 @@ fun VideoNoteCard(
                     }
                 }
                 if (noteState.status == VideoNoteLoadStatus.LOADING) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    AdaptiveLoadingIndicator(size = 18.dp, strokeWidth = 2.dp)
                 }
                 if (defaultCollapsed) {
                     TextButton(onClick = { userExpanded = !userExpanded }) {
@@ -365,7 +365,7 @@ fun VideoNoteEditorSheet(
                     enabled = !noteState.saving
                 ) {
                     if (noteState.saving) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        AdaptiveLoadingIndicator(size = 16.dp, strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(6.dp))
                     }
                     Text("保存")

@@ -56,7 +56,7 @@ class PrimitivePresetCoverageTest {
             resolveRefreshIndicatorRenderer(UiPreset.IOS, AndroidNativeVariant.MATERIAL3)
         )
         assertEquals(
-            IOSRefreshIndicatorRenderer.MATERIAL3_CIRCULAR,
+            IOSRefreshIndicatorRenderer.MATERIAL3_LOADING,
             resolveRefreshIndicatorRenderer(UiPreset.MD3, AndroidNativeVariant.MATERIAL3)
         )
         assertEquals(
