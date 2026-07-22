@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-06-28 · Synced to v9.6.0 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-07-23 · Synced to v9.9.8.8 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-9.6.0-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-9.9.8.8-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -436,13 +436,13 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v9.9.8.6 · 2026-07-21)
+### Latest (v9.9.8.8 · 2026-07-23)
 
-- Player volume/brightness theme feedback and landscape seek preview/haptics.
-- Portrait direct-entry, multi-P/season, subtitles, and HDR/Dolby/8K playurl chain fixes.
-- Related-video ⋮ menu (watch later / feedback / not interested).
-- Card realtime blur / liquid glass is still WIP — leave off; do not use.
-- Version metadata is updated to `9.9.8.6 / versionCode 261`.
+- Theme-aware loading feedback and blue-snow-maid app icons for light and dark mode.
+- Playback insights, precise HDR upgrades, retained frames during fullscreen switches, and steadier card returns.
+- Space watch history, isolated favorite-collection queues, complete dynamic text, and inline comments.
+- The portrait UP preview now opens from the author avatar and blocks background video paging while open.
+- Version metadata is updated to `9.9.8.8 / versionCode 263`.
 
 ---
 

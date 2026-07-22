@@ -1,5 +1,67 @@
 # Changelog
 
+## v9.9.8.8 (2026-07-23)
+
+### 版本信息
+- 版本号从 `9.9.8.7` 升级到 `9.9.8.8`，`versionCode` 从 `262` 升级到 `263`。
+
+### 相对 v9.9.8.7 的完整更新
+
+#### 加载反馈与应用图标
+- **主题化加载指示器**：MD3、Miuix 与 iOS 风格的加载反馈统一按主题呈现，并覆盖下拉刷新和内容加载场景。
+- **蓝雪女仆图标**：新增可选的蓝雪女仆应用图标；补齐深色模式、前景图、圆形图标及系统启动页适配，修复白色外壳、尺寸与圆角稳定性。
+
+#### 播放器、画质与返回过渡
+- **播放洞察**：新增并收敛播放状态洞察展示，玻璃面板更紧凑，数据模型与状态来源更可靠。
+- **HDR 画质升级**：画质切换按精确能力升级，避免高规格视频错误降级。
+- **手势反馈与全屏**：MD3 音量 / 亮度反馈移至边缘；横竖屏切换期间保持当前画面，减少黑帧与闪动。
+- **视频卡返回**：稳定卡片返回时的景深效果；相关推荐滚动后的卡片过渡恢复正常。
+- **长按倍速提示**：长按加速时不再遮挡画面，松手后再提示可锁定倍速。
+
+#### 空间、收藏与动态
+- **空间观看记录**：UP 空间视频支持记录已观看状态。
+- **收藏合集播放**：合集播放队列与外层列表隔离，避免互相污染。
+- **动态详情与评论**：进入动态详情自动展开评论；评论以内联形式展示并优化相关推荐滚动。
+- **纯文字动态全文**：按详情接口补取完整正文；富文本节点不完整时回退到完整 `desc.text`，避免内容被截断。
+- **返回位置**：从 UP 空间返回首页后保留原有 Feed 位置。
+
+#### 竖屏视频与 UP 预览
+- **UP 预览位置**：预览面板只在竖屏视频点击 UP 头像时打开，普通详情页保持原有跳转行为。
+- **手势冲突**：UP 预览打开时禁用底层竖屏 Pager 下滑切换，面板列表仍可正常滚动，关闭后恢复切换手势。
+- **相关推荐点击**：修复相关推荐卡片点击回调与过渡链路。
+
+#### 提交清单（自 v9.9.8.7 起，不含本版本发布提交）
+```
+feat(ui): theme-aware loading indicators for MD3, Miuix, and iOS
+feat(ui): extend theme-aware loading to refresh and content spinners
+feat: add blue snow maid app icon
+fix: preserve white shell around maid icons
+fix: enlarge maid adaptive icon artwork
+feat: add dark mode maid app icons
+fix: refresh dark launcher icon and splash corners
+fix: round maid system splash icons
+feat: add selectable maid icon appearance
+fix: keep maid splash corners stable
+fix: stabilize video card return depth effect
+fix(player): apply exact HDR quality upgrades
+feat(player): model reliable playback insights
+feat(player): add playback insight experience
+refactor(player): compact playback insight glass
+fix(dynamic): auto-open comments when entering dynamic detail
+fix(home): preserve feed position after space return
+fix(detail): inline dynamic comments and smooth related scroll
+fix(video): restore related card transitions after scroll
+fix(video): return unit from related card click
+fix(player): move md3 level feedback to edges
+fix(video): keep current frame during fullscreen switch
+fix(favorite): isolate collection playback queue
+feat(space): remember watched videos
+fix(video): move UP preview to portrait player
+fix(player): defer long-press lock hint
+fix(dynamic): load complete plain text detail
+fix(video): block pager while UP preview is open
+```
+
 ## v9.9.8.7 (2026-07-22)
 
 ### 版本信息

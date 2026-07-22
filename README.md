@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-9.9.8.6-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.9.8.6" />
+  <img src="https://img.shields.io/badge/Version-9.9.8.8-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.9.8.8" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-Non--Commercial-FF3B30?style=flat-square" alt="Non-Commercial License" />
@@ -23,8 +23,8 @@
   <a href="https://github.com/jay3-yy/BiliPai/releases">
     <img src="https://img.shields.io/github/downloads/jay3-yy/BiliPai/total?style=flat-square&color=34C759&label=%E6%80%BB%E4%B8%8B%E8%BD%BD%E9%87%8F&labelColor=ffffff" alt="总下载量" />
   </a>
-  <a href="https://github.com/jay3-yy/BiliPai/releases/tag/v9.9.8.6">
-    <img src="https://img.shields.io/github/downloads/jay3-yy/BiliPai/v9.9.8.6/total?style=flat-square&color=5AC8FA&label=%E6%9C%80%E6%96%B0%E7%89%88%E4%B8%8B%E8%BD%BD%E9%87%8F&labelColor=ffffff" alt="最新版本下载量" />
+  <a href="https://github.com/jay3-yy/BiliPai/releases/tag/v9.9.8.7">
+    <img src="https://img.shields.io/github/downloads/jay3-yy/BiliPai/v9.9.8.7/total?style=flat-square&color=5AC8FA&label=%E6%9C%80%E6%96%B0%E5%B7%B2%E5%8F%91%E5%B8%83%E7%89%88%E6%9C%AC%E4%B8%8B%E8%BD%BD%E9%87%8F&labelColor=ffffff" alt="最新已发布版本下载量" />
   </a>
 </p>
 
@@ -43,7 +43,7 @@
   </a>
 </p>
 
-<sub>README 更新：2026-07-20 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
+<sub>README 更新：2026-07-23 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
 
 </div>
 
@@ -188,12 +188,12 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `9.9.8.6 / versionCode 261`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.9.8.6`：
+当前仓库版本号已更新到 `9.9.8.8 / versionCode 263`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.9.8.8`：
 
-- 播放器音量 / 亮度主题化反馈与横屏 Seek 预览、振动。
-- 竖屏直达、多 P / 合集、字幕与 HDR/Dolby/8K 画质链修复。
-- 相关推荐官方 ⋮ 菜单（稍后再看 / 反馈 / 不感兴趣）。
-- 卡片实时模糊 / 液态玻璃仍在开发中，默认关闭，请勿使用。
+- 主题化加载反馈与蓝雪女仆深浅色应用图标。
+- 播放洞察、精确 HDR 升级、全屏画面保持与卡片返回过渡修复。
+- 空间观看记录、收藏合集队列隔离、动态全文与内联评论优化。
+- 竖屏 UP 预览移至头像入口，并修复预览面板下拉切换视频的手势冲突。
 
 ## 路线图
 
