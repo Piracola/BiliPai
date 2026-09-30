@@ -115,6 +115,7 @@ internal data class VideoPlayerSectionActions(
     val onSponsorDismiss: () -> Unit = {},
     val onSponsorVote: (Int) -> Unit = {},
     val onSponsorContributionMarkBoundary: () -> Unit = {},
+    val onSponsorContributionMarkWholeVideo: () -> Unit = {},
     val onSponsorContributionCategoryChange: (String) -> Unit = {},
     val onSponsorContributionActionTypeChange: (String) -> Unit = {},
     val onSponsorContributionSubmit: () -> Unit = {},

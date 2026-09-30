@@ -23,6 +23,7 @@ internal data class VideoDetailPlaybackActions(
     val dismissSponsorSkipButton: () -> Unit,
     val voteSponsorSegment: (Int) -> Unit,
     val markSponsorContributionBoundary: () -> Unit,
+    val markWholeVideoAsSponsor: () -> Unit,
     val setSponsorContributionCategory: (String) -> Unit,
     val setSponsorContributionActionType: (String) -> Unit,
     val submitSponsorContribution: () -> Unit,

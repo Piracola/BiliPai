@@ -82,7 +82,11 @@ internal fun normalizeSponsorSegments(
 ): List<SponsorSegment> {
     return segments
         .asSequence()
-        .filter { segment -> segment.endTimeMs > segment.startTimeMs }
+        .filter { segment ->
+            segment.endTimeMs > segment.startTimeMs ||
+                (segment.actionType == com.android.purebilibili.data.model.response.SponsorActionType.FULL &&
+                    segment.startTimeMs == 0L && segment.endTimeMs == 0L)
+        }
         .groupBy { segment -> "${segment.category}:${segment.actionType}" }
         .values
         .mapNotNull { candidates ->
@@ -110,6 +114,10 @@ internal fun resolveSponsorProgressMarkers(
                 SponsorBlockMarkerMode.SPONSOR_ONLY -> segment.category == com.android.purebilibili.data.model.response.SponsorCategory.SPONSOR
                 SponsorBlockMarkerMode.ALL_SKIPPABLE -> true
             }
+        }
+        .filterNot { segment ->
+            segment.actionType == com.android.purebilibili.data.model.response.SponsorActionType.FULL &&
+                segment.startTimeMs == 0L && segment.endTimeMs == 0L
         }
         .map { segment ->
             SponsorProgressMarker(
@@ -212,27 +220,23 @@ class SponsorBlockPlugin : PlayerPluginApi {
         //  [修复] 加载配置
         loadConfigSuspend()
         
-        // 加载片段数据
-        try {
-            segments = normalizeSponsorSegments(
-                SponsorBlockRepository.getSegments(
-                    bvid = bvid,
-                    cid = cid,
-                    categories = config.requestedCategories,
-                    baseUrl = config.serverBaseUrl
-                )
-            ).filter { segment ->
-                config.behaviorFor(segment.category) != SponsorBlockSegmentBehavior.DISABLED &&
-                    segment.duration >= config.minimumSegmentDurationSeconds
-            }
-            progressMarkers = resolveSponsorProgressMarkers(segments, config.markerMode, config.categoryColorHex)
-            Logger.d(
-                TAG,
-                " Loaded ${segments.size} SponsorBlock segments for $bvid, autoSkip=${config.autoSkip}, markers=${progressMarkers.size}"
-            )
-        } catch (e: Exception) {
-            Logger.w(TAG, " 加载片段失败: ${e.message}")
+        // Failures must reach the owning ViewModel so it can retry this video.
+        val loadedSegments = SponsorBlockRepository.loadSegments(
+            bvid = bvid,
+            cid = cid,
+            categories = config.requestedCategories,
+            baseUrl = config.serverBaseUrl
+        )
+        segments = normalizeSponsorSegments(loadedSegments).filter { segment ->
+            config.behaviorFor(segment.category) != SponsorBlockSegmentBehavior.DISABLED &&
+                (segment.actionType == com.android.purebilibili.data.model.response.SponsorActionType.FULL ||
+                    segment.duration >= config.minimumSegmentDurationSeconds)
         }
+        progressMarkers = resolveSponsorProgressMarkers(segments, config.markerMode, config.categoryColorHex)
+        Logger.d(
+            TAG,
+            "Loaded ${segments.size} SponsorBlock segments for $bvid/$cid, autoSkip=${config.autoSkip}"
+        )
     }
     
     // 记录上次播放位置，用于检测回拉
@@ -425,7 +429,9 @@ class SponsorBlockPlugin : PlayerPluginApi {
         if (!config.communityContributionEnabled) {
             return Result.failure(IllegalStateException("请先在空降助手设置中允许提交社区片段"))
         }
-        if (bvid.isBlank() || endMs <= startMs || startMs < 0L) {
+        val wholeVideo = actionType == com.android.purebilibili.data.model.response.SponsorActionType.FULL &&
+            startMs == 0L && endMs == 0L
+        if (bvid.isBlank() || startMs < 0L || (!wholeVideo && endMs <= startMs)) {
             return Result.failure(IllegalArgumentException("片段时间范围无效"))
         }
         if (category !in com.android.purebilibili.data.model.response.SponsorCategory.ALL_CATEGORIES) {
@@ -481,6 +487,8 @@ class SponsorBlockPlugin : PlayerPluginApi {
                 config = SponsorBlockConfig(autoSkip = true)
             }
             Logger.d(TAG, "Loaded SponsorBlock config: autoSkip=${config.autoSkip}, markerMode=${config.markerMode}")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Logger.e(TAG, "Failed to load config", e)
             config = SponsorBlockConfig(autoSkip = true)

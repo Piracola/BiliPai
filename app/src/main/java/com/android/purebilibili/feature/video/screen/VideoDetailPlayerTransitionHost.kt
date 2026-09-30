@@ -321,6 +321,7 @@ internal fun PortraitInlineVideoPlayerHost(
                 onSponsorDismiss = { playbackActions.dismissSponsorSkipButton() },
                 onSponsorVote = { playbackActions.voteSponsorSegment(it) },
                 onSponsorContributionMarkBoundary = { playbackActions.markSponsorContributionBoundary() },
+                onSponsorContributionMarkWholeVideo = { playbackActions.markWholeVideoAsSponsor() },
                 onSponsorContributionCategoryChange = { playbackActions.setSponsorContributionCategory(it) },
                 onSponsorContributionActionTypeChange = { playbackActions.setSponsorContributionActionType(it) },
                 onSponsorContributionSubmit = { playbackActions.submitSponsorContribution() },

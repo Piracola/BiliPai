@@ -604,6 +604,7 @@ private fun CinemaStagePlayer(
                     onSubtitleTrackSelected = playbackActions.selectSubtitleTrack,
                     onDanmakuInputClick = playbackActions.showDanmakuSendDialog,
                     onSponsorContributionMarkBoundary = playbackActions.markSponsorContributionBoundary,
+                    onSponsorContributionMarkWholeVideo = playbackActions.markWholeVideoAsSponsor,
                     onSponsorContributionCategoryChange = playbackActions.setSponsorContributionCategory,
                     onSponsorContributionActionTypeChange = playbackActions.setSponsorContributionActionType,
                     onSponsorContributionSubmit = playbackActions.submitSponsorContribution,

@@ -131,6 +131,7 @@ fun SponsorSkipButton(
 fun SponsorContributionOverlay(
     state: SponsorContributionUiState,
     onMarkBoundary: () -> Unit,
+    onMarkWholeVideo: () -> Unit,
     onCategoryChange: (String) -> Unit,
     onActionTypeChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -174,6 +175,11 @@ fun SponsorContributionOverlay(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
+                if (!marking) {
+                    AppTextButton(onClick = onMarkWholeVideo) {
+                        AppText("整段恰饭")
+                    }
+                }
             }
         }
     }
@@ -195,7 +201,11 @@ fun SponsorContributionOverlay(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     AppText(
-                        text = "${formatSponsorContributionTime(state.startMs ?: 0L)} – ${formatSponsorContributionTime(state.endMs ?: 0L)}",
+                        text = if (state.actionType == "full") {
+                            "整个视频"
+                        } else {
+                            "${formatSponsorContributionTime(state.startMs ?: 0L)} – ${formatSponsorContributionTime(state.endMs ?: 0L)}"
+                        },
                         style = MaterialTheme.typography.titleMedium,
                     )
                     if (state.phase != SponsorContributionPhase.SUCCESS) {
@@ -208,7 +218,12 @@ fun SponsorContributionOverlay(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            SponsorCategory.ALL_CATEGORIES.forEach { category ->
+                            SponsorCategory.ALL_CATEGORIES
+                                .filter { category ->
+                                    state.actionType != "full" ||
+                                        "full" in sponsorBlockAllowedActionTypes(category)
+                                }
+                                .forEach { category ->
                                 AppFilterChip(
                                     selected = state.category == category,
                                     onClick = { onCategoryChange(category) },
@@ -226,7 +241,9 @@ fun SponsorContributionOverlay(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            sponsorBlockAllowedActionTypes(state.category).forEach { actionType ->
+                            sponsorBlockAllowedActionTypes(state.category)
+                                .filter { actionType -> state.actionType != "full" || actionType == "full" }
+                                .forEach { actionType ->
                                 AppFilterChip(
                                     selected = state.actionType == actionType,
                                     onClick = { onActionTypeChange(actionType) },

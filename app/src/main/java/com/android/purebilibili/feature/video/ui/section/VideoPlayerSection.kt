@@ -760,6 +760,7 @@ private fun VideoPlayerSectionContent(
     val onSponsorDismiss = actions.onSponsorDismiss
     val onSponsorVote = actions.onSponsorVote
     val onSponsorContributionMarkBoundary = actions.onSponsorContributionMarkBoundary
+    val onSponsorContributionMarkWholeVideo = actions.onSponsorContributionMarkWholeVideo
     val onSponsorContributionCategoryChange = actions.onSponsorContributionCategoryChange
     val onSponsorContributionActionTypeChange = actions.onSponsorContributionActionTypeChange
     val onSponsorContributionSubmit = actions.onSponsorContributionSubmit
@@ -5721,6 +5722,7 @@ private fun VideoPlayerSectionContent(
             SponsorContributionOverlay(
                 state = sponsorContributionState,
                 onMarkBoundary = onSponsorContributionMarkBoundary,
+                onMarkWholeVideo = onSponsorContributionMarkWholeVideo,
                 onCategoryChange = onSponsorContributionCategoryChange,
                 onActionTypeChange = onSponsorContributionActionTypeChange,
                 onSubmit = onSponsorContributionSubmit,
