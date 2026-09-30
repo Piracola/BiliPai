@@ -99,6 +99,9 @@ docs/*
 !docs/GOOGLE_CAST_PLUGIN.md
 !docs/DLNA_CAST_PLUGIN.md
 !docs/android17-verification.md
+!docs/PERFORMANCE_REVIEW_PLAN.md
+!docs/perf/
+!docs/perf/*.md
 !docs/images/
 !docs/images/screenshot*.png
 !docs/wiki/
@@ -115,7 +118,8 @@ docs/wiki/LIQUID_GLASS_REUSE_PARITY.md
 docs/wiki/MIUIX_ALIGNMENT.md
 docs/wiki/NATIVE_THEME_COMPONENT_MIGRATION.md
 docs/wiki/THEME_SIMPLIFICATION_PHASE0_BASELINE.md
-docs/perf/
+# 原始性能采样数据不入库；docs/perf/ 下的基线/热点文档是交付物，保持跟踪
+docs/perf/raw/
 app/src/test/java/com/android/purebilibili/docs/UiDesignDocumentationStructureTest.kt
 
 # Local Reasonix session settings and metadata
