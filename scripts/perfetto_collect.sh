@@ -10,12 +10,20 @@
 #   ./scripts/perfetto_collect.sh [--device SERIAL] [--scenario tabs|play|manual]
 #                                 [--duration SEC] [--rounds N] [--tabs N]
 #                                 [--buffer-kb KB] [--package PKG] [--out NAME]
+#                                 [--profile auto|full|light]
 #
 # Scenarios:
 #   tabs    Auto-drive bottom bar tab round trips (default 5 tabs x 6 rounds).
 #   play    Launch app, then open a video MANUALLY within the warmup window;
 #           the script keeps recording for the whole duration (default 600s).
 #   manual  Just record for --duration seconds while you drive the app.
+#
+# Profiles (ring buffer retains buffer_kb/rate seconds, so window length picks the profile):
+#   full  All atrace categories. ~4.9MB/s, so a 128MB ring keeps only ~26s —
+#         use it for short windows carrying sched/gfx/render detail.
+#   light No atrace categories except "am". ~0.1MB/s — use it for multi-minute
+#         windows (frame timing, GPU/CPU freq, meminfo, app Trace sections).
+#   auto  full when --duration <= 30s, light otherwise (default).
 #
 # Notes:
 #   - App-side Trace sections (e.g. BiliPaiDanmakuSetData) reach the trace via
@@ -24,6 +32,10 @@
 #     meminfo polling + sched gaps instead.
 #   - Output lands in docs/perf/raw/ (perfetto trace + gfxinfo + meminfo).
 set -euo pipefail
+
+# Git Bash (MSYS2) rewrites /data/... arguments into C:/Program Files/Git/data/... before
+# adb.exe sees them, which breaks every device-side path below. Exclude them from conversion.
+export MSYS2_ARG_CONV_EXCL="/data;/data/*"
 
 PKG="com.android.purebilibili"
 DEVICE=""
@@ -35,9 +47,10 @@ TAP_DELAY_SECONDS="1.2"
 WARMUP_SECONDS=8
 BUFFER_KB=131072
 OUT_NAME=""
+PROFILE="auto"
 
 usage() {
-  sed -n '2,25p' "$0" | grep -E '^#( |$)' | sed 's/^# \{0,1\}//'
+  sed -n '2,/^[^#]/p' "$0" | grep -E '^#( |$)' | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -52,6 +65,7 @@ while [[ $# -gt 0 ]]; do
     --buffer-kb) BUFFER_KB="${2:-}"; shift 2 ;;
     --package) PKG="${2:-}"; shift 2 ;;
     --out) OUT_NAME="${2:-}"; shift 2 ;;
+    --profile) PROFILE="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
   esac
@@ -60,6 +74,11 @@ done
 case "$SCENARIO" in
   tabs|play|manual) ;;
   *) echo "Unknown scenario: $SCENARIO (tabs|play|manual)" >&2; exit 1 ;;
+esac
+
+case "$PROFILE" in
+  auto|full|light) ;;
+  *) echo "Unknown profile: $PROFILE (auto|full|light)" >&2; exit 1 ;;
 esac
 
 if ! command -v adb >/dev/null 2>&1; then
@@ -98,6 +117,30 @@ fi
 
 echo "[perfetto] device=$DEVICE scenario=$SCENARIO duration=${DURATION}s buffer=${BUFFER_KB}KB pkg=$PKG"
 
+# --- profile selection ----------------------------------------------------------
+# Measured on Xiaomi 2109119BC (SM7325, 120Hz) with Perfetto v34, app in foreground:
+#   full  ≈ 4.9 MB/s — ftrace-bound (gfx 1.65, view 1.57, sched 1.25 MB/s, rest 0.43)
+#   light ≈ 0.1 MB/s — no ftrace categories except "am"
+# The ring buffer only retains size/rate seconds, so a window longer than that keeps
+# just the tail. Long scenarios must therefore drop ftrace detail.
+FULL_RATE_KBPS=4900
+LIGHT_RATE_KBPS=100
+if [[ "$PROFILE" == "auto" ]]; then
+  if (( DURATION > 30 )); then PROFILE="light"; else PROFILE="full"; fi
+fi
+if [[ "$PROFILE" == "full" ]]; then
+  PROFILE_RATE_KBPS="$FULL_RATE_KBPS"
+else
+  PROFILE_RATE_KBPS="$LIGHT_RATE_KBPS"
+fi
+RETENTION_S=$(( BUFFER_KB / PROFILE_RATE_KBPS ))
+if (( RETENTION_S < 1 )); then RETENTION_S=1; fi
+echo "[perfetto] profile=$PROFILE (~${PROFILE_RATE_KBPS}KB/s) ring retention≈${RETENTION_S}s"
+if (( DURATION > RETENTION_S )); then
+  echo "[perfetto] WARNING: ${DURATION}s window > ${RETENTION_S}s retention; only the tail survives." >&2
+  echo "[perfetto]          Raise --buffer-kb (RAM-bound) or shorten --duration." >&2
+fi
+
 # --- screen size for tab tap coordinates -------------------------------------
 SIZE_LINE="$(adb_cmd shell wm size | tr -d '\r' | head -n1)"
 SIZE="${SIZE_LINE##*: }"
@@ -108,26 +151,55 @@ if [[ -z "$WIDTH" || -z "$HEIGHT" || "$WIDTH" == "$SIZE" ]]; then
 fi
 
 # --- device-side config -------------------------------------------------------
-CFG_REMOTE="/data/local/tmp/bilipai_perfetto.cfg"
+# perfetto only reads configs labelled perfetto_configs_data_file. A file pushed to
+# /data/local/tmp carries shell_data_file and fails with errno 13 (Permission denied).
+CFG_REMOTE="/data/misc/perfetto-configs/bilipai_perfetto.cfg"
 TRACE_REMOTE="/data/misc/perfetto-traces/${OUT_NAME}.pftrace"
+DURATION_MS=$(( DURATION * 1000 ))
 
 CFG_LOCAL="$(mktemp -t bilipai_perfetto.XXXXXX)"
+
+if [[ "$PROFILE" == "full" ]]; then
+  CFG_FTRACE='data_sources {
+  config {
+    name: "linux.ftrace"
+    ftrace_config {
+      atrace_categories: "sched"
+      atrace_categories: "freq"
+      atrace_categories: "idle"
+      atrace_categories: "am"
+      atrace_categories: "wm"
+      atrace_categories: "gfx"
+      atrace_categories: "view"
+      atrace_categories: "input"
+      atrace_categories: "binder_driver"
+      atrace_categories: "binder_lock"
+      atrace_categories: "hal"
+      atrace_categories: "ss"
+      atrace_categories: "database"
+    }
+  }
+}'
+else
+  # "am" is the only near-free category (~1KB/s); everything else measured above
+  # 100KB/s and would blow the ring buffer on a multi-minute window.
+  CFG_FTRACE='data_sources {
+  config {
+    name: "linux.ftrace"
+    ftrace_config {
+      atrace_categories: "am"
+    }
+  }
+}'
+fi
+
 cat > "$CFG_LOCAL" <<EOF
 buffers {
   size_kb: ${BUFFER_KB}
   fill_policy: RING_BUFFER
 }
-data_sources {
-  config {
-    name: "android.atrace"
-    atrace_config {
-      categories: [
-        "sched", "freq", "idle", "am", "wm", "gfx", "view", "input",
-        "binder_driver", "binder_lock", "hal", "ss", "database"
-      ]
-    }
-  }
-}
+duration_ms: ${DURATION_MS}
+${CFG_FTRACE}
 data_sources {
   config {
     name: "android.surfaceflinger.frametimeline"
@@ -138,7 +210,7 @@ data_sources {
     name: "linux.sys_stats"
     sys_stats_config {
       cpufreq_period_ms: 250
-      gpufreq_period_ms: 250
+      devfreq_period_ms: 250
       meminfo_period_ms: 1000
       vmstat_period_ms: 5000
       stat_period_ms: 5000
@@ -150,7 +222,7 @@ data_sources {
     name: "linux.process_stats"
     process_stats_config {
       scan_all_processes_on_start: true
-      record_rss: true
+      proc_stats_poll_ms: 1000
     }
   }
 }
@@ -164,6 +236,10 @@ incremental_state_config {
   clear_period_ms: 10000
 }
 EOF
+# core.autocrlf=true checks this script out with CRLF; a stray \r would land in the
+# text-format config, so normalise before pushing.
+tr -d '\r' < "$CFG_LOCAL" > "${CFG_LOCAL}.lf" && mv "${CFG_LOCAL}.lf" "$CFG_LOCAL"
+adb_cmd shell "mkdir -p /data/misc/perfetto-configs" >/dev/null
 adb_cmd push "$CFG_LOCAL" "$CFG_REMOTE" >/dev/null
 rm -f "$CFG_LOCAL"
 
@@ -176,8 +252,9 @@ trap cleanup EXIT
 echo "[perfetto] starting capture (${DURATION}s window)..."
 adb_cmd shell rm -f "$TRACE_REMOTE" >/dev/null 2>&1 || true
 START_TS="$(date +%s)"
+# Duration lives in the config (duration_ms); perfetto rejects --time together with -c.
 (
-  adb_cmd shell "perfetto -c $CFG_REMOTE --txt -o $TRACE_REMOTE --time ${DURATION}s"
+  adb_cmd shell "perfetto -c $CFG_REMOTE --txt -o $TRACE_REMOTE"
 ) &
 PERFETTO_PID=$!
 sleep 3
@@ -188,12 +265,12 @@ if ! kill -0 "$PERFETTO_PID" 2>/dev/null; then
 fi
 
 # --- scenario drive ------------------------------------------------------------
-LAUNCHED="no"
+# drive_scenario runs in a background subshell, so it cannot report status back via a
+# variable; the parent probes the process instead.
 drive_scenario() {
   adb_cmd shell input keyevent 3 >/dev/null
   adb_cmd shell am start -W -n "${PKG}/com.android.purebilibili.MainActivity" >/dev/null || true
   sleep "$WARMUP_SECONDS"
-  LAUNCHED="yes"
 
   case "$SCENARIO" in
     tabs)
@@ -231,6 +308,7 @@ DRIVE_PID=$!
 adb_cmd shell dumpsys gfxinfo "$PKG" reset >/dev/null 2>&1 || true
 
 wait "$DRIVE_PID" || true
+if adb_cmd shell pidof "$PKG" >/dev/null 2>&1; then LAUNCHED="yes"; else LAUNCHED="no"; fi
 ELAPSED=$(( $(date +%s) - START_TS ))
 REMAINING=$(( DURATION - ELAPSED ))
 if (( REMAINING > 0 )); then
